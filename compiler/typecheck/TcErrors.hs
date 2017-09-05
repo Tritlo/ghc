@@ -43,10 +43,9 @@ import NameSet
 import Bag
 import ErrUtils         ( ErrMsg, errDoc, pprLocErrMsg )
 import BasicTypes
-import ConLike          ( ConLike(..), conLikeWrapId_maybe )
+import ConLike          ( ConLike(..))
 import Util
-import HscTypes ( HscEnv, lookupTypeHscEnv, TypeEnv, lookupTypeEnv )
-import NameEnv ( lookupNameEnv )
+import TcEnv (tcLookup)
 import {-# SOURCE #-} TcSimplify ( tcSubsumes )
 import FastString
 import Outputable
@@ -1119,14 +1118,11 @@ mkHoleError _ ct = pprPanic "mkHoleError" (ppr ct)
 -- See Note [Valid substitutions include ...]
 validSubstitutions :: Ct -> TcM SDoc
 validSubstitutions ct | isExprHoleCt ct =
-  do { top_env <- getTopEnv
-     ; rdr_env <- getGlobalRdrEnv
-     ; gbl_env <- tcg_type_env <$> getGblEnv
-     ; lcl_env <- getLclTypeEnv
+  do { rdr_env <- getGlobalRdrEnv
      ; dflags <- getDynFlags
      ; (discards, substitutions) <-
         setTcLevel hole_lvl $
-          go (gbl_env, lcl_env, top_env) (maxValidSubstitutions dflags)
+          go  (maxValidSubstitutions dflags)
            $ localsFirst $ globalRdrEnvElts rdr_env
      ; return $ ppUnless (null substitutions) $
                  hang (text "Valid substitutions include")
@@ -1160,53 +1156,42 @@ validSubstitutions ct | isExprHoleCt ct =
             ty = varType id
             idAndTy = (pprPrefixOcc name <+> dcolon <+> pprType ty)
 
-    tyToId :: TyThing -> Maybe Id
-    tyToId (AnId i) = Just i
-    tyToId (AConLike c) = conLikeWrapId_maybe c
-    tyToId _ = Nothing
-
-    tcTyToId :: TcTyThing -> Maybe Id
-    tcTyToId (AGlobal id) = tyToId id
-    tcTyToId (ATcId id _) = Just id
-    tcTyToId _ = Nothing
-
     substituteable :: Id ->  TcM Bool
+    -- Here we need to wrap the hole type with the implications
+    -- contained within the ReportErrCtxt
     substituteable id = hole_ty `tcSubsumes` ty
       where ty = varType id
 
-    lookupTopId :: HscEnv -> Name -> IO (Maybe Id)
-    lookupTopId env name =
-        maybe Nothing tyToId <$> lookupTypeHscEnv env name
-
-    lookupGblId :: TypeEnv -> Name -> Maybe Id
-    lookupGblId env name = maybe Nothing tyToId $ lookupTypeEnv env name
-
-    lookupLclId :: TcTypeEnv -> Name -> Maybe Id
-    lookupLclId env name = maybe Nothing tcTyToId $ lookupNameEnv env name
-
-    go ::  (TypeEnv, TcTypeEnv, HscEnv) -> Maybe Int -> [GlobalRdrElt]
+    go ::  Maybe Int -> [GlobalRdrElt]
        -> TcM (Bool, [Id])
     go = go_ []
 
-    go_ ::  [Id] -> (TypeEnv, TcTypeEnv, HscEnv) -> Maybe Int -> [GlobalRdrElt]
+    go_ ::  [Id] -> Maybe Int -> [GlobalRdrElt]
          -> TcM (Bool, [Id])
-    go_ subs _ _ [] = return (False, reverse subs)
-    go_ subs _ (Just 0) _ = return (True, reverse subs)
-    go_ subs envs@(gbl,lcl,top) maxleft (el:elts) =
+    go_ subs _ [] = return (False, reverse subs)
+    go_ subs (Just 0) _ = return (True, reverse subs)
+    go_ subs maxleft (el:elts) =
       if shouldBeSkipped el then discard_it
-      else do { maybeId <- liftIO lookupId
+      else do { maybeId <- tcLookupIdMaybe (gre_name el)
               ; case maybeId of
-                 Just id -> do { canSub <- substituteable id
+                Just id -> do { canSub <- substituteable id
                                ; if canSub then (keep_it id) else discard_it }
-                 _ -> discard_it }
-      where name = gre_name el
-            discard_it = go_ subs envs maxleft elts
-            keep_it id = go_ (id:subs) envs ((\n -> n - 1) <$> maxleft) elts
-            getTopId = lookupTopId top name
-            gbl_id = lookupGblId gbl name
-            lcl_id = lookupLclId lcl name
-            lookupId = if (isJust lcl_id) then return lcl_id
-                       else if (isJust gbl_id) then return gbl_id else getTopId
+                _ -> discard_it
+              }
+      where discard_it = go_ subs maxleft elts
+            keep_it id = go_ (id:subs) ((\n -> n - 1) <$> maxleft) elts
+            -- Does the same as tcLookupId, but returns a Maybe instead of
+            -- crashing.
+            -- TODO: Make sure it doesn't pollute the current environment
+            -- accidentally.
+            tcLookupIdMaybe :: Name -> TcM (Maybe Id)
+            tcLookupIdMaybe name = do { thing <- tcLookup name
+                                 ; case thing of
+                                     ATcId { tct_id = id} -> return $ Just id
+                                     AGlobal (AnId id)    -> return $ Just id
+                                     _                    -> return Nothing
+                                 }
+
 
 
 validSubstitutions _ = return empty
@@ -1286,7 +1271,9 @@ The hole in `main` would generate the message:
           use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
 
 Valid substitutions are found by checking ids in scope, and checking whether
-their type subsumes the type of the hole.
+their type subsumes the type of the hole. We remove ids that are local
+bindings, since they are already included in the relevant bindings section
+of the hole error message.
 
 Note [Constraints include ...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
