@@ -478,34 +478,21 @@ simplifyDefault theta
        ; traceTc "reportUnsolved }" empty
        ; return () }
 
+tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
 -- Reports whether one type subsumes another, discarding any errors
--- Note: Make sure the implications for the hole type are present,
-tcSubsumes :: [Implication] -> TcSigmaType -> TcSigmaType -> TcM Bool
--- The quick path, we don't have to do any fancy checking!
-tcSubsumes _ hole_ty ty | hole_ty `eqType` ty = return True
-tcSubsumes implics hole_ty ty = discardErrs $
+-- Note: Make sure the types contain all constraints present in
+-- the associated implications.
+tcSubsumes hole_ty ty | hole_ty `eqType` ty = return True
+tcSubsumes hole_ty ty = discardErrs $
  do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
     ; (rem, _) <- runTcS (simpl_top wanted)
-    -- If there are no constraints left, we've found a match!
-    -- Otherwise, constraints from the implications might help
-    ; if isEmptyWC rem then return True else checkImplics implics rem
+    -- We don't want any insoluble or simple constraints left,
+    -- but solved implications are ok (and neccessary for e.g. undefined)
+    ; return (isEmptyBag (wc_simple rem)
+         && isEmptyBag (wc_insol rem)
+         && allBag (isSolvedStatus . ic_status) (wc_impl rem))
     }
- where
-  checkImplics :: [Implication] -> WantedConstraints -> TcM Bool
-  -- If there are no implications, they can't help, so it's not a match.
-  checkImplics implics _ | null implics = return False
-  -- If any of the implications were solved, it means that the constraints
-  -- present solved the constraints that were left by the hole, which
-  -- means we've succeeded in finding a math!
-  checkImplics implics wc = or <$> mapM (solvesImplication wc) implics
-  solvesImplication :: WantedConstraints -> Implication -> TcM Bool
-  -- To check whether the implication givens would solve the constraints,
-  -- we just inject them into the implications for the hole.
-  solvesImplication wc impl =
-     do { let newImpl = impl {ic_wanted = wc}
-        ; (rem, _) <- runTcS (simpl_top $ mkImplicWC (unitBag newImpl))
-        ; return (isEmptyWC rem) }
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool

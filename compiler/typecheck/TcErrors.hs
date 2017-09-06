@@ -1120,11 +1120,12 @@ validSubstitutions :: ReportErrCtxt -> Ct -> TcM SDoc
 validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; dflags <- getDynFlags
-     ; traceTc "ctWas" $ ppr ct
+     ; traceTc "findingValidSubstitutionsFor {" $ ppr wrapped_hole_ty
      ; (discards, substitutions) <-
         setTcLevel hole_lvl $
          go (maxValidSubstitutions dflags) $
           localsFirst $ globalRdrEnvElts rdr_env
+     ; traceTc "}" empty
      ; return $ ppUnless (null substitutions) $
                  hang (text "Valid substitutions include")
                   2 (vcat (map (ppr_sub rdr_env) substitutions)
@@ -1136,17 +1137,35 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     hole_env = ctLocEnv $ hole_loc
     hole_lvl = ctLocLevel $ hole_loc
 
+    wrapType :: Type -> Implication -> Type
+    wrapType ty (Implic {ic_skols = skols, ic_given=givens}) =
+      wrapWithAllSkols $ mkFunTys (map idType givens) $ ty
+      -- mkForAllTys skols Specified $ mkFunTy (map idType givens) ty
+      where forAllTy :: Type -> TyVar -> Type
+            forAllTy ty tv = mkForAllTy tv Specified ty
+            wrapWithAllSkols ty = foldl forAllTy ty skols
+
+    -- We get more and more exact types as we wrap the type with more
+    -- implications. Checking for fits in reverse order by this list
+    -- allows us to have suggestions that are more relevant higher
+    -- on the list of suggestions.
+    wrapped_hole_ty :: TcSigmaType
+    wrapped_hole_ty = foldl wrapType hole_ty implics
+
+
     -- We rearrange the elements to make locals appear at the top of the list,
     -- since they're most likely to be relevant to the user
     localsFirst :: [GlobalRdrElt] -> [GlobalRdrElt]
     localsFirst elts = lcl ++ gbl
       where (lcl, gbl) = partition gre_lcl elts
 
-    getBndrOcc :: TcIdBinder -> OccName
-    getBndrOcc (TcIdBndr id _) = occName $ getName id
-    getBndrOcc (TcIdBndr_ExpType name _ _) = occName $ getName name
-
+    -- The set of relative bindings. We use it to make sure we don't repeat
+    -- ids from the relevant bindings again in the suggestions.
+    relBindSet :: OccSet
     relBindSet =  mkOccSet $ map getBndrOcc $ tcl_bndrs hole_env
+      where getBndrOcc :: TcIdBinder -> OccName
+            getBndrOcc (TcIdBndr id _) = occName $ getName id
+            getBndrOcc (TcIdBndr_ExpType name _ _) = occName $ getName name
 
     -- We skip elements that are already in the "Relevant Bindings Include"
     -- part of the error message, as given by the relBindSet.
@@ -1160,11 +1179,13 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
       where name = idName id
             ty = varType id
             idAndTy = (pprPrefixOcc name <+> dcolon <+> pprType ty)
+
     -- The real work happens here, where we invoke the typechecker to check
     -- whether we the given type fits into the hole!
     substituteable :: Id -> TcM Bool
-    substituteable id = tcSubsumes implics hole_ty ty
+    substituteable id = wrapped_hole_ty `tcSubsumes` ty
       where ty = varType id
+
     -- Kickoff the checking of the elements. The first argument
     -- is a counter, so that we stop after finding functions up to the
     -- limit the user gives us.
@@ -1181,6 +1202,7 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
       else do { maybeId <- tcLookupIdMaybe (gre_name el)
               ; case maybeId of
                 Just id -> do { canSub <- substituteable id
+                              ; traceTc (if canSub then "canSub" else "cantSub") $ ppr id
                               ; if canSub then (keep_it id) else discard_it }
                 _ -> discard_it
               }
