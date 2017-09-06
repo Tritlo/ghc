@@ -1064,7 +1064,7 @@ mkHoleError ctxt ct@(CHoleCan { cc_hole = hole })
                   = givenConstraintsMsg ctxt
                | otherwise = empty
 
-       ; sub_msg <- validSubstitutions ct
+       ; sub_msg <- validSubstitutions ctxt ct
        ; mkErrorMsgFromCt ctxt ct $
             important hole_msg `mappend`
             relevant_bindings (binds_msg $$ constraints_msg) `mappend`
@@ -1116,14 +1116,15 @@ mkHoleError _ ct = pprPanic "mkHoleError" (ppr ct)
 
 
 -- See Note [Valid substitutions include ...]
-validSubstitutions :: Ct -> TcM SDoc
-validSubstitutions ct | isExprHoleCt ct =
+validSubstitutions :: ReportErrCtxt -> Ct -> TcM SDoc
+validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; dflags <- getDynFlags
+     ; traceTc "ctWas" $ ppr ct
      ; (discards, substitutions) <-
         setTcLevel hole_lvl $
-          go  (maxValidSubstitutions dflags)
-           $ localsFirst $ globalRdrEnvElts rdr_env
+         go (maxValidSubstitutions dflags) $
+          localsFirst $ globalRdrEnvElts rdr_env
      ; return $ ppUnless (null substitutions) $
                  hang (text "Valid substitutions include")
                   2 (vcat (map (ppr_sub rdr_env) substitutions)
@@ -1135,6 +1136,8 @@ validSubstitutions ct | isExprHoleCt ct =
     hole_env = ctLocEnv $ hole_loc
     hole_lvl = ctLocLevel $ hole_loc
 
+    -- We rearrange the elements to make locals appear at the top of the list,
+    -- since they're most likely to be relevant to the user
     localsFirst :: [GlobalRdrElt] -> [GlobalRdrElt]
     localsFirst elts = lcl ++ gbl
       where (lcl, gbl) = partition gre_lcl elts
@@ -1145,6 +1148,8 @@ validSubstitutions ct | isExprHoleCt ct =
 
     relBindSet =  mkOccSet $ map getBndrOcc $ tcl_bndrs hole_env
 
+    -- We skip elements that are already in the "Relevant Bindings Include"
+    -- part of the error message, as given by the relBindSet.
     shouldBeSkipped :: GlobalRdrElt -> Bool
     shouldBeSkipped el = (occName $ gre_name el) `elemOccSet` relBindSet
 
@@ -1155,19 +1160,20 @@ validSubstitutions ct | isExprHoleCt ct =
       where name = idName id
             ty = varType id
             idAndTy = (pprPrefixOcc name <+> dcolon <+> pprType ty)
-
-    substituteable :: Id ->  TcM Bool
-    -- Here we need to wrap the hole type with the implications
-    -- contained within the ReportErrCtxt
-    substituteable id = hole_ty `tcSubsumes` ty
+    -- The real work happens here, where we invoke the typechecker to check
+    -- whether we the given type fits into the hole!
+    substituteable :: Id -> TcM Bool
+    substituteable id = tcSubsumes implics hole_ty ty
       where ty = varType id
-
-    go ::  Maybe Int -> [GlobalRdrElt]
-       -> TcM (Bool, [Id])
+    -- Kickoff the checking of the elements. The first argument
+    -- is a counter, so that we stop after finding functions up to the
+    -- limit the user gives us.
+    go :: Maybe Int -> [GlobalRdrElt] -> TcM (Bool, [Id])
     go = go_ []
 
-    go_ ::  [Id] -> Maybe Int -> [GlobalRdrElt]
-         -> TcM (Bool, [Id])
+    -- We iterate over the elements, checking each one in turn. If we've
+    -- already found -fmax-valid-substitutions=n elements, we look no further.
+    go_ :: [Id] -> Maybe Int -> [GlobalRdrElt] -> TcM (Bool, [Id])
     go_ subs _ [] = return (False, reverse subs)
     go_ subs (Just 0) _ = return (True, reverse subs)
     go_ subs maxleft (el:elts) =
@@ -1175,7 +1181,7 @@ validSubstitutions ct | isExprHoleCt ct =
       else do { maybeId <- tcLookupIdMaybe (gre_name el)
               ; case maybeId of
                 Just id -> do { canSub <- substituteable id
-                               ; if canSub then (keep_it id) else discard_it }
+                              ; if canSub then (keep_it id) else discard_it }
                 _ -> discard_it
               }
       where discard_it = go_ subs maxleft elts
@@ -1194,7 +1200,7 @@ validSubstitutions ct | isExprHoleCt ct =
 
 
 
-validSubstitutions _ = return empty
+validSubstitutions _ _ = return empty
 
 
 -- See Note [Constraints include ...]
@@ -1270,10 +1276,10 @@ The hole in `main` would generate the message:
         (Some substitutions suppressed;
           use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
 
-Valid substitutions are found by checking ids in scope, and checking whether
-their type subsumes the type of the hole. We remove ids that are local
-bindings, since they are already included in the relevant bindings section
-of the hole error message.
+Valid substitutions are found by checking top level ids in scope, and checking
+whether their type subsumes the type of the hole. We remove ids that are
+local bindings, since they are already included in the relevant bindings
+section of the hole error message.
 
 Note [Constraints include ...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
