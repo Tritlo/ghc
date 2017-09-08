@@ -1209,8 +1209,6 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
             keep_it id = go_ (id:subs) ((\n -> n - 1) <$> maxleft) elts
             -- Does the same as tcLookupId, but returns a Maybe instead of
             -- crashing.
-            -- TODO: Make sure it doesn't pollute the current environment
-            -- accidentally.
             tcLookupIdMaybe :: Name -> TcM (Maybe Id)
             tcLookupIdMaybe name = do { thing <- tcLookup name
                                  ; case thing of
