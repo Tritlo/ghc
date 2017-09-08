@@ -1202,7 +1202,6 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
       else do { maybeId <- tcLookupIdMaybe (gre_name el)
               ; case maybeId of
                 Just id -> do { canSub <- substituteable id
-                              ; traceTc (if canSub then "canSub" else "cantSub") $ ppr id
                               ; if canSub then (keep_it id) else discard_it }
                 _ -> discard_it
               }
@@ -1269,34 +1268,50 @@ Note [Valid substitutions include ...]
 `validSubstitutions` returns the "Valid substitutions include ..." message.
 For example, look at the following definitions in a file called test.hs:
 
-    ps :: String -> IO ()
-    ps = putStrLn
+   import Data.List (inits)
 
-    ps2 :: a -> IO ()
-    ps2 _ = putStrLn "hello, world"
+   f :: [String]
+   f = _ "hello, world"
 
-    main :: IO ()
-    main = _ "hello, world"
+The hole in `f` would generate the message:
 
-The hole in `main` would generate the message:
-
-    Valid substitutions include
-        ps :: String -> IO () (defined at t1.hs:2:1)
-        ps2 :: forall a. a -> IO () (defined at t1.hs:5:1)
-        putStrLn :: String -> IO ()
-          (imported from ‘Prelude’ at t1.hs:1:1
-           (and originally defined in ‘System.IO’))
-        fail :: forall (m :: * -> *). Monad m => forall a. String -> m a
-          (imported from ‘Prelude’ at t1.hs:1:1
-           (and originally defined in ‘GHC.Base’))
-        mempty :: forall a. Monoid a => a
-          (imported from ‘Prelude’ at t1.hs:1:1
-           (and originally defined in ‘GHC.Base’))
-        print :: forall a. Show a => a -> IO ()
-          (imported from ‘Prelude’ at t1.hs:1:1
-           (and originally defined in ‘System.IO’))
-        (Some substitutions suppressed;
-          use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
+  Valid substitutions include
+    inits :: forall a. [a] -> [[a]]
+      (imported from ‘Data.List’ at tp.hs:3:19-23
+       (and originally defined in ‘base-4.10.0.0:Data.OldList’))
+    fail :: forall (m :: * -> *). Monad m => forall a. String -> m a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Base’))
+    mempty :: forall a. Monoid a => a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Base’))
+    pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Base’))
+    return :: forall (m :: * -> *). Monad m => forall a. a -> m a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Base’))
+    read :: forall a. Read a => String -> a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘Text.Read’))
+    lines :: String -> [String]
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘base-4.10.0.0:Data.OldList’))
+    words :: String -> [String]
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘base-4.10.0.0:Data.OldList’))
+    error :: forall (a :: TYPE r).  GHC.Stack.Types.HasCallStack => [Char] -> a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Err’))
+    errorWithoutStackTrace :: forall (a :: TYPE r). [Char] -> a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Err’))
+    undefined :: forall (a :: TYPE r).  GHC.Stack.Types.HasCallStack => a
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.Err’))
+    repeat :: forall a. a -> [a]
+      (imported from ‘Prelude’ at tp.hs:1:8-9
+       (and originally defined in ‘GHC.List’))
 
 Valid substitutions are found by checking top level ids in scope, and checking
 whether their type subsumes the type of the hole. We remove ids that are
