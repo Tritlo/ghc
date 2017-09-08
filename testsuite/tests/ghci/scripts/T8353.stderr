@@ -11,6 +11,11 @@ Defer03.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include f :: Int (bound at Defer03.hs:7:1)
       Valid substitutions include
         a :: Int (defined at Defer03.hs:4:1)
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at Defer03.hs:1:8-11
+           (and originally defined in ‘GHC.Err’))
         maxBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
@@ -30,6 +35,11 @@ Defer03.hs:7:5: error:
     • Relevant bindings include f :: Int (bound at Defer03.hs:7:1)
       Valid substitutions include
         a :: Int (defined at Defer03.hs:4:1)
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at Defer03.hs:1:8-11
+           (and originally defined in ‘GHC.Err’))
         maxBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
@@ -49,6 +59,11 @@ Defer03.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include f :: Int (bound at Defer03.hs:7:1)
       Valid substitutions include
         a :: Int (defined at Defer03.hs:4:1)
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at Defer03.hs:1:8-11
+           (and originally defined in ‘GHC.Err’))
         maxBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
@@ -68,6 +83,11 @@ Defer03.hs:7:5: error:
     • Relevant bindings include f :: Int (bound at Defer03.hs:7:1)
       Valid substitutions include
         a :: Int (defined at Defer03.hs:4:1)
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at Defer03.hs:1:8-11
+           (and originally defined in ‘GHC.Err’))
         maxBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
@@ -87,6 +107,11 @@ Defer03.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include f :: Int (bound at Defer03.hs:7:1)
       Valid substitutions include
         a :: Int (defined at Defer03.hs:4:1)
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at Defer03.hs:1:8-11
+           (and originally defined in ‘GHC.Err’))
         maxBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
