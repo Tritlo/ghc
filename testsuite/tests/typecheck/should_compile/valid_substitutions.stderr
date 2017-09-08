@@ -15,6 +15,11 @@ valid_substitutions.hs:13:8: warning: [-Wtyped-holes (in -Wdefault)]
         mempty :: forall a. Monoid a => a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-30
            (and originally defined in ‘GHC.Base’))
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-30
+           (and originally defined in ‘GHC.Err’))
         catMaybes :: forall a. [Maybe a] -> [a]
           (imported from ‘Data.Maybe’ at valid_substitutions.hs:5:1-17)
 
@@ -26,7 +31,11 @@ valid_substitutions.hs:16:9: warning: [-Wtyped-holes (in -Wdefault)]
         test2 :: Integer -> ValidSubs.Moo
           (bound at valid_substitutions.hs:16:1)
       Valid substitutions include
-        ValidSubs.Moo :: Integer -> ValidSubs.Moo
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-30
+           (and originally defined in ‘GHC.Err’))
 
 valid_substitutions.hs:19:8: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: [Char] -> IO ()

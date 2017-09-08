@@ -8,6 +8,26 @@ T13050.hs:4:9: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T13050.hs:4:5)
         x :: Int (bound at T13050.hs:4:3)
         f :: Int -> Int -> Int (bound at T13050.hs:4:1)
+      Valid substitutions include
+        (-) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Base’))
+        (*) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        subtract :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        (Some substitutions suppressed; use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
 
 T13050.hs:5:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Int -> Int -> Int
@@ -20,6 +40,22 @@ T13050.hs:5:11: warning: [-Wtyped-holes (in -Wdefault)]
         g :: Int -> Int -> Int (bound at T13050.hs:5:1)
       Valid substitutions include
         f :: Int -> Int -> Int (defined at T13050.hs:4:1)
+        (-) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Base’))
+        (*) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        (Some substitutions suppressed; use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
 
 T13050.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _a :: Int -> Int -> Int
@@ -34,3 +70,16 @@ T13050.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
       Valid substitutions include
         f :: Int -> Int -> Int (defined at T13050.hs:4:1)
         g :: Int -> Int -> Int (defined at T13050.hs:5:1)
+        (-) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Base’))
+        (*) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at T13050.hs:1:8-17
+           (and originally defined in ‘GHC.Num’))
+        (Some substitutions suppressed; use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
