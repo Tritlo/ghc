@@ -1138,24 +1138,25 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                   2 (vcat (map (ppr_sub rdr_env) substitutions)
                     $$ ppWhen discards subsDiscardMsg) }
   where
+    -- We extract the type of the hole from the constraint.
     hole_ty :: TcPredType
     hole_ty = ctEvPred (ctEvidence ct)
     hole_loc = ctEvLoc $ ctEvidence ct
     hole_env = ctLocEnv $ hole_loc
     hole_lvl = ctLocLevel $ hole_loc
 
+    -- This wraps the type with the constraints (via ic_given) in the
+    -- implication, according to the variables mentioned (via ic_skols)
+    -- in the implication.
     wrapType :: Type -> Implication -> Type
     wrapType ty (Implic {ic_skols = skols, ic_given=givens}) =
       wrapWithAllSkols $ mkFunTys (map idType givens) $ ty
-      -- mkForAllTys skols Specified $ mkFunTy (map idType givens) ty
       where forAllTy :: Type -> TyVar -> Type
             forAllTy ty tv = mkForAllTy tv Specified ty
             wrapWithAllSkols ty = foldl forAllTy ty skols
 
-    -- We get more and more exact types as we wrap the type with more
-    -- implications. Checking for fits in reverse order by this list
-    -- allows us to have suggestions that are more relevant higher
-    -- on the list of suggestions.
+    -- For checking, we wrap the type of the hole with all the givens
+    -- from all the implications in the context.
     wrapped_hole_ty :: TcSigmaType
     wrapped_hole_ty = foldl wrapType hole_ty implics
 
@@ -1179,6 +1180,8 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     shouldBeSkipped :: GlobalRdrElt -> Bool
     shouldBeSkipped el = (occName $ gre_name el) `elemOccSet` relBindSet
 
+    -- For pretty printing, we look up the name and type of the substitution
+    -- we found.
     ppr_sub :: GlobalRdrEnv -> Id -> SDoc
     ppr_sub rdr_env id = case lookupGRE_Name rdr_env (idName id) of
         Just elt -> sep [ idAndTy, nest 2 (parens $ pprNameProvenance elt)]
@@ -1225,7 +1228,7 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                                  }
 
 
-
+-- We don't (as of yet) handle holes in types, only in expressions.
 validSubstitutions _ _ = return empty
 
 
