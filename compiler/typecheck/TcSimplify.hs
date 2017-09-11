@@ -9,6 +9,7 @@ module TcSimplify(
        simplifyInteractive, solveEqualities,
        simplifyWantedsTcM,
        tcCheckSatisfiability,
+       tcSubsumes,
 
        -- For Rules we need these
        solveWanteds, solveWantedsAndDrop,
@@ -42,6 +43,7 @@ import TrieMap       () -- DV: for now
 import Type
 import TysWiredIn    ( liftedRepTy )
 import Unify         ( tcMatchTyKi )
+import TcUnify       ( tcSubType_NC )
 import Util
 import Var
 import VarSet
@@ -478,6 +480,22 @@ simplifyDefault theta
        ; reportAllUnsolved unsolved
        ; traceTc "reportUnsolved }" empty
        ; return () }
+
+tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
+-- Reports whether one type subsumes another, discarding any errors
+-- Note: Make sure the types contain all constraints present in
+-- the associated implications.
+tcSubsumes hole_ty ty | hole_ty `eqType` ty = return True
+tcSubsumes hole_ty ty = discardErrs $
+ do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
+                           tcSubType_NC ExprSigCtxt ty hole_ty
+    ; (rem, _) <- runTcS (simpl_top wanted)
+    -- We don't want any insoluble or simple constraints left,
+    -- but solved implications are ok (and neccessary for e.g. undefined)
+    ; return (isEmptyBag (wc_simple rem)
+         && isEmptyBag (wc_insol rem)
+         && allBag (isSolvedStatus . ic_status) (wc_impl rem))
+    }
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool
