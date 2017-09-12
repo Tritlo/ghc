@@ -62,19 +62,12 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         z :: [a] -> [a] (bound at holes.hs:11:1)
       Valid substitutions include
         f :: forall t. t (defined at holes.hs:3:1)
-        (-) :: forall a. Num a => a -> a -> a
+        g :: Int -> Char (defined at holes.hs:6:1)
+        toEnum :: forall a. Enum a => Int -> a
           (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        const :: forall a b. a -> b -> a
+           (and originally defined in ‘GHC.Enum’))
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
           (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Base’))
-        asTypeOf :: forall a. a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Base’))
-        pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Base’))
-        return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Base’))
-        (Some substitutions suppressed; use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
+           (and originally defined in ‘GHC.Err’))

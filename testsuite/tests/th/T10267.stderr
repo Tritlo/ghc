@@ -28,8 +28,8 @@ T10267.hs:8:1: error:
       In an equation for ‘i’: i = _foo
     • Relevant bindings include i :: a -> a (bound at T10267.hs:8:1)
       Valid substitutions include
-        k :: forall a. a -> a (defined at T10267.hs:14:3)
         l :: forall a. a -> a (defined at T10267.hs:23:3)
+        k :: forall a. a -> a (defined at T10267.hs:14:3)
         foo :: forall a. a -> a (defined at T10267.hs:33:1)
         id :: forall a. a -> a
           (imported from ‘Prelude’ at T10267.hs:3:8-13
