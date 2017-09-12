@@ -58,4 +58,18 @@ valid_substitutions.hs:19:8: warning: [-Wtyped-holes (in -Wdefault)]
           (imported qualified from ‘System.IO’ at valid_substitutions.hs:4:1-26)
         putStrLn :: String -> IO ()
           (imported qualified from ‘System.IO’ at valid_substitutions.hs:4:1-26)
-        (Some substitutions suppressed; use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
+        readIO :: forall a. Read a => String -> IO a
+          (imported qualified from ‘System.IO’ at valid_substitutions.hs:4:1-26)
+        error :: forall (a :: TYPE r).
+                 GHC.Stack.Types.HasCallStack =>
+                 [Char] -> a
+          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-30
+           (and originally defined in ‘GHC.Err’))
+        errorWithoutStackTrace :: forall (a :: TYPE r). [Char] -> a
+          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-30
+           (and originally defined in ‘GHC.Err’))
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-30
+           (and originally defined in ‘GHC.Err’))
