@@ -481,14 +481,16 @@ simplifyDefault theta
        ; traceTc "reportUnsolved }" empty
        ; return () }
 
+-- | Reports whether first type (ty_a) subsumes the second type (ty_b),
+-- discarding any errors. Subsumption here means that the ty_b can fit into the
+-- ty_a, i.e. `tcSubsumes a b == True` if b is a subtype of a.
+-- N.B.: Make sure that the types contain all the constraints
+-- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
--- Reports whether one type subsumes another, discarding any errors
--- Note: Make sure the types contain all constraints present in
--- the associated implications.
-tcSubsumes hole_ty ty | hole_ty `eqType` ty = return True
-tcSubsumes hole_ty ty = discardErrs $
+tcSubsumes ty_a ty_b | ty_a `eqType` ty_b = return True
+tcSubsumes ty_a ty_b = discardErrs $
  do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
-                           tcSubType_NC ExprSigCtxt ty hole_ty
+                           tcSubType_NC ExprSigCtxt ty_b ty_a
     ; (rem, _) <- runTcS (simpl_top wanted)
     -- We don't want any insoluble or simple constraints left,
     -- but solved implications are ok (and neccessary for e.g. undefined)

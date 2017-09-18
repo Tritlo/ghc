@@ -45,7 +45,7 @@ import ErrUtils         ( ErrMsg, errDoc, pprLocErrMsg )
 import BasicTypes
 import ConLike          ( ConLike(..))
 import Util
-import TcEnv (tcLookup)
+import TcEnv (tcLookupIdMaybe)
 import {-# SOURCE #-} TcSimplify ( tcSubsumes )
 import FastString
 import Outputable
@@ -59,7 +59,7 @@ import FV ( fvVarList, unionFV )
 
 import Control.Monad    ( when )
 import Data.Foldable    ( toList )
-import Data.List        ( partition, mapAccumL, nub, sortBy, unfoldr )
+import Data.List        ( partition, mapAccumL, nub, sortBy, unfoldr, foldl')
 import qualified Data.Set as Set
 
 import Data.Semigroup   ( Semigroup )
@@ -1145,20 +1145,11 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     hole_env = ctLocEnv $ hole_loc
     hole_lvl = ctLocLevel $ hole_loc
 
-    -- This wraps the type with the constraints (via ic_given) in the
-    -- implication, according to the variables mentioned (via ic_skols)
-    -- in the implication.
-    wrapType :: Type -> Implication -> Type
-    wrapType ty (Implic {ic_skols = skols, ic_given=givens}) =
-      wrapWithAllSkols $ mkFunTys (map idType givens) $ ty
-      where forAllTy :: Type -> TyVar -> Type
-            forAllTy ty tv = mkForAllTy tv Specified ty
-            wrapWithAllSkols ty = foldl forAllTy ty skols
 
     -- For checking, we wrap the type of the hole with all the givens
     -- from all the implications in the context.
     wrapped_hole_ty :: TcSigmaType
-    wrapped_hole_ty = foldl wrapType hole_ty implics
+    wrapped_hole_ty = foldl' wrapType hole_ty implics
 
 
     -- We rearrange the elements to make locals appear at the top of the list,
@@ -1167,7 +1158,7 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     localsFirst elts = lcl ++ gbl
       where (lcl, gbl) = partition gre_lcl elts
 
-    -- The set of relative bindings. We use it to make sure we don't repeat
+    -- The set of relevant bindings. We use it to make sure we don't repeat
     -- ids from the relevant bindings again in the suggestions.
     relBindSet :: OccSet
     relBindSet =  mkOccSet $ map getBndrOcc $ tcl_bndrs hole_env
@@ -1217,15 +1208,6 @@ validSubstitutions (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
               }
       where discard_it = go_ subs maxleft elts
             keep_it id = go_ (id:subs) ((\n -> n - 1) <$> maxleft) elts
-            -- Does the same as tcLookupId, but returns a Maybe instead of
-            -- crashing.
-            tcLookupIdMaybe :: Name -> TcM (Maybe Id)
-            tcLookupIdMaybe name = do { thing <- tcLookup name
-                                 ; case thing of
-                                     ATcId { tct_id = id} -> return $ Just id
-                                     AGlobal (AnId id)    -> return $ Just id
-                                     _                    -> return Nothing
-                                 }
 
 
 -- We don't (as of yet) handle holes in types, only in expressions.
