@@ -58,6 +58,7 @@ import Control.Monad
 import Data.Foldable      ( toList )
 import Data.List          ( partition )
 import Data.List.NonEmpty ( NonEmpty(..) )
+import Data.Maybe         ( isJust )
 
 {-
 *********************************************************************************
@@ -489,22 +490,27 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes = tcCheckHoleFit emptyBag
+tcSubsumes ty_a ty_b = isJust <$> tcCheckHoleFit emptyBag ty_a ty_b
 
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
 -- perform unification
-tcCheckHoleFit :: Cts -> TcSigmaType -> TcSigmaType -> TcM Bool
-tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty = return True
+tcCheckHoleFit :: Cts -> TcSigmaType -> TcSigmaType -> TcM (Maybe Int)
+tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty
+  = return (Just (-1))
 tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
  do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
-    ; (rem, _) <- runTcS (simpl_top $ addSimples wanted relevantCts)
+    ; (rem, steps) <- runTcSDeriveds $
+                     do { rem <- (simpl_top $ addSimples wanted relevantCts)
+                        ; steps <- readStepCountTcS
+                        ; return (rem, steps) }
     -- We don't want any insoluble or simple constraints left,
     -- but solved implications are ok (and neccessary for e.g. undefined)
-    ; return (isEmptyBag (wc_simple rem)
+    ; if (isEmptyBag (wc_simple rem)
               && allBag (isSolvedStatus . ic_status) (wc_impl rem))
+         then return $ Just steps else return Nothing
     }
 
 ------------------

@@ -43,8 +43,8 @@ holes.hs:8:5: warning: [-Wtyped-holes (in -Wdefault)]
       In an equation for ‘h’: h = _ ++ "a"
     • Relevant bindings include h :: [Char] (bound at holes.hs:8:1)
       Valid substitutions include
-        f :: forall t. t (defined at holes.hs:3:1)
         h :: [Char] (defined at holes.hs:8:1)
+        f :: forall t. t (defined at holes.hs:3:1)
         mempty :: forall a. Monoid a => a
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.Base’))
@@ -68,6 +68,11 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         g :: Int -> Char (defined at holes.hs:6:1)
         h :: [Char] (defined at holes.hs:8:1)
         z :: forall a. [a] -> [a] (defined at holes.hs:11:1)
+        undefined :: forall (a :: TYPE r).
+                     GHC.Stack.Types.HasCallStack =>
+                     a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Err’))
         Left :: forall a b. a -> Either a b
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘Data.Either’))
@@ -95,9 +100,6 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         GT :: Ordering
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.Types’))
-        (-) :: forall a. Num a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
         (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.Base’))
@@ -149,197 +151,6 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         until :: forall a. (a -> Bool) -> (a -> a) -> a -> a
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.Base’))
-        (**) :: forall a. Floating a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        acos :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        acosh :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        asin :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        asinh :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        atan :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        atan2 :: forall a. RealFloat a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        atanh :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        cos :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        cosh :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        decodeFloat :: forall a. RealFloat a => a -> (Integer, Int)
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        encodeFloat :: forall a. RealFloat a => Integer -> Int -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        exp :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        exponent :: forall a. RealFloat a => a -> Int
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        floatDigits :: forall a. RealFloat a => a -> Int
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        floatRadix :: forall a. RealFloat a => a -> Integer
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        floatRange :: forall a. RealFloat a => a -> (Int, Int)
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        isDenormalized :: forall a. RealFloat a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        isIEEE :: forall a. RealFloat a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        isInfinite :: forall a. RealFloat a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        isNaN :: forall a. RealFloat a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        isNegativeZero :: forall a. RealFloat a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        log :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        logBase :: forall a. Floating a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        pi :: forall a. Floating a => a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        scaleFloat :: forall a. RealFloat a => Int -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        significand :: forall a. RealFloat a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        sin :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        sinh :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        sqrt :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        tan :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        tanh :: forall a. Floating a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Float’))
-        (*) :: forall a. Num a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        (+) :: forall a. Num a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        abs :: forall a. Num a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        fromInteger :: forall a. Num a => Integer -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        negate :: forall a. Num a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        signum :: forall a. Num a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        subtract :: forall a. Num a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Num’))
-        (/) :: forall a. Fractional a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        (^^) :: forall a b. (Fractional a, Integral b) => a -> b -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        ceiling :: forall a. RealFrac a => forall b. Integral b => a -> b
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        div :: forall a. Integral a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        divMod :: forall a. Integral a => a -> a -> (a, a)
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        even :: forall a. Integral a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        floor :: forall a. RealFrac a => forall b. Integral b => a -> b
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        fromIntegral :: forall a b. (Integral a, Num b) => a -> b
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        fromRational :: forall a. Fractional a => Rational -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        gcd :: forall a. Integral a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        lcm :: forall a. Integral a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        mod :: forall a. Integral a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        odd :: forall a. Integral a => a -> Bool
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        properFraction :: forall a.
-                          RealFrac a =>
-                          forall b. Integral b => a -> (b, a)
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        quot :: forall a. Integral a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        quotRem :: forall a. Integral a => a -> a -> (a, a)
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        realToFrac :: forall a b. (Real a, Fractional b) => a -> b
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        recip :: forall a. Fractional a => a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        rem :: forall a. Integral a => a -> a -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        round :: forall a. RealFrac a => forall b. Integral b => a -> b
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        toInteger :: forall a. Integral a => a -> Integer
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        toRational :: forall a. Real a => a -> Rational
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
-        truncate :: forall a. RealFrac a => forall b. Integral b => a -> b
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Real’))
         showChar :: Char -> ShowS
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.Show’))
@@ -391,17 +202,7 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         words :: String -> [String]
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘base-4.11.0.0:Data.OldList’))
-        error :: forall (a :: TYPE r).
-                 GHC.Stack.Types.HasCallStack =>
-                 [Char] -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Err’))
         errorWithoutStackTrace :: forall (a :: TYPE r). [Char] -> a
-          (imported from ‘Prelude’ at holes.hs:1:8-12
-           (and originally defined in ‘GHC.Err’))
-        undefined :: forall (a :: TYPE r).
-                     GHC.Stack.Types.HasCallStack =>
-                     a
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.Err’))
         ioError :: forall a. IOError -> IO a
@@ -513,3 +314,202 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         zip :: forall a b. [a] -> [b] -> [(a, b)]
           (imported from ‘Prelude’ at holes.hs:1:8-12
            (and originally defined in ‘GHC.List’))
+        error :: forall (a :: TYPE r).
+                 GHC.Stack.Types.HasCallStack =>
+                 [Char] -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Err’))
+        (-) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        pi :: forall a. Floating a => a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        (*) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        abs :: forall a. Num a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        fromInteger :: forall a. Num a => Integer -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        negate :: forall a. Num a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        signum :: forall a. Num a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        subtract :: forall a. Num a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Num’))
+        (/) :: forall a. Fractional a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        fromRational :: forall a. Fractional a => Rational -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        recip :: forall a. Fractional a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        (**) :: forall a. Floating a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        acos :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        acosh :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        asin :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        asinh :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        atan :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        atanh :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        cos :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        cosh :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        exp :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        log :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        logBase :: forall a. Floating a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        sin :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        sinh :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        sqrt :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        tan :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        tanh :: forall a. Floating a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        toRational :: forall a. Real a => a -> Rational
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        div :: forall a. Integral a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        divMod :: forall a. Integral a => a -> a -> (a, a)
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        even :: forall a. Integral a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        gcd :: forall a. Integral a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        lcm :: forall a. Integral a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        mod :: forall a. Integral a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        odd :: forall a. Integral a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        quot :: forall a. Integral a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        quotRem :: forall a. Integral a => a -> a -> (a, a)
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        rem :: forall a. Integral a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        toInteger :: forall a. Integral a => a -> Integer
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        realToFrac :: forall a b. (Real a, Fractional b) => a -> b
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        fromIntegral :: forall a b. (Integral a, Num b) => a -> b
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        (^^) :: forall a b. (Fractional a, Integral b) => a -> b -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        atan2 :: forall a. RealFloat a => a -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        decodeFloat :: forall a. RealFloat a => a -> (Integer, Int)
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        encodeFloat :: forall a. RealFloat a => Integer -> Int -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        exponent :: forall a. RealFloat a => a -> Int
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        floatDigits :: forall a. RealFloat a => a -> Int
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        floatRadix :: forall a. RealFloat a => a -> Integer
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        floatRange :: forall a. RealFloat a => a -> (Int, Int)
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        isDenormalized :: forall a. RealFloat a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        isIEEE :: forall a. RealFloat a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        isInfinite :: forall a. RealFloat a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        isNaN :: forall a. RealFloat a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        isNegativeZero :: forall a. RealFloat a => a -> Bool
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        scaleFloat :: forall a. RealFloat a => Int -> a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        significand :: forall a. RealFloat a => a -> a
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Float’))
+        ceiling :: forall a. RealFrac a => forall b. Integral b => a -> b
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        floor :: forall a. RealFrac a => forall b. Integral b => a -> b
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        properFraction :: forall a.
+                          RealFrac a =>
+                          forall b. Integral b => a -> (b, a)
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        round :: forall a. RealFrac a => forall b. Integral b => a -> b
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))
+        truncate :: forall a. RealFrac a => forall b. Integral b => a -> b
+          (imported from ‘Prelude’ at holes.hs:1:8-12
+           (and originally defined in ‘GHC.Real’))

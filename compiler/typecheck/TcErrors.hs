@@ -1153,9 +1153,8 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
      ; dflags <- getDynFlags
      ; traceTc "findingValidSubstitutionsFor {" $ ppr wrapped_hole_ty
      ; (discards, substitutions) <-
-        setTcLevel hole_lvl $
-         go (maxValidSubstitutions dflags) $
-          localsFirst $ globalRdrEnvElts rdr_env
+       fmap (sortFitsAndLimit (maxValidSubstitutions dflags)) $
+        setTcLevel hole_lvl $ go $ globalRdrEnvElts rdr_env
      ; traceTc "}" empty
      ; return $ ppUnless (null substitutions) $
                  hang (text "Valid substitutions include")
@@ -1174,16 +1173,12 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     wrapped_hole_ty :: TcSigmaType
     wrapped_hole_ty = foldl' wrapTypeWithImplication hole_ty implics
 
-    -- We rearrange the elements to make locals appear at the top of the list,
-    -- since they're most likely to be relevant to the user
-    localsFirst :: [GlobalRdrElt] -> [GlobalRdrElt]
-    localsFirst elts = lcl ++ gbl
-      where (lcl, gbl) = partition gre_lcl elts
 
     -- For pretty printing, we look up the name and type of the substitution
     -- we found.
-    ppr_sub :: (GlobalRdrElt, Id) -> SDoc
-    ppr_sub (elt, id) = sep [ idAndTy , nest 2 (parens $ pprNameProvenance elt)]
+    ppr_sub :: (Int, GlobalRdrElt, Id) -> SDoc
+    ppr_sub (_, elt, id) = sep [ idAndTy
+                               , nest 2 (parens $ pprNameProvenance elt)]
       where name = gre_name elt
             ty = varType id
             idAndTy = (pprPrefixOcc name <+> dcolon <+> pprType ty)
@@ -1231,7 +1226,7 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- To check: Clone all relevant cts and the hole
     -- then solve the subsumption check AND check that all other
     -- the other constraints were solved.
-    fitsHole :: Type -> TcM Bool
+    fitsHole :: Type -> TcM (Maybe Int)
     fitsHole typ =
       do { traceTc "checkingFitOf {" $ ppr typ
          ; cloneSub <- getHoleCloningSubst
@@ -1241,31 +1236,50 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
          ; traceTc "}" empty
          ; return fits}
 
-    -- Kickoff the checking of the elements. The first argument
-    -- is a counter, so that we stop after finding functions up to
-    -- the limit the user gives us.
-    go :: Maybe Int -> [GlobalRdrElt] -> TcM (Bool, [(GlobalRdrElt, Id)])
+    -- We sort our findings by how many steps it took for the constraint solver
+    -- to check that a fit fit the hole. This makes "more far fetched" fits
+    -- appear lower in the list of valid substitutions. We also make sure
+    -- that local identifiers appear first.
+    sortFitsAndLimit :: Maybe Int
+                     -> [(Int, GlobalRdrElt, Id)]
+                     -> (Bool, [(Int, GlobalRdrElt, Id)])
+    sortFitsAndLimit maxfits fits =
+      case maxfits of
+        Just max -> (length fits > max, take max sorted)
+        _ -> (False, sorted)
+      where sorted = localsFirst fits
+            -- We sort by the number of steps it took to find the element, but
+            -- we reverse the list first, so that elements that have the same
+            -- score appear in the same order as they are defined in.
+            sortBySteps = sortWith (\(s, _,_) -> s) . reverse
+            localsFirst :: [(Int, GlobalRdrElt, Id)]
+                        -> [(Int, GlobalRdrElt, Id)]
+            localsFirst elts = (sortBySteps lcl) ++ (sortBySteps gbl)
+              where (lcl, gbl) = partition (\(_, el,_) -> gre_lcl el) elts
+
+    -- Kickoff the checking of the elements.
+    go :: [GlobalRdrElt] -> TcM ([(Int, GlobalRdrElt, Id)])
     go = go_ []
 
-    -- We iterate over the elements, checking each one in turn. If
-    -- we've already found -fmax-valid-substitutions=n elements, we
-    -- look no further.
-    go_ :: [(GlobalRdrElt,Id)] -- What we've found so far.
-        -> Maybe Int           -- How many we're allowed to find, if limited.
+    -- We iterate over the elements, checking each one in turn for whether it
+    -- fits, and adding it to the results if it does.
+    go_ :: [(Int, GlobalRdrElt,Id)] -- What we've found so far.
         -> [GlobalRdrElt]      -- The elements we've yet to check.
-        -> TcM (Bool, [(GlobalRdrElt, Id)])
-    go_ subs _ [] = return (False, reverse subs)
-    go_ subs (Just 0) _ = return (True, reverse subs)
-    go_ subs maxleft (el:elts) =
+        -> TcM ([(Int, GlobalRdrElt, Id)])
+    go_ subs [] = return subs
+    go_ subs (el:elts) =
       do { traceTc "lookingUp" $ ppr el
          ; maybeThing <- lookup (gre_name el)
          ; case maybeThing of
              Just id -> do { fits <- fitsHole (varType id)
-                           ; if fits then (keep_it id) else discard_it }
+                           ; case fits of
+                               Just steps -> keep_it id steps
+                               _ -> discard_it
+                           }
              _ -> discard_it
          }
-      where discard_it = go_ subs maxleft elts
-            keep_it id = go_ ((el,id):subs) ((\n -> n - 1) <$> maxleft) elts
+      where discard_it = go_ subs elts
+            keep_it id steps = go_ ((steps, el, id):subs) elts
             lookup name =
               do { thing <- tcLookup name
                  ; case thing of
@@ -1337,45 +1351,47 @@ The hole in `f` would generate the message:
     In an equation for ‘f’: f = _ "hello, world"
   • Relevant bindings include f :: [String] (bound at test.hs:6:1)
     Valid substitutions include
-      inits :: forall a. [a] -> [[a]]
-        (imported from ‘Data.List’ at test.hs:3:19-23
-         (and originally defined in ‘base-4.11.0.0:Data.OldList’))
-      return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      fail :: forall (m :: * -> *). Monad m => forall a. String -> m a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      mempty :: forall a. Monoid a => a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      read :: forall a. Read a => String -> a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘Text.Read’))
       lines :: String -> [String]
         (imported from ‘Prelude’ at test.hs:1:8-11
          (and originally defined in ‘base-4.11.0.0:Data.OldList’))
       words :: String -> [String]
         (imported from ‘Prelude’ at test.hs:1:8-11
          (and originally defined in ‘base-4.11.0.0:Data.OldList’))
-      error :: forall (a :: TYPE r). GHC.Stack.Types.HasCallStack => [Char] -> a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Err’))
+      inits :: forall a. [a] -> [[a]]
+        (imported from ‘Data.List’ at test.hs:3:19-23
+         (and originally defined in ‘base-4.11.0.0:Data.OldList’))
       errorWithoutStackTrace :: forall (a :: TYPE r). [Char] -> a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Err’))
-      undefined :: forall (a :: TYPE r). GHC.Stack.Types.HasCallStack => a
         (imported from ‘Prelude’ at test.hs:1:8-11
          (and originally defined in ‘GHC.Err’))
       repeat :: forall a. a -> [a]
         (imported from ‘Prelude’ at test.hs:1:8-11
          (and originally defined in ‘GHC.List’))
+      return :: forall (m :: * -> *). Monad m => forall a. a -> m a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘GHC.Base’))
+      fail :: forall (m :: * -> *). Monad m => forall a. String -> m a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘GHC.Base’))
+      pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘GHC.Base’))
+      error :: forall (a :: TYPE r). GHC.Stack.Types.HasCallStack => [Char] -> a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘GHC.Err’))
+      undefined :: forall (a :: TYPE r). GHC.Stack.Types.HasCallStack => a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘GHC.Err’))
+      mempty :: forall a. Monoid a => a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘GHC.Base’))
+      read :: forall a. Read a => String -> a
+        (imported from ‘Prelude’ at test.hs:1:8-11
+         (and originally defined in ‘Text.Read’))
+
 
 Valid substitutions are found by checking top level identifiers in scope for
-whether their type is subsumed by the type of the hole. Additionally, as
+whether their type is subsumed by the type of the hole, and if so, how many
+steps the simplifier took in simplifying the hole. Additionally, as
 highlighted by Trac #14273, we also need to check whether all relevant
 constraints are solved by choosing an identifier of that type as well. This is
 to make sure we don't suggest a substitution which does not fulfill the
@@ -1385,7 +1401,12 @@ variables are all mentioned by the type of the hole. Since checking for
 subsumption results in the side effect of type variables being unified by the
 simplifier, we need to take care to clone the variables in the hole and relevant
 constraints before checking whether an identifier fits into the hole, to avoid
-affecting the hole and later checks.
+affecting the hole and later checks. When outputting, we sort the found fits for
+the hole such that local identifiers appear before imported identifiers, and by
+how many steps it took for the simplifier to resolve the subsumption check and
+relevant constraints. This is done to have some metric for the "relevance" of
+the identifier and to show more relevant identifiers before more far-fetched
+ones.
 
 
 Note [Constraints include ...]

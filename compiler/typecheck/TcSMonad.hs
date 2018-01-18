@@ -22,7 +22,7 @@ module TcSMonad (
 
     -- Tracing etc
     panicTcS, traceTcS,
-    traceFireTcS, bumpStepCountTcS, csTraceTcS,
+    traceFireTcS, bumpStepCountTcS, readStepCountTcS, csTraceTcS,
     wrapErrTcS, wrapWarnTcS,
 
     -- Evidence creation and transformation
@@ -2422,6 +2422,9 @@ instance HasDynFlags TcS where
 
 getGlobalRdrEnvTcS :: TcS GlobalRdrEnv
 getGlobalRdrEnvTcS = wrapTcS TcM.getGlobalRdrEnv
+
+readStepCountTcS :: TcS Int
+readStepCountTcS = TcS (TcM.readTcRef . tcs_count)
 
 bumpStepCountTcS :: TcS ()
 bumpStepCountTcS = TcS $ \env -> do { let ref = tcs_count env
