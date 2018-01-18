@@ -556,6 +556,17 @@ by saying ``-fno-wombat``.
     they may be numerous), but ``-fno-max-relevant-bindings`` includes
     them too.
 
+.. ghc-flag:: -fno-show-valid-substitutions
+    :shortdesc: Disables showing a list of valid substitutions for typed holes
+        in type error messages.
+    :type: dynamic
+    :category:
+
+    :default: off
+
+    The type checker sometimes displays a list of valid substitutions
+    for typed holes in error messages. This can be toggled off with this flag.
+
 .. ghc-flag:: -fmax-valid-substitutions=⟨n⟩
     :shortdesc: *default: 6.* Set the maximum number of valid substitutions for
         typed holes to display in type error messages.
@@ -569,6 +580,20 @@ by saying ``-fno-wombat``.
     for typed holes in error messages, but only up to some maximum number,
     set by this flag. Turning it off with
     ``-fno-max-valid-substitutions`` gives an unlimited number.
+
+.. ghc-flag:: -fno-sort-valid-substitutions
+    :shortdesc: Disables the sorting of the list of valid substitutions for
+        typed holes in type error messages according to the subsumption graph
+        of the substitutions that fit that hole.
+    :type: dynamic
+    :category:
+
+    :default: off
+
+    The type checker sometimes displays a list of valid substitutions
+    for typed holes in error messages, and by default, it is sorted by a
+    topological sort on the subsumption graph of the identified substitutions.
+    This can be toggled off with this flag.
 
 .. ghc-flag:: -fmax-uncovered-patterns=⟨n⟩
     :shortdesc: *default: 4.* Set the maximum number of patterns to display in
