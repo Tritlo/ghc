@@ -1181,6 +1181,10 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                 -- We split the fits into localFits and globalFits and show
                 -- local fit before global fits, since they are probably more
                 -- relevant to the user.
+               --; traceTc "relevantCts were" $ ppr relevantCts
+               ; traceTc "hole was" $ ppr ct
+               ; traceTc "implics were" $ ppr implics
+               ; traceTc "inferred constraints were" $ ppr inferredConstraints
                ; let (lclFits, gblFits) = partition (gre_lcl . hfEl) subs
                ; (discards, sortedSubs) <-
                    -- We sort the fits first, to prevent the order of
@@ -1203,6 +1207,19 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     hole_loc = ctEvLoc $ ctEvidence ct
     hole_lvl = ctLocLevel $ hole_loc
     hole_fvs = tyCoFVsOfType hole_ty
+
+
+    -- We find which constraints are inferred, so that we can apply
+    -- tighter constraints than those inferred and see if that would work.
+    inferredConstraints :: [PredType]
+    inferredConstraints = concat (mapMaybe tyToPreds inferredTypes)
+        where tyToPreds :: Type -> Maybe [PredType]
+              tyToPreds ty = filter isPredTy <$> (tyConAppArgs_maybe ty)
+              getInferred :: SkolemInfo -> [TcType]
+              getInferred (InferSkol infs) = map snd infs
+              getInferred _ = []
+              inferredTypes :: [TcType]
+              inferredTypes = concatMap (getInferred . ic_info) implics
 
     -- For checking, we wrap the type of the hole with all the givens
     -- from all the implications in the context.
@@ -1274,9 +1291,13 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
          ; cloneSub <- getHoleCloningSubst
          ; let cHoleTy = substTy cloneSub wrapped_hole_ty
                cCts = map (applySubToCt cloneSub) relevantCts
-         ; fits <- tcCheckHoleFit (listToBag cCts) cHoleTy typ
+         ; fits <- tcCheckHoleFit True (listToBag cCts) cHoleTy typ
+         ; unlessM (return $ isEmptyBag fits) $
+            do { traceTc "rems were" $ ppr fits
+               ; traceTc "substWas" $ ppr cloneSub
+               ; traceTc "inferred were" $ ppr $ map (substTy cloneSub) inferredConstraints}
          ; traceTc "}" empty
-         ; return fits}
+         ; return $ isEmptyBag fits}
 
 
     -- Based on the flags, we might possibly discard some or all the

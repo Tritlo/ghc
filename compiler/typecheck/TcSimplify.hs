@@ -489,24 +489,50 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes = tcCheckHoleFit emptyBag
+tcSubsumes ty_a ty_b = isEmptyBag <$> tcCheckHoleFit False emptyBag ty_a ty_b
 
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
--- perform unification.
-tcCheckHoleFit :: Cts -> TcSigmaType -> TcSigmaType -> TcM Bool
-tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty = return True
-tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
+-- perform unification. Returns any unsolved implications if additional
+-- evidence might help.
+tcCheckHoleFit :: Bool        -- Check if tighter constraints would help.
+               -> Cts         -- Any relevant constraints we need to solve.
+               -> TcSigmaType -- The type of the hole.
+               -> TcSigmaType -- The type to check whether fits.
+               -> TcM (Bag Implication) -- Any unsolved implications are
+                                        -- returned.
+tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty = return emptyBag
+tcCheckHoleFit tighten relevantCts hole_ty ty = discardErrs $
  do { (_, wanted, _) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
-    ; rem <- runTcSDeriveds $
-               simpl_top $ addSimples wanted relevantCts
-    -- We don't want any insoluble or simple constraints left,
-    -- but solved implications are ok (and neccessary for e.g. undefined)
-    ; return (isEmptyBag (wc_simple rem)
-              && allBag (isSolvedStatus . ic_status) (wc_impl rem))
-    }
+    ; rem <- runTcSDeriveds $ simpl_top $ addSimples wanted relevantCts
+    ; let noSimples = isEmptyBag (wc_simple rem)
+          allSolved = allBag (isSolvedStatus . ic_status) (wc_impl rem)
+    -- We don't want any simple constraints left, but solved implications are
+    -- ok (and neccessary for e.g. undefined).
+    ; if (noSimples && not allSolved) then
+        do { let unSolSimps =
+                   wc_simple $ foldr (andWC . ic_wanted) emptyWC (wc_impl rem)
+                 cdc c@(CDictCan {}) = [c]
+                 cdc _ = []
+                 canDs = concatMap cdc $ bagToList unSolSimps
+           ; sups <- runTcSDeriveds $ makeSuperClasses canDs
+           ; traceTc "pending scs were" $ ppr $ canDs
+           ; traceTc "sups were" $ ppr sups
+           ; traceTc "preds were" $ ppr $ mapMaybeBag implPred (wc_impl rem)
+           ; if tighten
+             then do { rev <- anyBagM (flip tcSubsumes hole_ty) $ mapMaybeBag implPred (wc_impl rem)
+                       ; traceTc "revSubSum was" $ ppr rev
+                       ; if rev then return emptyBag else return (wc_impl rem)}
+             else return (wc_impl rem)}
+       else return emptyBag }
+    where implPred :: Implication -> Maybe Type
+          implPred (Implic {ic_skols=(s:sks), ic_wanted=wanteds}) =
+            Just (mkForAllTy s Specified $ wrapType (mkTyVarTy s) sks $ map ctPred $ bagToList $ wc_simple wanteds)
+          implPred _ = Nothing
+    --; return (if (noSimples && not allSolved) then wc_impl rem else emptyBag) }
+
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool
