@@ -11042,14 +11042,14 @@ for typed holes:
 
 .. ghc-flag:: -funclutter-valid-substitutions
     :shortdesc: Unclutter the list of valid substitutions by not showing
-    provenance of suggestion.
+        provenance of the substitution suggestions.
     :type: dynamic
     :category: verbosity
 
     :default: off
 
     This flag can be toggled to decrease the verbosity of the valid
-    substitution suggestions by not showing the provenance the suggestions.
+    substitution suggestions by not showing the provenance of the suggestions.
 
 .. _partial-type-signatures:
 
