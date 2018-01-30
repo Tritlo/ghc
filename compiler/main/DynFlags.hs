@@ -552,6 +552,7 @@ data GeneralFlag
    | Opt_PprShowTicks
    | Opt_ShowHoleConstraints
    | Opt_NoShowValidSubstitutions
+   | Opt_UnclutterValidSubstitutions
    | Opt_NoSortValidSubstitutions
    | Opt_ShowLoadedModules
 
@@ -3893,6 +3894,7 @@ fFlagsDeps = [
   flagSpec "show-hole-constraints"            Opt_ShowHoleConstraints,
   flagSpec "no-show-valid-substitutions"      Opt_NoShowValidSubstitutions,
   flagSpec "no-sort-valid-substitutions"      Opt_NoSortValidSubstitutions,
+  flagSpec "unclutter-valid-substitutions"    Opt_UnclutterValidSubstitutions,
   flagSpec "show-loaded-modules"              Opt_ShowLoadedModules,
   flagSpec "whole-archive-hs-libs"            Opt_WholeArchiveHsLibs
   ]

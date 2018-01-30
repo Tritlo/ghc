@@ -1169,6 +1169,7 @@ validSubstitutions :: [Ct] -> ReportErrCtxt -> Ct -> TcM SDoc
 validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; maxSubs <- maxValidSubstitutions <$> getDynFlags
+     ; showProvenance <- not <$> goptM Opt_UnclutterValidSubstitutions
      ; sortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
      -- If we're not supposed to output any substitutions, we don't want to do
      -- any work.
@@ -1194,7 +1195,7 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                ; traceTc "}" empty
                ; return $ ppUnless (null sortedSubs) $
                    hang (text "Valid substitutions include")
-                     2 (vcat (map ppr_sub sortedSubs)
+                     2 (vcat (map (ppr_sub showProvenance) sortedSubs)
                         $$ ppWhen discards subsDiscardMsg) } }
   where
     -- We extract the type of the hole from the constraint.
@@ -1218,12 +1219,14 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
 
     -- For pretty printing, we look up the name and type of the substitution
     -- we found.
-    ppr_sub :: HoleFit -> SDoc
-    ppr_sub (HoleFit elt id) = sep [ idAndTy
-                                   , nest 2 (parens $ pprNameProvenance elt)]
+    ppr_sub :: Bool -> HoleFit -> SDoc
+    ppr_sub showProv (HoleFit elt id) = if showProv
+                                        then sep [ idAndTy, nest 2 provenance]
+                                        else idAndTy
       where name = gre_name elt
             ty = varType id
             idAndTy = (pprPrefixOcc name <+> dcolon <+> pprType ty)
+            provenance = parens $ pprNameProvenance elt
 
     -- These are the constraints whose every free unification variable is
     -- mentioned in the type of the hole.
