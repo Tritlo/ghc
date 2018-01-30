@@ -11038,8 +11038,18 @@ for typed holes:
     The list of valid substitutions is limited by displaying up to 6
     substitutions per hole. The number of substitutions shown can be set by this
     flag. Turning the limit off with ``-fno-max-valid-substitutions`` displays
-    all the found substitutions. 
+    all the found substitutions.
 
+.. ghc-flag:: -funclutter-valid-substitutions
+    :shortdesc: Unclutter the list of valid substitutions by not showing
+    provenance of suggestion.
+    :type: dynamic
+    :category: verbosity
+
+    :default: off
+
+    This flag can be toggled to decrease the verbosity of the valid
+    substitution suggestions by not showing the provenance the suggestions.
 
 .. _partial-type-signatures:
 
