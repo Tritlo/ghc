@@ -1165,45 +1165,87 @@ instance Eq HoleFit where
 instance Ord HoleFit where
   compare = compare `on` (gre_name . hfEl)
 
+
+
 -- See Note [Valid substitutions include ...]
 validSubstitutions :: [Ct] -> ReportErrCtxt -> Ct -> TcM SDoc
 validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
-     ; maxSubs <- maxValidSubstitutions <$> getDynFlags
+     ; maxVSubs <- maxValidSubstitutions <$> getDynFlags
      ; showProvenance <- not <$> goptM Opt_UnclutterValidSubstitutions
      ; sortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
-     -- If we're not supposed to output any substitutions, we don't want to do
-     -- any work.
-     ; if maxSubs == Just 0
-       then return empty
-       else do { traceTc "findingValidSubstitutionsFor {" $ ppr wrapped_hole_ty
-               ; let limit = if sortSubs then Nothing else maxSubs
-               ; (discards, subs) <-
-                   setTcLevel hole_lvl $ go limit $ globalRdrEnvElts rdr_env
-                -- We split the fits into localFits and globalFits and show
-                -- local fit before global fits, since they are probably more
-                -- relevant to the user.
-               ; let (lclFits, gblFits) = partition (gre_lcl . hfEl) subs
-               ; (discards, sortedSubs) <-
-                   -- We sort the fits first, to prevent the order of
-                   -- suggestions being effected when identifiers are moved
-                   -- around in modules. We use (<*>) to expose the
-                   -- parallelism, in case it becomes useful later.
-                   if sortSubs then possiblyDiscard maxSubs <$>
-                     ((++) <$> sortByGraph (sort lclFits)
-                           <*> sortByGraph (sort gblFits))
-                   else return (discards, lclFits ++ gblFits)
-               ; traceTc "}" empty
-               ; return $ ppUnless (null sortedSubs) $
-                   hang (text "Valid substitutions include")
-                     2 (vcat (map (ppr_sub showProvenance) sortedSubs)
-                        $$ ppWhen discards subsDiscardMsg) } }
+     ; refLevel <- refLevelSubstitutions <$> getDynFlags
+     ; (discards, subs) <- findSubs sortSubs maxVSubs rdr_env wrapped_hole_ty
+     ; let vMsg = ppUnless (null subs) $
+                    hang (text "Valid substitutions include") 2 $
+                    (vcat (map (ppr_sub showProvenance 0) subs)
+                     $$ ppWhen discards subsDiscardMsg)
+     ; refMsg <- if refLevel >= (Just 0) then
+         do { maxRSubs <- maxRefSubstitutions <$> getDynFlags
+            -- We can use from just, since we know that Nothing >= _ is False.
+            ; let maxRefLvl = fromJust refLevel
+                  refLvls = [1..maxRefLvl]
+            -- We make a new refinement type for each level of refinement, where
+            -- the level of refinement indicates number of additional arguments
+            -- to allow.
+            ; ref_tys <- mapM mkRefTy refLvls
+            ; refDs <- mapM (findSubs sortSubs maxRSubs rdr_env) ref_tys
+            ; let refDiscards = any fst refDs
+                  rMsgs = map (\(l,s) -> (map (ppr_sub showProvenance l) s))
+                              $ zip refLvls $ map snd refDs
+            ; return $
+                ppUnless (all null refDs) $
+                  hang (text "Valid refinement substitutions include") 2 $
+                  (vcat $ map vcat rMsgs)
+                    $$ ppWhen refDiscards refSubsDiscardMsg }
+       else return empty
+     ; return (vMsg $$ refMsg)}
   where
+    hole_loc = ctEvLoc $ ctEvidence ct
+    hole_lvl = ctLocLevel $ hole_loc
+
+    -- We make a refinement type by adding a new type variable in front
+    -- of the type of t h hole, going from e.g. [Integer] -> Integer
+    -- to t_a1/m[tau:1] -> [Integer] -> Integer. This allows the simplifier
+    -- to unify the new type variable with any type, allowing us
+    -- to suggest a "refinement substitution", like `(foldl1 _)` instead
+    -- of only concrete substitutions like `sum`.
+    mkRefTy :: Int -> TcM TcType
+    mkRefTy refLvl = (flip mkFunTys hole_ty) <$> newTyVars
+     where newTyVars :: TcM [TcType]
+           newTyVars = sequence $ replicate refLvl newOpenFlexiTyVarTy
+
+
+    findSubs :: Bool          -- Whether we should sort the subs or not
+             -> Maybe Int     -- How many we should output, if limited.
+             -> GlobalRdrEnv  -- The elements to check whether fit.
+             -> TcType        -- The type to check for fits.
+             -> TcM (Bool, [HoleFit])
+    -- We don't check if no output is desired.
+    findSubs _ (Just 0) _ _ = return (False, [])
+    findSubs sortSubs maxSubs rdr_env hole_ty =
+      do { traceTc "findingValidSubstitutionsFor {" $ ppr $ hole_ty
+         ; let limit = if sortSubs then Nothing else maxSubs
+         -- We split the fits into localFits and globalFits and show
+         -- local fit before global fits, since they are probably more
+         -- relevant to the user.
+         ; (discards, subs) <- setTcLevel hole_lvl $
+                                 go limit hole_ty $ globalRdrEnvElts rdr_env
+         ; let (lclFits, gblFits) = partition (gre_lcl . hfEl) subs
+         ; (discards, sortedSubs) <-
+             -- We sort the fits first, to prevent the order of
+             -- suggestions being effected when identifiers are moved
+             -- around in modules. We use (<*>) to expose the
+             -- parallelism, in case it becomes useful later.
+             if sortSubs then possiblyDiscard maxSubs <$>
+               ((++) <$> sortByGraph (sort lclFits)
+                     <*> sortByGraph (sort gblFits))
+             else return (discards, lclFits ++ gblFits)
+         ; traceTc "}" empty
+         ; return (discards, sortedSubs) }
     -- We extract the type of the hole from the constraint.
     hole_ty :: TcPredType
     hole_ty = ctPred ct
-    hole_loc = ctEvLoc $ ctEvidence ct
-    hole_lvl = ctLocLevel $ hole_loc
     hole_fvs = tyCoFVsOfType hole_ty
 
     -- For checking, we wrap the type of the hole with all the givens
@@ -1220,13 +1262,15 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
 
     -- For pretty printing, we look up the name and type of the substitution
     -- we found.
-    ppr_sub :: Bool -> HoleFit -> SDoc
-    ppr_sub showProv (HoleFit elt id) = if showProv
-                                        then sep [ idAndTy, nest 2 provenance]
-                                        else idAndTy
+    ppr_sub :: Bool -> Int -> HoleFit -> SDoc
+    ppr_sub showProv refLvl (HoleFit elt id) = if showProv
+                                               then sep [ idAndTy
+                                                        , nest 2 provenance]
+                                               else idAndTy
       where name = gre_name elt
             ty = varType id
-            idAndTy = (pprPrefixOcc name <+> dcolon <+> pprType ty)
+            holeVs = hsep $ replicate refLvl $ text "_"
+            idAndTy = (pprPrefixOcc name <+> holeVs <+> dcolon <+> pprType ty)
             provenance = parens $ pprNameProvenance elt
 
     -- These are the constraints whose every free unification variable is
@@ -1254,12 +1298,12 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- constraints. Note that since we only pick constraints such that all their
     -- free variables are mentioned by the hole, the free variables of the hole
     -- are all the free variables of the constraints as well.
-    getHoleCloningSubst :: TcM TCvSubst
-    getHoleCloningSubst = mkTvSubstPrs <$> getClonedVars
+    getHoleCloningSubst :: TcType -> TcM TCvSubst
+    getHoleCloningSubst hole_ty = mkTvSubstPrs <$> getClonedVars
       where cloneFV :: TyVar -> TcM (TyVar, Type)
             cloneFV fv = ((,) fv) <$> newFlexiTyVarTy (varType fv)
             getClonedVars :: TcM [(TyVar, Type)]
-            getClonedVars = mapM cloneFV (fvVarList hole_fvs)
+            getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfType hole_ty)
 
     -- This applies the given substitution to the given constraint.
     applySubToCt :: TCvSubst -> Ct -> Ct
@@ -1272,11 +1316,11 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- To check: Clone all relevant cts and the hole
     -- then solve the subsumption check AND check that all other
     -- the other constraints were solved.
-    fitsHole :: Type -> TcM Bool
-    fitsHole typ =
+    fitsHole :: TcType -> Type -> TcM Bool
+    fitsHole hole_ty typ =
       do { traceTc "checkingFitOf {" $ ppr typ
-         ; cloneSub <- getHoleCloningSubst
-         ; let cHoleTy = substTy cloneSub wrapped_hole_ty
+         ; cloneSub <- getHoleCloningSubst hole_ty
+         ; let cHoleTy = substTy cloneSub hole_ty
                cCts = map (applySubToCt cloneSub) relevantCts
          ; fits <- tcCheckHoleFit (listToBag cCts) cHoleTy typ
          ; traceTc "}" empty
@@ -1310,27 +1354,29 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                  ; go ((id, adjs):sofar) ids }
 
     -- Kickoff the checking of the elements.
-    go :: Maybe Int -> [GlobalRdrElt] -> TcM (Bool, [HoleFit])
+    go :: Maybe Int -> TcType -> [GlobalRdrElt] -> TcM (Bool, [HoleFit])
     go = go_ []
 
     -- We iterate over the elements, checking each one in turn for whether it
     -- fits, and adding it to the results if it does.
     go_ :: [HoleFit]               -- What we've found so far.
         -> Maybe Int               -- How many we're allowed to find, if limited
+        -> TcType                  -- The type to check
         -> [GlobalRdrElt]          -- The elements we've yet to check.
         -> TcM (Bool, [HoleFit])
-    go_ subs _ [] = return (False, reverse subs)
-    go_ subs (Just 0) _ = return (True, reverse subs)
-    go_ subs maxleft (el:elts) =
+    go_ subs _ _ [] = return (False, reverse subs)
+    go_ subs (Just 0) _ _ = return (True, reverse subs)
+    go_ subs maxleft t (el:elts) =
       do { traceTc "lookingUp" $ ppr el
          ; maybeThing <- lookup (gre_name el)
          ; case maybeThing of
-             Just id -> do { fits <- fitsHole (varType id)
+             Just id -> do { fits <- fitsHole t (varType id)
                            ; if fits then (keep_it id) else discard_it }
              _ -> discard_it
          }
-      where discard_it = go_ subs maxleft elts
-            keep_it id = go_ ((HoleFit el id):subs) ((\n->n-1) <$> maxleft) elts
+      where discard_it = go_ subs maxleft t elts
+            keep_it id = go_ ((HoleFit el id):subs)
+                               ((\n->n-1) <$> maxleft) t elts
             lookup name =
               do { thing <- tcLookup name
                  ; case thing of
@@ -1459,6 +1505,60 @@ first where the most specific suggestions (i.e. the ones that are subsumed by
 the other suggestions) appear first. This puts suggestions such as `error` and
 `undefined` last, as seen in the example above.
 
+When the flag `-frefinement-level-substitutions=n` where `n > 0` is passed, we
+also look for valid refinement substitutions, i.e. substitutions that are valid,
+but adds more holes. Consider the following:
+
+  f :: [Integer] -> Integer
+  f = _
+
+Here the valid substitutions suggested will be (with the
+`-funclutter-valid-substitutions` flag set):
+
+  Valid substitutions include
+    f :: [Integer] -> Integer
+    product :: forall (t :: * -> *).
+              Foldable t => forall a. Num a => t a -> a
+    sum :: forall (t :: * -> *).
+          Foldable t => forall a. Num a => t a -> a
+    maximum :: forall (t :: * -> *).
+              Foldable t => forall a. Ord a => t a -> a
+    minimum :: forall (t :: * -> *).
+              Foldable t => forall a. Ord a => t a -> a
+    head :: forall a. [a] -> a
+    (Some substitutions suppressed;
+        use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
+
+When the `-frefinement-level-substitutions=1` flag is given, we additionally
+compute and report valid refinement substitutions:
+
+  Valid refinement substitutions include
+    foldl1 _ :: forall (t :: * -> *).
+                Foldable t => forall a. (a -> a -> a) -> t a -> a
+    foldr1 _ :: forall (t :: * -> *).
+                Foldable t => forall a. (a -> a -> a) -> t a -> a
+    head _ :: forall a. [a] -> a
+    last _ :: forall a. [a] -> a
+    error _ :: forall (a :: TYPE r).
+                GHC.Stack.Types.HasCallStack => [Char] -> a
+    errorWithoutStackTrace _ :: forall (a :: TYPE r). [Char] -> a
+    (Some refinement substitutions suppressed;
+      use -fmax-refinement-substitutions=N or -fno-max-refinement-substitutions)
+
+Which are substitutions with holes in them. This allows e.g. beginners to
+discover the fold functions and similar.
+
+We find these refinement suggestions by considering substitutions that don't
+fit the type of the hole, but ones that would fit if given an additional
+argument. We do this by creating a new type variable with newOpenFlexiTyVarTy
+(e.g. `t_a1/m[tau:1]`), and then considering substitutions of the type
+`t_a1/m[tau:1] -> v` where `v` is the type of the hole. Since the simplifier is
+free to unify this new type variable with any type (and it is cloned before each
+check to avoid side-effects), we can now discover any identifiers that would fit
+if given another identifier of a suitable type. This is then generalized so that
+we can consider any number of additional arguments by setting the
+`-frefinement-level-substitutions` flag to any number, and then considering
+substitutions like e.g. `foldl _ _` with two additional arguments.
 
 Note [Constraints include ...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3168,6 +3268,12 @@ subsDiscardMsg :: SDoc
 subsDiscardMsg =
     text "(Some substitutions suppressed;" <+>
     text "use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)"
+
+refSubsDiscardMsg :: SDoc
+refSubsDiscardMsg =
+    text "(Some refinement substitutions suppressed;" <+>
+    text "use -fmax-refinement-substitutions=N" <+>
+    text "or -fno-max-refinement-substitutions)"
 
 -----------------------
 warnDefaulting :: [Ct] -> Type -> TcM ()
