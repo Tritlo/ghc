@@ -1194,7 +1194,7 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
      ; graphSortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
      ; refLevel <- refLevelSubstitutions <$> getDynFlags
      ; (searchDiscards, subs) <-
-        findSubs graphSortSubs maxVSubs rdr_env 0 wrapped_hole_ty
+        findSubs graphSortSubs maxVSubs rdr_env 0 (wrapped_hole_ty, [])
      ; (vDiscards, sortedSubs) <-
         sortSubs graphSortSubs maxVSubs searchDiscards subs
      ; let vMsg = ppUnless (null subs) $
@@ -1231,8 +1231,9 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- to unify the new type variable with any type, allowing us
     -- to suggest a "refinement substitution", like `(foldl1 _)` instead
     -- of only concrete substitutions like `sum`.
-    mkRefTy :: Int -> TcM TcType
-    mkRefTy refLvl = (flip mkFunTys hole_ty) <$> newTyVars
+    mkRefTy :: Int -> TcM (TcType, [TcType])
+    mkRefTy refLvl = do { vars <- newTyVars
+                        ; return (wrap_ty $ mkFunTys vars hole_ty, vars) }
      where newTyVars :: TcM [TcType]
            newTyVars = sequence $ replicate refLvl newOpenFlexiTyVarTy
 
@@ -1259,19 +1260,19 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
         where (lclFits, gblFits) = partition (gre_lcl . hfEl) subs
 
 
-    findSubs :: Bool          -- Whether we should sort the subs or not
-             -> Maybe Int     -- How many we should output, if limited.
-             -> GlobalRdrEnv  -- The elements to check whether fit.
-             -> Int           -- The refinement level of the hole
-             -> TcType        -- The type to check for fits.
+    findSubs :: Bool               -- Whether we should sort the subs or not
+             -> Maybe Int          -- How many we should output, if limited
+             -> GlobalRdrEnv       -- The elements to check whether fit
+             -> Int                -- The refinement level of the hole
+             -> (TcType, [TcType]) -- The type to check for fits and ref vars
              -> TcM (Bool, [HoleFit])
     -- We don't check if no output is desired.
     findSubs _ (Just 0) _ _ _ = return (False, [])
-    findSubs sortSubs maxSubs rdr_env refLvl hole_ty =
+    findSubs sortSubs maxSubs rdr_env refLvl ht@(hole_ty, _) =
       do { traceTc "findingValidSubstitutionsFor {" $ ppr $ hole_ty
          ; let limit = if sortSubs then Nothing else maxSubs
          ; (discards, subs) <- setTcLevel hole_lvl $
-                                 go limit hole_ty refLvl $
+                                 go limit ht refLvl $
                                     globalRdrEnvElts rdr_env
          ; traceTc "}" empty
          ; return (discards, subs) }
@@ -1282,15 +1283,17 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
 
     -- For checking, we wrap the type of the hole with all the givens
     -- from all the implications in the context.
+    wrap_ty :: TcType -> TcSigmaType
+    wrap_ty ty = foldl' wrapTypeWithImplication ty implics
+
     wrapped_hole_ty :: TcSigmaType
-    wrapped_hole_ty = foldl' wrapTypeWithImplication hole_ty implics
+    wrapped_hole_ty = wrap_ty hole_ty
 
     -- We rearrange the elements to make locals appear at the top of the list
     -- since they're most likely to be relevant to the user.
     localsFirst :: [HoleFit] -> [HoleFit]
     localsFirst elts = lcl ++ gbl
       where (lcl, gbl) = partition (gre_lcl . hfEl) elts
-
 
 
     -- These are the constraints whose every free unification variable is
@@ -1336,15 +1339,24 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- To check: Clone all relevant cts and the hole
     -- then solve the subsumption check AND check that all other
     -- the other constraints were solved.
-    fitsHole :: TcType -> Type -> TcM Bool
-    fitsHole hole_ty typ =
+    fitsHole :: (TcType, [TcType]) -> Type -> TcM Bool
+    fitsHole (hole_ty, vars) typ =
       do { traceTc "checkingFitOf {" $ ppr typ
          ; cloneSub <- getHoleCloningSubst hole_ty
          ; let cHoleTy = substTy cloneSub hole_ty
                cCts = map (applySubToCt cloneSub) relevantCts
-         ; fits <- tcCheckHoleFit (listToBag cCts) cHoleTy typ
+         ; absFits <- tcCheckHoleFit (listToBag cCts) cHoleTy typ
          ; traceTc "}" empty
-         ; return fits }
+         -- We'd like to avoid refinement suggestions like `id _ _` or
+         -- `head _ _`, and only suggest refinements where our all phantom
+         -- variables got unified during the checking. This can be disabled
+         -- with the `-fabstract-refinement-substitutions` flag.
+         ; if absFits && (not . null) vars
+            then goptM Opt_AbstractRefSubstitutions `orM`
+              do { let cVars = map (substTy cloneSub) vars
+                       unified = fmap (not . isFlexi) . readMetaTyVar
+                 ; allM (allM unified . fvVarList . tyCoFVsOfType) cVars }
+            else return absFits }
 
     -- Based on the flags, we might possibly discard some or all the
     -- fits we've found.
@@ -1374,16 +1386,17 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                  ; go ((id, adjs):sofar) ids }
 
     -- Kickoff the checking of the elements.
-    go :: Maybe Int -> TcType -> Int -> [GlobalRdrElt] -> TcM (Bool, [HoleFit])
+    go :: Maybe Int -> (TcType, [TcType]) -> Int
+        -> [GlobalRdrElt] -> TcM (Bool, [HoleFit])
     go = go_ []
 
     -- We iterate over the elements, checking each one in turn for whether it
     -- fits, and adding it to the results if it does.
-    go_ :: [HoleFit]       -- What we've found so far.
-        -> Maybe Int       -- How many we're allowed to find, if limited
-        -> TcType          -- The type to check
-        -> Int             -- The refinement level of the hole we're checking
-        -> [GlobalRdrElt]  -- The elements we've yet to check.
+    go_ :: [HoleFit]          -- What we've found so far.
+        -> Maybe Int          -- How many we're allowed to find, if limited
+        -> (TcType, [TcType]) -- The type to check, and refinement variables.
+        -> Int                -- The refinement level of the hole we're checking
+        -> [GlobalRdrElt]     -- The elements we've yet to check.
         -> TcM (Bool, [HoleFit])
     go_ subs _ _ _ [] = return (False, reverse subs)
     go_ subs (Just 0) _ _ _ = return (True, reverse subs)

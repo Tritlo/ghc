@@ -556,6 +556,7 @@ data GeneralFlag
    | Opt_NoShowValidSubstitutions
    | Opt_UnclutterValidSubstitutions
    | Opt_NoSortValidSubstitutions
+   | Opt_AbstractRefSubstitutions
    | Opt_ShowLoadedModules
 
    -- Suppress all coercions, them replacing with '...'
@@ -3918,6 +3919,7 @@ fFlagsDeps = [
   flagSpec "show-hole-constraints"            Opt_ShowHoleConstraints,
   flagSpec "no-show-valid-substitutions"      Opt_NoShowValidSubstitutions,
   flagSpec "no-sort-valid-substitutions"      Opt_NoSortValidSubstitutions,
+  flagSpec "abstract-refinement-substitutions" Opt_AbstractRefSubstitutions,
   flagSpec "unclutter-valid-substitutions"    Opt_UnclutterValidSubstitutions,
   flagSpec "show-loaded-modules"              Opt_ShowLoadedModules,
   flagSpec "whole-archive-hs-libs"            Opt_WholeArchiveHsLibs
