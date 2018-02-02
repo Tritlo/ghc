@@ -11048,7 +11048,7 @@ configurable by a few flags.
 
 .. ghc-flag:: -funclutter-valid-substitutions
     :shortdesc: Unclutter the list of valid substitutions by not showing
-    provenance of suggestion.
+        provenance of suggestion.
     :type: dynamic
     :category: verbosity
 
