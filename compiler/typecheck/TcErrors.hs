@@ -1345,17 +1345,17 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
          ; cloneSub <- getHoleCloningSubst hole_ty
          ; let cHoleTy = substTy cloneSub hole_ty
                cCts = map (applySubToCt cloneSub) relevantCts
+               cVars = map (substTy cloneSub) vars
+
          ; absFits <- tcCheckHoleFit (listToBag cCts) cHoleTy typ
          ; traceTc "}" empty
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
          -- with the `-fabstract-refinement-substitutions` flag.
-         ; if absFits && (not . null) vars
-            then goptM Opt_AbstractRefSubstitutions `orM`
-              do { let cVars = map (substTy cloneSub) vars
-                       unified = fmap (not . isFlexi) . readMetaTyVar
-                 ; allM (allM unified . fvVarList . tyCoFVsOfType) cVars }
+         ; if absFits && (not . null) vars then
+            goptM Opt_AbstractRefSubstitutions `orM`
+              allM isFilledMetaTyVar (fvVarList $ tyCoFVsOfTypes cVars)
             else return absFits }
 
     -- Based on the flags, we might possibly discard some or all the
