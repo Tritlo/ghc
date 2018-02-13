@@ -61,7 +61,7 @@ import Pair
 import qualified GHC.LanguageExtensions as LangExt
 import FV ( fvVarList, fvVarSet, unionFV )
 
-import Control.Monad    ( when, filterM )
+import Control.Monad    ( when, filterM, replicateM )
 import Data.Foldable    ( toList )
 import Data.List        ( partition, mapAccumL, nub
                         , sortBy, sort, unfoldr, foldl' )
@@ -1152,8 +1152,12 @@ mkHoleError tidy_simples ctxt ct@(CHoleCan { cc_hole = hole })
 mkHoleError _ _ ct = pprPanic "mkHoleError" (ppr ct)
 
 -- HoleFit is the type we use for a fit in valid substitutions. It contains the
--- element that was checked and the elements Id.
-data HoleFit = HoleFit { hfEl :: GlobalRdrElt, hfId :: Id, hfRefLvl :: Int }
+-- element that was checked, the Id of that element as found by `tcLookup`,
+-- and the refinement level of the fit, which is the number of extra argument
+-- holes that this fit uses (e.g. if hfRefLvl is 2, the fit is for `Id _ _`).
+data HoleFit = HoleFit { hfEl :: GlobalRdrElt -- The element that was checked.
+                       , hfId :: Id           -- the elements id in the TcM.
+                       , hfRefLvl :: Int }    -- The number of holes in this fit
 
 -- We define an Eq and Ord instance to be able to build a graph.
 instance Eq HoleFit where
@@ -1193,6 +1197,10 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
      ; showProvenance <- not <$> goptM Opt_UnclutterValidSubstitutions
      ; graphSortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
      ; refLevel <- refLevelSubstitutions <$> getDynFlags
+     ; traceTc "findingValidSubstitutionsFor { " $ ppr ct
+     ; traceTc "hole_lvl is:" $ ppr hole_lvl
+     ; traceTc "implics are: " $ ppr implics
+     ; traceTc "simples are: " $ ppr simples
      ; (searchDiscards, subs) <-
         findSubs graphSortSubs maxVSubs rdr_env 0 (wrapped_hole_ty, [])
      ; (vDiscards, sortedSubs) <-
@@ -1208,7 +1216,8 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
             -- We make a new refinement type for each level of refinement, where
             -- the level of refinement indicates number of additional arguments
             -- to allow.
-            ; ref_tys <- zip refLvls <$> mapM mkRefTy refLvls
+            ; ref_tys <- mapM (\l -> mkRefTy l >>= return . (,) l) refLvls
+            ; traceTc "ref_tys are" $ ppr ref_tys
             ; refDs <-
                 mapM (uncurry $ findSubs graphSortSubs maxRSubs rdr_env) ref_tys
             ; (rDiscards, sortedRSubs) <-
@@ -1220,6 +1229,7 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                   (vcat (map (pprHoleFit showProvenance) sortedRSubs)
                     $$ ppWhen rDiscards refSubsDiscardMsg) }
        else return empty
+     ; traceTc "}" empty
      ; return (vMsg $$ refMsg)}
   where
     hole_loc = ctEvLoc $ ctEvidence ct
@@ -1232,10 +1242,10 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- to suggest a "refinement substitution", like `(foldl1 _)` instead
     -- of only concrete substitutions like `sum`.
     mkRefTy :: Int -> TcM (TcType, [TcType])
-    mkRefTy refLvl = do { vars <- newTyVars
-                        ; return (wrap_ty $ mkFunTys vars hole_ty, vars) }
-     where newTyVars :: TcM [TcType]
-           newTyVars = sequence $ replicate refLvl newOpenFlexiTyVarTy
+    mkRefTy refLvl = (\v -> (wrapHoleWithArgs v, v)) <$> newTyVarTys
+     where newTyVarTys = replicateM refLvl newOpenFlexiTyVarTy
+           wrapHoleWithArgs args = (wrap_ty . mkFunTys args) hole_ty
+
 
     sortSubs :: Bool          -- Whether we should sort the subs or not
                               -- by subsumption or not
@@ -1269,7 +1279,7 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
     -- We don't check if no output is desired.
     findSubs _ (Just 0) _ _ _ = return (False, [])
     findSubs sortSubs maxSubs rdr_env refLvl ht@(hole_ty, _) =
-      do { traceTc "findingValidSubstitutionsFor {" $ ppr $ hole_ty
+      do { traceTc "checkingSubstitutionsFor {" $ ppr $ hole_ty
          ; let limit = if sortSubs then Nothing else maxSubs
          ; (discards, subs) <- setTcLevel hole_lvl $
                                  go limit ht refLvl $
@@ -1583,7 +1593,7 @@ discover the fold functions and similar.
 
 We find these refinement suggestions by considering substitutions that don't
 fit the type of the hole, but ones that would fit if given an additional
-argument. We do this by creating a new type variable with newOpenFlexiTyVarTy
+argument. We do this by creating a new type variable with `newOpenFlexiTyVarTy`
 (e.g. `t_a1/m[tau:1]`), and then considering substitutions of the type
 `t_a1/m[tau:1] -> v` where `v` is the type of the hole. Since the simplifier is
 free to unify this new type variable with any type (and it is cloned before each

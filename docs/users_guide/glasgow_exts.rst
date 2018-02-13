@@ -11043,8 +11043,8 @@ configurable by a few flags.
 
     The list of valid substitutions is limited by displaying up to 6
     substitutions per hole. The number of substitutions shown can be set by this
-    flag. Turning the limit off with ``-fno-max-valid-substitutions`` displays
-    all found substitutions.
+    flag. Turning the limit off with :ghc-flag:`-fno-max-valid-substitutions`
+    displays all found substitutions.
 
 .. ghc-flag:: -funclutter-valid-substitutions
     :shortdesc: Unclutter the list of valid substitutions by not showing
@@ -11062,10 +11062,12 @@ configurable by a few flags.
 Refinement Substitutions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-When the flag :ghc-flag:`-frefinement-level-substitutions=(n)` is set to an `n`
-larger than `0`, GHC will offer up a list of refinement substitutions. These
-are valid substitutions, but require `n` or fewer more holes to be valid. As
-an example, consider the hole in ::
+When the flag :ghc-flag:`-frefinement-level-substitutions=⟨n⟩` is set to an
+``n`` larger than ``0``, GHC will offer up a list of valid refinement
+substitutions, which are valid substitutions that need up to ``n`` levels of
+additional refinement to be complete, where each level represents an additional
+hole in the substitution that requires filling in.  As an example, consider the
+hole in ::
 
   f :: [Integer] -> Integer
   f = _
@@ -11086,8 +11088,8 @@ suggestions: ::
     head :: forall a. [a] -> a
     (Some substitutions suppressed; use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
 
-However, with :ghc-flag:`-frefinement-level-substitutions=1`, it will
-additionally offer up a list of refinement substitutions, in this case: ::
+However, with :ghc-flag:`-frefinement-level-substitutions=⟨n⟩` set to e.g. `1`,
+it will additionally offer up a list of refinement substitutions, in this case: ::
 
   Valid refinement substitutions include
     foldl1 _ :: forall (t :: * -> *).
@@ -11102,13 +11104,13 @@ additionally offer up a list of refinement substitutions, in this case: ::
     (Some refinement substitutions suppressed;
       use -fmax-refinement-substitutions=N or -fno-max-refinement-substitutions)
 
-Which shows that the hole could be replaced with e.g. `foldl1 _`. While not
+Which shows that the hole could be replaced with e.g. ``foldl1 _``. While not
 fixing the hole, this can help users understand what options they have.
  
 .. ghc-flag:: -frefinement-level-substitutions=⟨n⟩
     :shortdesc: *default: off.* Sets the level of refinement of the
-         refinement substitutions, where level `n` means that substitutions
-         of up to `n` holes will be considered.
+         refinement substitutions, where level ``n`` means that substitutions
+         of up to ``n`` holes will be considered.
     :type: dynamic
     :reverse: -fno-refinement-level-substitutions
     :category: verbosity
@@ -11130,11 +11132,12 @@ fixing the hole, this can help users understand what options they have.
     :default: off
 
     Valid list of valid refinement substitutions can often grow large when
-    the refinement level is >= 2, with holes like `head _ _` or `fst _ _` ,
-    which are valid refinements, but which are unlikely to be relevant since
-    one or more of the holes are still completely open. By default, such
-    holes are not reported. By turning this flag on, such holes are included
-    in the list of valid refinement substitutions.
+    the refinement level is ``>= 2``, with holes like ``head _ _`` or
+    ``fst _ _``, which are valid refinements, but which are unlikely to be
+    relevant since one or more of the holes are still completely open, in that
+    neither the type nor kind of those holes are constrained by the proposed
+    identifier at all. By default, such holes are not reported. By turning this
+    flag on, such holes are included in the list of valid refinement substitutions.
 
 .. ghc-flag:: -fmax-refinement-substitutions=⟨n⟩
     :shortdesc: *default: 6.* Set the maximum number of refinement substitutions
@@ -11147,7 +11150,7 @@ fixing the hole, this can help users understand what options they have.
 
     The list of valid refinement substitutions is limited by displaying up to 6
     substitutions per hole. The number of substitutions shown can be set by this
-    flag. Turning the limit off with ``-fno-max-refinement-substitutions``
+    flag. Turning the limit off with :ghc-flag:`-fno-max-refinement-substitutions`
     displays all found substitutions.
 
 .. _partial-type-signatures:
