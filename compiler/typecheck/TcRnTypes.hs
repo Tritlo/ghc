@@ -2572,11 +2572,13 @@ pprEvVarWithType v = ppr v <+> dcolon <+> pprType (evVarPred v)
 -- in the implication, but taking care to only wrap those variables
 -- that are mentioned in the type or the implication.
 wrapTypeWithImplication :: Type -> Implication -> Type
-wrapTypeWithImplication ty impl = wrapType ty mentioned_skols givens
-    where givens = map idType $ ic_given impl
+wrapTypeWithImplication ty impl = wrapType ty mentionedSkols relevantGivens
+    where tyFreeVars = fvVarSet $ tyCoFVsOfType ty
+          givens = map idType $ ic_given impl
+          mentionTy = intersectsVarSet tyFreeVars . fvVarSet . tyCoFVsOfType
+          relevantGivens = filter mentionTy givens
           skols = ic_skols impl
-          freeVars = fvVarSet $ tyCoFVsOfTypes (ty:givens)
-          mentioned_skols = filter (`elemVarSet` freeVars) skols
+          mentionedSkols = filter (`elemVarSet` tyFreeVars) skols
 
 wrapType :: Type -> [TyVar] -> [PredType] -> Type
 wrapType ty skols givens = mkSpecForAllTys skols $ mkFunTys givens ty
