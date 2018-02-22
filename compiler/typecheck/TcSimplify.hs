@@ -489,24 +489,58 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes = tcCheckHoleFit emptyBag
-
+tcSubsumes = tcCheckHoleFitUpToEq False emptyBag []
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
 -- perform unification.
-tcCheckHoleFit :: Cts -> TcSigmaType -> TcSigmaType -> TcM Bool
-tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty = return True
-tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
+tcCheckHoleFit :: Cts -> [TcType] -> TcSigmaType -> TcSigmaType -> TcM Bool
+tcCheckHoleFit = tcCheckHoleFitUpToEq True
+
+-- | A tcSubsumes that allows for unsolved constraints, provided that they
+--  only pertain to the equality of two type variables or the instantiation
+--  of refinement type variable types.
+tcCheckHoleFitUpToEq :: Bool        -- Whether to allow unsolved constraints.
+                     -> Cts         -- Any relevant Cts to the hole.
+                     -> [TcType]    -- The list of refinement TyVarTys.
+                     -> TcSigmaType -- The type of the hole.
+                     -> TcSigmaType -- The type to check whether fits.
+                     -> TcM Bool
+tcCheckHoleFitUpToEq _ _ _ hole_ty ty | hole_ty `eqType` ty = return True
+tcCheckHoleFitUpToEq allowEq relevantCts holeVars hole_ty ty = discardErrs $
  do { (_, wanted, _) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
     ; rem <- runTcSDeriveds $
                simpl_top $ addSimples wanted relevantCts
     -- We don't want any insoluble or simple constraints left,
     -- but solved implications are ok (and neccessary for e.g. undefined)
-    ; return (isEmptyBag (wc_simple rem)
-              && allBag (isSolvedStatus . ic_status) (wc_impl rem))
-    }
+    ; return (checkIfOnlyNeedsEquality rem) }
+    where
+       -- If everything is solved, we have a match!
+      checkIfOnlyNeedsEquality (WC simpl impl) |
+        isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl = True
+        -- If not every thing was solved, but the rest could be solved
+        -- by additional classes, we're also good
+      checkIfOnlyNeedsEquality (WC simpl impl) |
+        allowEq
+        && allBag isPSC simpl
+        && not (isEmptyBag impl)
+        && allBag (isUnsolved . ic_status) impl
+        && allBag (allBag isCNonCanonical . wc_simple . ic_wanted) impl
+        && allBag (allBag (isEqOfTy . ctEvPred . cc_ev) . wc_simple . ic_wanted)
+            impl  = True
+      checkIfOnlyNeedsEquality _ = False
+      isUnsolved IC_Unsolved = True
+      isUnsolved _ = False
+      isEqOfTy ty | isEqPred ty =
+        case splitTyConApp ty of
+            (_ , [k1, k2, t1, t2]) | eqType k1 k2 ->
+              all isTyVarTy [t1,t2] || any (flip any [t1,t2] . eqType) holeVars
+            _ -> False
+      isEqOfTy _ = False
+      isPSC :: Ct -> Bool
+      isPSC (CDictCan {cc_pend_sc = True}) = True
+      isPSC _ = False
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool

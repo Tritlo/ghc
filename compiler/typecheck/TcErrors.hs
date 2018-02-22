@@ -38,7 +38,7 @@ import Name
 import RdrName ( lookupGlobalRdrEnv, lookupGRE_Name, GlobalRdrEnv
                , mkRdrUnqual, isLocalGRE, greSrcSpan, pprNameProvenance
                , GlobalRdrElt (..), globalRdrEnvElts )
-import PrelNames ( typeableClassName, hasKey, liftedRepDataConKey )
+import PrelNames ( typeableClassName, hasKey, liftedRepDataConKey, gHC_ERR )
 import Id
 import Var
 import VarSet
@@ -1357,7 +1357,7 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
                cCts = map (applySubToCt cloneSub) relevantCts
                cVars = map (substTy cloneSub) vars
 
-         ; absFits <- tcCheckHoleFit (listToBag cCts) cHoleTy typ
+         ; absFits <- tcCheckHoleFit (listToBag cCts) cVars cHoleTy typ
          ; traceTc "}" empty
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
@@ -1414,12 +1414,15 @@ validSubstitutions simples (CEC {cec_encl = implics}) ct | isExprHoleCt ct =
       do { traceTc "lookingUp" $ ppr el
          ; maybeThing <- lookup (gre_name el)
          ; case maybeThing of
-             Just id -> do { fits <- fitsHole t (varType id)
+             Just id | not_trivial id -> do {
+                             fits <- fitsHole t (varType id)
                            ; if fits then keep_it (HoleFit el id r)
                                      else discard_it }
              _ -> discard_it }
       where discard_it = go_ subs maxleft t r elts
             keep_it fit = go_ (fit:subs) ((\n -> n - 1) <$> maxleft) t r elts
+            -- We want to filter out undefined.
+            not_trivial id = not (nameModule (idName id) == gHC_ERR)
             lookup name =
               do { thing <- tcLookup name
                  ; case thing of
