@@ -1,6 +1,8 @@
 {-# OPTIONS_GHC -frefinement-level-substitutions=2 #-}
 module TG where
-import Prelude (Monad, Applicative, Functor, fmap, (<*>), pure, (>>=), (=<<), ($), (<$>))
+import Prelude ( Monad, Applicative, Functor
+               , fmap, (<*>), pure, (>>=)
+               , (=<<), ($), (<$>) )
 
 data Free f a = Pure a | Free (f (Free f a))
 
@@ -18,4 +20,3 @@ instance Functor f => Applicative (Free f) where
 instance Applicative f => Monad (Free f) where
     Pure a >>= f = f a
     Free f >>= g = Free (fmap _a f)
-  
