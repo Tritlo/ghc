@@ -1,97 +1,141 @@
 
-free_monad_substitutions.hs:10:28: warning: [-Wtyped-holes (in -Wdefault)]
+free_monad_substitutions.hs:12:28: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole:
         _a :: (Free f1 a -> Free f2 b) -> f1 (Free f1 a) -> f2 (Free f2 b)
       Where: ‘f1’, ‘f2’ are rigid type variables bound by
                the inferred type of go :: Free f1 a -> Free f2 b
-               at free_monad_substitutions.hs:(9,7)-(10,36)
+               at free_monad_substitutions.hs:(11,7)-(12,36)
              ‘a’, ‘b’ are rigid type variables bound by
                the type signature for:
                  fmap :: forall a b. (a -> b) -> Free f a -> Free f b
-               at free_monad_substitutions.hs:8:5-8
+               at free_monad_substitutions.hs:10:5-8
       Or perhaps ‘_a’ is mis-spelled, or not in scope
     • In the expression: _a
       In the first argument of ‘Free’, namely ‘(_a go fa)’
       In the expression: Free (_a go fa)
     • Relevant bindings include
-        fa :: f1 (Free f1 a) (bound at free_monad_substitutions.hs:10:16)
+        fa :: f1 (Free f1 a) (bound at free_monad_substitutions.hs:12:16)
         go :: Free f1 a -> Free f2 b
-          (bound at free_monad_substitutions.hs:9:7)
-        f :: a -> b (bound at free_monad_substitutions.hs:8:10)
+          (bound at free_monad_substitutions.hs:11:7)
+        f :: a -> b (bound at free_monad_substitutions.hs:10:10)
         fmap :: (a -> b) -> Free f a -> Free f b
-          (bound at free_monad_substitutions.hs:8:5)
+          (bound at free_monad_substitutions.hs:10:5)
       Valid refinement substitutions include
         (=<<) _ _ :: forall (m :: * -> *) a b.
                      Monad m =>
                      (a -> m b) -> m a -> m b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:18-22
+           (and originally defined in ‘GHC.Base’))
         pure _ _ :: forall (f :: * -> *).
                     Applicative f =>
                     forall a. a -> f a
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:31-34
+           (and originally defined in ‘GHC.Base’))
         pure _ :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:31-34
+           (and originally defined in ‘GHC.Base’))
         (<*>) _ _ :: forall (f :: * -> *).
                      Applicative f =>
                      forall a b. f (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:24-28
+           (and originally defined in ‘GHC.Base’))
         fmap _ _ :: forall (f :: * -> *).
                     Functor f =>
                     forall a b. (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:18-21
+           (and originally defined in ‘GHC.Base’))
         (<$>) _ _ :: forall (f :: * -> *) a b.
                      Functor f =>
                      (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:30-34
+           (and originally defined in ‘Data.Functor’))
         (>>=) _ _ :: forall (m :: * -> *).
                      Monad m =>
                      forall a b. m a -> (a -> m b) -> m b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:37-41
+           (and originally defined in ‘GHC.Base’))
         ($) _ _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:25-27
+           (and originally defined in ‘GHC.Base’))
         ($) _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:25-27
+           (and originally defined in ‘GHC.Base’))
 
-free_monad_substitutions.hs:20:31: warning: [-Wtyped-holes (in -Wdefault)]
+free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _a :: Free f a -> Free f b
       Where: ‘a’, ‘b’ are rigid type variables bound by
                the type signature for:
                  (>>=) :: forall a b. Free f a -> (a -> Free f b) -> Free f b
-               at free_monad_substitutions.hs:19:12-14
+               at free_monad_substitutions.hs:21:12-14
              ‘f’ is a rigid type variable bound by
                the instance declaration
-               at free_monad_substitutions.hs:18:10-40
+               at free_monad_substitutions.hs:20:10-40
       Or perhaps ‘_a’ is mis-spelled, or not in scope
     • In the first argument of ‘fmap’, namely ‘_a’
       In the first argument of ‘Free’, namely ‘(fmap _a f)’
       In the expression: Free (fmap _a f)
     • Relevant bindings include
-        g :: a -> Free f b (bound at free_monad_substitutions.hs:20:16)
-        f :: f (Free f a) (bound at free_monad_substitutions.hs:20:10)
+        g :: a -> Free f b (bound at free_monad_substitutions.hs:22:16)
+        f :: f (Free f a) (bound at free_monad_substitutions.hs:22:10)
         (>>=) :: Free f a -> (a -> Free f b) -> Free f b
-          (bound at free_monad_substitutions.hs:19:12)
+          (bound at free_monad_substitutions.hs:21:12)
       Valid refinement substitutions include
         (=<<) _ :: forall (m :: * -> *) a b.
                    Monad m =>
                    (a -> m b) -> m a -> m b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:18-22
+           (and originally defined in ‘GHC.Base’))
         (=<<) _ _ :: forall (m :: * -> *) a b.
                      Monad m =>
                      (a -> m b) -> m a -> m b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:18-22
+           (and originally defined in ‘GHC.Base’))
         (<$>) _ :: forall (f :: * -> *) a b.
                    Functor f =>
                    (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:30-34
+           (and originally defined in ‘Data.Functor’))
         pure _ :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:31-34
+           (and originally defined in ‘GHC.Base’))
         pure _ _ :: forall (f :: * -> *).
                     Applicative f =>
                     forall a. a -> f a
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:31-34
+           (and originally defined in ‘GHC.Base’))
         (<*>) _ _ :: forall (f :: * -> *).
                      Applicative f =>
                      forall a b. f (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:24-28
+           (and originally defined in ‘GHC.Base’))
         (<*>) _ :: forall (f :: * -> *).
                    Applicative f =>
                    forall a b. f (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:24-28
+           (and originally defined in ‘GHC.Base’))
         fmap _ _ :: forall (f :: * -> *).
                     Functor f =>
                     forall a b. (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:18-21
+           (and originally defined in ‘GHC.Base’))
         fmap _ :: forall (f :: * -> *).
                   Functor f =>
                   forall a b. (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:18-21
+           (and originally defined in ‘GHC.Base’))
         (<$>) _ _ :: forall (f :: * -> *) a b.
                      Functor f =>
                      (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:30-34
+           (and originally defined in ‘Data.Functor’))
         (>>=) _ _ :: forall (m :: * -> *).
                      Monad m =>
                      forall a b. m a -> (a -> m b) -> m b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:4:37-41
+           (and originally defined in ‘GHC.Base’))
         ($) _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:25-27
+           (and originally defined in ‘GHC.Base’))
         ($) _ _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+          (imported from ‘Prelude’ at free_monad_substitutions.hs:5:25-27
+           (and originally defined in ‘GHC.Base’))

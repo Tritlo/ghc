@@ -516,20 +516,18 @@ tcCheckHoleFitUpToEq allowEq relevantCts holeVars hole_ty ty = discardErrs $
     -- but solved implications are ok (and neccessary for e.g. undefined)
     ; return (checkIfOnlyNeedsEquality rem) }
     where
+      checkIfOnlyNeedsEquality (WC simpl impl) =
        -- If everything is solved, we have a match!
-      checkIfOnlyNeedsEquality (WC simpl impl) |
-        isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl = True
-        -- If not every thing was solved, but the rest could be solved
+        (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)
+        -- oherwise, not every thing was solved, but the rest could be solved
         -- by additional classes, we're also good
-      checkIfOnlyNeedsEquality (WC simpl impl) |
-        allowEq
-        && allBag isPSC simpl
-        && not (isEmptyBag impl)
-        && allBag (isUnsolved . ic_status) impl
-        && allBag (allBag isCNonCanonical . wc_simple . ic_wanted) impl
-        && allBag (allBag (isEqOfTy . ctEvPred . cc_ev) . wc_simple . ic_wanted)
-            impl  = True
-      checkIfOnlyNeedsEquality _ = False
+        || (allowEq
+            && allBag isPSC simpl
+            && not (isEmptyBag impl)
+            && allBag (isUnsolved . ic_status) impl
+            && allBag (allBag isCNonCanonical . wc_simple . ic_wanted) impl
+            && allBag (allBag (isEqOfTy . ctEvPred . cc_ev)
+                              . wc_simple . ic_wanted) impl)
       isUnsolved IC_Unsolved = True
       isUnsolved _ = False
       isEqOfTy ty | isEqPred ty =
