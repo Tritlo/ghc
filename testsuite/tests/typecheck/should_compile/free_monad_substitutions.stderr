@@ -1,0 +1,97 @@
+
+free_monad_substitutions.hs:10:28: warning: [-Wtyped-holes (in -Wdefault)]
+    • Found hole:
+        _a :: (Free f1 a -> Free f2 b) -> f1 (Free f1 a) -> f2 (Free f2 b)
+      Where: ‘f1’, ‘f2’ are rigid type variables bound by
+               the inferred type of go :: Free f1 a -> Free f2 b
+               at free_monad_substitutions.hs:(9,7)-(10,36)
+             ‘a’, ‘b’ are rigid type variables bound by
+               the type signature for:
+                 fmap :: forall a b. (a -> b) -> Free f a -> Free f b
+               at free_monad_substitutions.hs:8:5-8
+      Or perhaps ‘_a’ is mis-spelled, or not in scope
+    • In the expression: _a
+      In the first argument of ‘Free’, namely ‘(_a go fa)’
+      In the expression: Free (_a go fa)
+    • Relevant bindings include
+        fa :: f1 (Free f1 a) (bound at free_monad_substitutions.hs:10:16)
+        go :: Free f1 a -> Free f2 b
+          (bound at free_monad_substitutions.hs:9:7)
+        f :: a -> b (bound at free_monad_substitutions.hs:8:10)
+        fmap :: (a -> b) -> Free f a -> Free f b
+          (bound at free_monad_substitutions.hs:8:5)
+      Valid refinement substitutions include
+        (=<<) _ _ :: forall (m :: * -> *) a b.
+                     Monad m =>
+                     (a -> m b) -> m a -> m b
+        pure _ _ :: forall (f :: * -> *).
+                    Applicative f =>
+                    forall a. a -> f a
+        pure _ :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+        (<*>) _ _ :: forall (f :: * -> *).
+                     Applicative f =>
+                     forall a b. f (a -> b) -> f a -> f b
+        fmap _ _ :: forall (f :: * -> *).
+                    Functor f =>
+                    forall a b. (a -> b) -> f a -> f b
+        (<$>) _ _ :: forall (f :: * -> *) a b.
+                     Functor f =>
+                     (a -> b) -> f a -> f b
+        (>>=) _ _ :: forall (m :: * -> *).
+                     Monad m =>
+                     forall a b. m a -> (a -> m b) -> m b
+        ($) _ _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+        ($) _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+
+free_monad_substitutions.hs:20:31: warning: [-Wtyped-holes (in -Wdefault)]
+    • Found hole: _a :: Free f a -> Free f b
+      Where: ‘a’, ‘b’ are rigid type variables bound by
+               the type signature for:
+                 (>>=) :: forall a b. Free f a -> (a -> Free f b) -> Free f b
+               at free_monad_substitutions.hs:19:12-14
+             ‘f’ is a rigid type variable bound by
+               the instance declaration
+               at free_monad_substitutions.hs:18:10-40
+      Or perhaps ‘_a’ is mis-spelled, or not in scope
+    • In the first argument of ‘fmap’, namely ‘_a’
+      In the first argument of ‘Free’, namely ‘(fmap _a f)’
+      In the expression: Free (fmap _a f)
+    • Relevant bindings include
+        g :: a -> Free f b (bound at free_monad_substitutions.hs:20:16)
+        f :: f (Free f a) (bound at free_monad_substitutions.hs:20:10)
+        (>>=) :: Free f a -> (a -> Free f b) -> Free f b
+          (bound at free_monad_substitutions.hs:19:12)
+      Valid refinement substitutions include
+        (=<<) _ :: forall (m :: * -> *) a b.
+                   Monad m =>
+                   (a -> m b) -> m a -> m b
+        (=<<) _ _ :: forall (m :: * -> *) a b.
+                     Monad m =>
+                     (a -> m b) -> m a -> m b
+        (<$>) _ :: forall (f :: * -> *) a b.
+                   Functor f =>
+                   (a -> b) -> f a -> f b
+        pure _ :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+        pure _ _ :: forall (f :: * -> *).
+                    Applicative f =>
+                    forall a. a -> f a
+        (<*>) _ _ :: forall (f :: * -> *).
+                     Applicative f =>
+                     forall a b. f (a -> b) -> f a -> f b
+        (<*>) _ :: forall (f :: * -> *).
+                   Applicative f =>
+                   forall a b. f (a -> b) -> f a -> f b
+        fmap _ _ :: forall (f :: * -> *).
+                    Functor f =>
+                    forall a b. (a -> b) -> f a -> f b
+        fmap _ :: forall (f :: * -> *).
+                  Functor f =>
+                  forall a b. (a -> b) -> f a -> f b
+        (<$>) _ _ :: forall (f :: * -> *) a b.
+                     Functor f =>
+                     (a -> b) -> f a -> f b
+        (>>=) _ _ :: forall (m :: * -> *).
+                     Monad m =>
+                     forall a b. m a -> (a -> m b) -> m b
+        ($) _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
+        ($) _ _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
