@@ -1,70 +1,41 @@
 
-module TcValidSubstitutions ( validSubstitutions ) where
-
-import TcSimplify ( tcCheckHoleFit, tcSubsumes )
-import TcErrors
-
+module TcValidSubstitutions ( findValidSubstitutions ) where
 
 import GhcPrelude
+
+import TcSimplify ( tcCheckHoleFit, tcSubsumes )
+import TcErrors ( ReportErrCtxt )
+
+
 
 import TcRnTypes
 import TcRnMonad
 import TcMType
-import TcUnify( occCheckForErrors, OccCheckResult(..) )
 import TcType
-import RnUnbound ( unknownNameSuggestions )
 import Type
-import TyCoRep
-import Kind
-import Unify            ( tcMatchTys )
-import Module
-import FamInst
-import FamInstEnv       ( flattenTys )
-import Inst
-import InstEnv
-import TyCon
-import Class
 import DataCon
-import TcEvidence
-import TcEvTerm
-import HsExpr  ( UnboundVar(..) )
-import HsBinds ( PatSynBind(..) )
 import Name
-import RdrName ( lookupGlobalRdrEnv, lookupGRE_Name, GlobalRdrEnv
-               , mkRdrUnqual, isLocalGRE, greSrcSpan, pprNameProvenance
+import RdrName ( GlobalRdrEnv, pprNameProvenance
                , GlobalRdrElt (..), globalRdrEnvElts )
-import PrelNames ( typeableClassName, hasKey, liftedRepDataConKey, gHC_ERR )
+   
+import PrelNames ( gHC_ERR )
 import Id
 import Var
 import VarSet
-import VarEnv
-import NameSet
 import Bag
-import ErrUtils         ( ErrMsg, errDoc, pprLocErrMsg )
-import BasicTypes
 import ConLike          ( ConLike(..))
 import Util
 import TcEnv (tcLookup)
-import FastString
 import Outputable
-import SrcLoc
 import DynFlags
-import ListSetOps       ( equivClasses )
 import Maybes
-import Pair
-import FV ( fvVarList, fvVarSet, unionFV )
+import FV ( fvVarList, fvVarSet )
 
-import Control.Monad    ( when, filterM, replicateM )
-import Data.Foldable    ( toList )
-import Data.List        ( partition, mapAccumL, nub
-                        , sortBy, sort, unfoldr, foldl' )
-import qualified Data.Set as Set
+import Control.Monad    ( filterM, replicateM )
+import Data.List        ( partition, sort, foldl' )
 import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
 
-
-import Data.Semigroup   ( Semigroup )
-import qualified Data.Semigroup as Semigroup
 
 
 
@@ -108,7 +79,7 @@ pprHoleFit showProv hf =
           provenance = parens $ pprNameProvenance (hfEl hf)
 
 -- See Note [Valid substitutions include ...]
-findValidSubstitutions :: ReportErrCtxt -> [Ct] -> Ct -> TcM SDoc
+findValidSubstitutions :: [Implication] -> [Ct] -> Ct -> TcM SDoc
 findValidSubstitutions implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; maxVSubs <- maxValidSubstitutions <$> getDynFlags
@@ -352,7 +323,7 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
 
 
 -- We don't (as of yet) handle holes in types, only in expressions.
-validSubstitutions _ _ _ = return empty
+findValidSubstitutions _ _ _ = return empty
 
 
 subsDiscardMsg :: SDoc

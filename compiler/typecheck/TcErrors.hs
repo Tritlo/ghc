@@ -3,6 +3,8 @@
 module TcErrors(
        reportUnsolved, reportAllUnsolved, warnAllUnsolved,
        warnDefaulting,
+       
+       ReportErrCtxt,
 
        solverDepthErrorTcS
   ) where
