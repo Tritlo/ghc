@@ -698,7 +698,7 @@ we'll complain about
    f :: ((Int ~ Bool) => a -> a) -> Int
 which arguably is OK.  It's more debatable for
    g :: (Int ~ Bool) => Int -> Int
-but it's tricky to distinguish these cases to we don't report
+but it's tricky to distinguish these cases so we don't report
 either.
 
 The bottom line is this: find_gadt_match looks for an enclosing
@@ -1148,7 +1148,6 @@ mkHoleError tidy_simples ctxt ct@(CHoleCan { cc_hole = hole })
          else empty
 
 mkHoleError _ _ ct = pprPanic "mkHoleError" (ppr ct)
-
 
 -- We unwrap the ReportErrCtxt here, to avoid introducing a loop in module
 -- imports

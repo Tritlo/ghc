@@ -681,9 +681,7 @@ simplifyInfer rhs_tclvl infer_mode sigs name_taus wanteds
                         psig_givens = mkGivens loc psig_theta_vars
                   ; _ <- solveSimpleGivens psig_givens
                          -- See Note [Add signature contexts as givens]
-                  ; wanteds' <- solveWanteds wanteds
-                  ; TcS.zonkWC wanteds' }
-
+                  ; solveWanteds wanteds }
 
        -- Find quant_pred_candidates, the predicates that
        -- we'll consider quantifying over
@@ -691,6 +689,7 @@ simplifyInfer rhs_tclvl infer_mode sigs name_taus wanteds
        --      the psig_theta; it's just the extra bit
        -- NB2: We do not do any defaulting when inferring a type, this can lead
        --      to less polymorphic types, see Note [Default while Inferring]
+       ; wanted_transformed_incl_derivs <- TcM.zonkWC wanted_transformed_incl_derivs
        ; let definite_error = insolubleWC wanted_transformed_incl_derivs
                               -- See Note [Quantification with errors]
                               -- NB: must include derived errors in this test,
@@ -1496,7 +1495,7 @@ expandSuperClasses unsolved
   | not (anyBag superClassesMightHelp unsolved)
   = return (True, unsolved)
   | otherwise
-  = do { traceTcS "expandSuperClasses {" empty
+  = do { traceTcS "expandSuperClasses {" (ppr unsolved)
        ; let (pending_wanted, unsolved') = mapAccumBagL get [] unsolved
              get acc ct | Just ct' <- isPendingScDict ct
                         = (ct':acc, ct')
@@ -1507,7 +1506,10 @@ expandSuperClasses unsolved
          then do { traceTcS "End expandSuperClasses no-op }" empty
                  ; return (True, unsolved) }
          else
-    do { new_given  <- makeSuperClasses pending_given
+    do { traceTcS "expandSuperClasses mid"
+             (vcat [ text "pending_given:" <+> ppr pending_given
+                   , text "pending_wanted:" <+> ppr pending_wanted ])
+       ; new_given  <- makeSuperClasses pending_given
        ; solveSimpleGivens new_given
        ; new_wanted <- makeSuperClasses pending_wanted
        ; traceTcS "End expandSuperClasses }"
@@ -1729,7 +1731,7 @@ neededEvVars implic@(Implic { ic_info = info
       ; let seeds1        = foldrBag add_implic_seeds old_needs implics
             seeds2        = foldEvBindMap add_wanted seeds1 ev_binds
             seeds3        = seeds2 `unionVarSet` tcvs
-            need_inner    = transCloVarSet (also_needs ev_binds) seeds3
+            need_inner    = findNeededEvVars ev_binds seeds3
             live_ev_binds = filterEvBindMap (needed_ev_bind need_inner) ev_binds
             need_outer    = foldEvBindMap del_ev_bndr need_inner live_ev_binds
                             `delVarSetList` givens
@@ -1762,19 +1764,6 @@ neededEvVars implic@(Implic { ic_info = info
      | is_given  = needs  -- Add the rhs vars of the Wanted bindings only
      | otherwise = evVarsOfTerm rhs `unionVarSet` needs
 
-   also_needs :: EvBindMap -> VarSet -> VarSet
-   also_needs ev_binds needs
-     = nonDetFoldUniqSet add emptyVarSet needs
-     -- It's OK to use nonDetFoldUFM here because we immediately
-     -- forget about the ordering by creating a set
-     where
-       add v needs
-        | Just ev_bind <- lookupEvBind ev_binds v
-        , EvBind { eb_is_given = is_given, eb_rhs = rhs } <- ev_bind
-        , is_given
-        = evVarsOfTerm rhs `unionVarSet` needs
-        | otherwise
-        = needs
 
 {- Note [Delete dead Given evidence bindings]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

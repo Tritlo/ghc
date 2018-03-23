@@ -144,7 +144,7 @@ cvtDec (TH.ValD pat body ds)
   | TH.VarP s <- pat
   = do  { s' <- vNameL s
         ; cl' <- cvtClause (mkPrefixFunRhs s') (Clause [] body ds)
-        ; returnJustL $ Hs.ValD $ mkFunBind s' [cl'] }
+        ; returnJustL $ Hs.ValD $ mkFunBind FromSource s' [cl'] }
 
   | otherwise
   = do  { pat' <- cvtPat pat
@@ -163,7 +163,7 @@ cvtDec (TH.FunD nm cls)
   | otherwise
   = do  { nm' <- vNameL nm
         ; cls' <- mapM (cvtClause (mkPrefixFunRhs nm')) cls
-        ; returnJustL $ Hs.ValD $ mkFunBind nm' cls' }
+        ; returnJustL $ Hs.ValD $ mkFunBind FromSource nm' cls' }
 
 cvtDec (TH.SigD nm typ)
   = do  { nm' <- vNameL nm
@@ -1301,6 +1301,9 @@ cvtTypeKind ty_str ty
              -> do  { let kis = replicate m placeHolderKind
                     ; returnL (HsExplicitTupleTy kis tys')
                     }
+             | otherwise
+             -> mk_apps (HsTyVar NotPromoted
+                               (noLoc (getRdrName (tupleDataCon Boxed n)))) tys'
              where
                m = length tys'
 
@@ -1622,8 +1625,14 @@ thRdrName loc ctxt_ns th_occ th_name
     occ :: OccName.OccName
     occ = mk_occ ctxt_ns th_occ
 
+-- Return an unqualified exact RdrName if we're dealing with built-in syntax.
+-- See Trac #13776.
 thOrigRdrName :: String -> TH.NameSpace -> PkgName -> ModName -> RdrName
-thOrigRdrName occ th_ns pkg mod = (mkOrig $! (mkModule (mk_pkg pkg) (mk_mod mod))) $! (mk_occ (mk_ghc_ns th_ns) occ)
+thOrigRdrName occ th_ns pkg mod =
+  let occ' = mk_occ (mk_ghc_ns th_ns) occ
+  in case isBuiltInOcc_maybe occ' of
+       Just name -> nameRdrName name
+       Nothing   -> (mkOrig $! (mkModule (mk_pkg pkg) (mk_mod mod))) $! occ'
 
 thRdrNameGuesses :: TH.Name -> [RdrName]
 thRdrNameGuesses (TH.Name occ flavour)

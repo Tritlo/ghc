@@ -1,10 +1,18 @@
 # Changelog for [`base` package](http://hackage.haskell.org/package/base)
 
-## 4.11.1.0 *TBA*
-  * `System.IO.openTempFile` is now thread-safe on Windows.
+## 4.12.0.0 *TBA*
+  * Move the module `Data.Functor.Contravariant` from the
+    `contravariant` package to `base`.
+
+  * `($!)` is now representation-polymorphic like `($)`.
+
+  * Add `Applicative` (for `K1`), `Semigroup` and `Monoid` instances in
+    `GHC.Generics`. (#14849)
 
 ## 4.11.0.0 *TBA*
   * Bundled with GHC 8.4.1
+
+  * `System.IO.openTempFile` is now thread-safe on Windows.
 
   * Deprecated `GHC.Stats.GCStats` interface has been removed.
 
@@ -75,6 +83,9 @@
     stack traces will be generated on unhandled exceptions by the RTS.
 
   * `getExecutablePath` now resolves symlinks on Windows (#14483)
+
+  * Deprecated STM invariant checking primitives (`checkInv`, `always`, and
+    `alwaysSucceeds`) in `GHC.Conc.Sync` (#14324).
 
 ## 4.10.1.0 *November 2017*
   * Bundled with GHC 8.2.2

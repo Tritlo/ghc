@@ -61,7 +61,8 @@ instance IsSet LabelSet where
   setIntersection (LS x) (LS y) = LS (setIntersection x y)
   setIsSubsetOf (LS x) (LS y) = setIsSubsetOf x y
 
-  setFold k z (LS s) = setFold (k . mkHooplLabel) z s
+  setFoldl k z (LS s) = setFoldl (\a v -> k a (mkHooplLabel v)) z s
+  setFoldr k z (LS s) = setFoldr (\v a -> k (mkHooplLabel v) a) z s
 
   setElems (LS s) = map mkHooplLabel (setElems s)
   setFromList ks = LS (setFromList (map lblToUnique ks))
@@ -86,6 +87,7 @@ instance IsMap LabelMap where
   mapInsert (Label k) v (LM m) = LM (mapInsert k v m)
   mapInsertWith f (Label k) v (LM m) = LM (mapInsertWith f k v m)
   mapDelete (Label k) (LM m) = LM (mapDelete k m)
+  mapAlter f (Label k) (LM m) = LM (mapAlter f k m)
 
   mapUnion (LM x) (LM y) = LM (mapUnion x y)
   mapUnionWithKey f (LM x) (LM y) = LM (mapUnionWithKey (f . mkHooplLabel) x y)
@@ -95,8 +97,10 @@ instance IsMap LabelMap where
 
   mapMap f (LM m) = LM (mapMap f m)
   mapMapWithKey f (LM m) = LM (mapMapWithKey (f . mkHooplLabel) m)
-  mapFold k z (LM m) = mapFold k z m
-  mapFoldWithKey k z (LM m) = mapFoldWithKey (k . mkHooplLabel) z m
+  mapFoldl k z (LM m) = mapFoldl k z m
+  mapFoldr k z (LM m) = mapFoldr k z m
+  mapFoldlWithKey k z (LM m) =
+      mapFoldlWithKey (\a v -> k a (mkHooplLabel v)) z m
   mapFilter f (LM m) = LM (mapFilter f m)
 
   mapElems (LM m) = mapElems m

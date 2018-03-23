@@ -704,9 +704,6 @@ loop:
   case THUNK_1_1:
   case THUNK_2_0:
   case THUNK_0_2:
-#if defined(NO_PROMOTE_THUNKS)
-#error bitrotted
-#endif
     copy(p,info,q,sizeofW(StgThunk)+2,gen_no);
     return;
 
@@ -1061,9 +1058,14 @@ selector_chain:
     // In threaded mode, we'll use WHITEHOLE to lock the selector
     // thunk while we evaluate it.
     {
-        do {
+        while(true) {
             info_ptr = xchg((StgPtr)&p->header.info, (W_)&stg_WHITEHOLE_info);
-        } while (info_ptr == (W_)&stg_WHITEHOLE_info);
+            if (info_ptr != (W_)&stg_WHITEHOLE_info) { break; }
+#if defined(PROF_SPIN)
+            ++whitehole_gc_spin;
+#endif
+            busy_wait_nop();
+        }
 
         // make sure someone else didn't get here first...
         if (IS_FORWARDING_PTR(info_ptr) ||

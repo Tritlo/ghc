@@ -73,7 +73,7 @@ test('T1969',
              # 2017-03-24 9261052 (x86/Linux, 64-bit machine)
              # 2017-04-06 9418680 (x86/Linux, 64-bit machine)
 
-           (wordsize(64), 19199872, 15)]),
+           (wordsize(64), 22311600, 15)]),
              # 2014-09-10 10463640, 10  # post-AMP-update (somewhat stabelish)
                # looks like the peak is around ~10M, but we're
                # unlikely to GC exactly on the peak.
@@ -89,6 +89,7 @@ test('T1969',
              # 2017-02-14 16393848 Early inline patch
              # 2017-03-31 16679176 Fix memory leak in simplifier
              # 2017-08-25 19199872 Refactor the Mighty Simplifier
+             # 2018-02-19 22311600 (amd64/Linux) Unknown
 
       compiler_stats_num_field('bytes allocated',
           [(platform('i386-unknown-mingw32'), 301784492, 5),
@@ -336,7 +337,7 @@ test('T3064',
             # 2016-04-06: 153261024 (x86/Linux) probably wildcard refactor
             # 2017-03-24: 134044092 (x86/Linux, 64-bit machine) Update
 
-           (wordsize(64), 281509496, 5)]),
+           (wordsize(64), 258505536, 5)]),
             # (amd64/Linux) (2011-06-28):  73259544
             # (amd64/Linux) (2013-02-07): 224798696
             # (amd64/Linux) (2013-08-02): 236404384, increase from roles
@@ -363,6 +364,7 @@ test('T3064',
             # (amd64/Linux) (2017-02-14): 259815560  Early inline patch: 9% improvement
             # (amd64/Linux) (2017-03-31): 265950920  Fix memory leak in simplifier
             # (amd64/Linux) (2017-05-01): 281509496  Avoid excessive space usage from unfoldings in CoreTidy
+            # (amd64/Linux) (2017-05-01): 258505536  I think this is improvement in coercionKind e4ab65bd
 
 ###################################
 # deactivated for now, as this metric became too volatile recently
@@ -474,11 +476,12 @@ test('parsing001',
           [(wordsize(32), 232777056, 10),
         # Initial:        274000576
         # 2017-03-24:     232777056
-           (wordsize(64), 463931280, 5)]),
+           (wordsize(64), 490228304, 5)]),
         # expected value: 587079016 (amd64/Linux)
         # 2016-09-01:     581551384 (amd64/Linux) Restore w/w limit (#11565)
         # 2016-12-19:     493730288 (amd64/Linux) Join points (#12988)
         # 2017-02-14:     463931280 Early inlining patch; acutal improvement 7%
+        # 2017-12-11:     490228304 BlockArguments
        only_ways(['normal']),
       ],
      compile_fail, [''])
@@ -662,7 +665,7 @@ test('T5837',
              # 2017-04-21                       54985248 (x64/Windows) - Unknown
              # 2017-12-24                       54793816 (x64/Windows) - Unknown
 
-           (wordsize(64), 52089424, 7)])
+           (wordsize(64), 55813608, 7)])
              # sample: 3926235424 (amd64/Linux, 15/2/2012)
              # 2012-10-02 81879216
              # 2012-09-20 87254264 amd64/Linux
@@ -700,6 +703,7 @@ test('T5837',
              # 2017-02-25 52625920  amd64/Linux Early inlining patch
              # 2017-09-06 56782344  amd64/Linux Drift manifest in unrelated LLVM patch
              # 2017-10-24 52089424  amd64/linux Fix space leak in BinIface.getSymbolTable
+             # 2018-02-19 55813608  amd64/Linux Unknown
       ],
       compile, ['-freduction-depth=50'])
 
@@ -1208,6 +1212,19 @@ test('T13719',
      multimod_compile,
      ['T13719', '-v0'])
 
+test('T14697',
+     [ compiler_stats_num_field('bytes allocated',
+          [(wordsize(64), 337290376, 10),
+          # initial:    635573784
+          # 2018-02-23: 337290376 Cache the fingerprint of sOpt_P
+          ]),
+       pre_cmd('./genT14697'),
+       extra_files(['genT14697']),
+       extra_hc_opts('$(cat T14697-flags)'), # 10k -optP arguments
+     ],
+     multimod_compile,
+     ['T14697', '-v0'])
+
 test('Naperian',
      [ reqlib('vector'),
        only_ways(['optasm']),
@@ -1224,9 +1241,10 @@ test ('T9630',
       [ compiler_stats_num_field('max_bytes_used', # Note [residency]
           [(platform('x86_64-unknown-mingw32'),   39867088, 15),
           # 2017-12-24:                     34171816 (x64/Windows)
-          (wordsize(64), 41568168, 15)
+          (wordsize(64), 35324712, 15)
           # initial:    56955240
           # 2017-06-07: 41568168     Stop the specialiser generating loopy code
+          # 2018-02-25: 35324712     It's not entirely clear
           ]),
       extra_clean(['T9630a.hi', 'T9630a.o'])
       ],

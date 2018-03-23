@@ -12,7 +12,7 @@ module Hoopl.Collections
 
 import GhcPrelude
 
-import qualified Data.IntMap as M
+import qualified Data.IntMap.Strict as M
 import qualified Data.IntSet as S
 
 import Data.List (foldl', foldl1')
@@ -34,7 +34,8 @@ class IsSet set where
   setIntersection :: set -> set -> set
   setIsSubsetOf :: set -> set -> Bool
 
-  setFold :: (ElemOf set -> b -> b) -> b -> set -> b
+  setFoldl :: (b -> ElemOf set -> b) -> b -> set -> b
+  setFoldr :: (ElemOf set -> b -> b) -> b -> set -> b
 
   setElems :: set -> [ElemOf set]
   setFromList :: [ElemOf set] -> set
@@ -65,6 +66,7 @@ class IsMap map where
   mapInsert :: KeyOf map -> a -> map a -> map a
   mapInsertWith :: (a -> a -> a) -> KeyOf map -> a -> map a -> map a
   mapDelete :: KeyOf map -> map a -> map a
+  mapAlter :: (Maybe a -> Maybe a) -> KeyOf map -> map a -> map a
 
   mapUnion :: map a -> map a -> map a
   mapUnionWithKey :: (KeyOf map -> a -> a -> a) -> map a -> map a -> map a
@@ -74,8 +76,9 @@ class IsMap map where
 
   mapMap :: (a -> b) -> map a -> map b
   mapMapWithKey :: (KeyOf map -> a -> b) -> map a -> map b
-  mapFold :: (a -> b -> b) -> b -> map a -> b
-  mapFoldWithKey :: (KeyOf map -> a -> b -> b) -> b -> map a -> b
+  mapFoldl :: (b -> a -> b) -> b -> map a -> b
+  mapFoldr :: (a -> b -> b) -> b -> map a -> b
+  mapFoldlWithKey :: (b -> KeyOf map -> a -> b) -> b -> map a -> b
   mapFilter :: (a -> Bool) -> map a -> map a
 
   mapElems :: map a -> [a]
@@ -118,7 +121,8 @@ instance IsSet UniqueSet where
   setIntersection (US x) (US y) = US (S.intersection x y)
   setIsSubsetOf (US x) (US y) = S.isSubsetOf x y
 
-  setFold k z (US s) = S.foldr k z s
+  setFoldl k z (US s) = S.foldl' k z s
+  setFoldr k z (US s) = S.foldr k z s
 
   setElems (US s) = S.elems s
   setFromList ks = US (S.fromList ks)
@@ -140,6 +144,7 @@ instance IsMap UniqueMap where
   mapInsert k v (UM m) = UM (M.insert k v m)
   mapInsertWith f k v (UM m) = UM (M.insertWith f k v m)
   mapDelete k (UM m) = UM (M.delete k m)
+  mapAlter f k (UM m) = UM (M.alter f k m)
 
   mapUnion (UM x) (UM y) = UM (M.union x y)
   mapUnionWithKey f (UM x) (UM y) = UM (M.unionWithKey f x y)
@@ -149,8 +154,9 @@ instance IsMap UniqueMap where
 
   mapMap f (UM m) = UM (M.map f m)
   mapMapWithKey f (UM m) = UM (M.mapWithKey f m)
-  mapFold k z (UM m) = M.foldr k z m
-  mapFoldWithKey k z (UM m) = M.foldrWithKey k z m
+  mapFoldl k z (UM m) = M.foldl' k z m
+  mapFoldr k z (UM m) = M.foldr k z m
+  mapFoldlWithKey k z (UM m) = M.foldlWithKey' k z m
   mapFilter f (UM m) = UM (M.filter f m)
 
   mapElems (UM m) = M.elems m

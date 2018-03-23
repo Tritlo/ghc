@@ -111,8 +111,7 @@ analyzeCmm dir lattice transfer cmmGraph initFact =
         blockMap =
             case hooplGraph of
                 GMany NothingO bm NothingO -> bm
-        entries = if mapNull initFact then [entry] else mapKeys initFact
-    in fixpointAnalysis dir lattice transfer entries blockMap initFact
+    in fixpointAnalysis dir lattice transfer entry blockMap initFact
 
 -- Fixpoint algorithm.
 fixpointAnalysis
@@ -120,16 +119,16 @@ fixpointAnalysis
        Direction
     -> DataflowLattice f
     -> TransferFun f
-    -> [Label]
+    -> Label
     -> LabelMap CmmBlock
     -> FactBase f
     -> FactBase f
-fixpointAnalysis direction lattice do_block entries blockmap = loop start
+fixpointAnalysis direction lattice do_block entry blockmap = loop start
   where
     -- Sorting the blocks helps to minimize the number of times we need to
     -- process blocks. For instance, for forward analysis we want to look at
     -- blocks in reverse postorder. Also, see comments for sortBlocks.
-    blocks     = sortBlocks direction entries blockmap
+    blocks     = sortBlocks direction entry blockmap
     num_blocks = length blocks
     block_arr  = {-# SCC "block_arr" #-} listArray (0, num_blocks - 1) blocks
     start      = {-# SCC "start" #-} IntSet.fromDistinctAscList
@@ -148,7 +147,7 @@ fixpointAnalysis direction lattice do_block entries blockmap = loop start
             -- information in fbase1 and (if something changed) we update it
             -- and add the affected blocks to the worklist.
             (todo2, fbase2) = {-# SCC "mapFoldWithKey" #-}
-                mapFoldWithKey
+                mapFoldlWithKey
                     (updateFact join dep_blocks) (todo1, fbase1) out_facts
         in loop todo2 fbase2
     loop _ !fbase1 = fbase1
@@ -174,9 +173,8 @@ rewriteCmm dir lattice rwFun cmmGraph initFact = do
         blockMap1 =
             case hooplGraph of
                 GMany NothingO bm NothingO -> bm
-        entries = if mapNull initFact then [entry] else mapKeys initFact
     (blockMap2, facts) <-
-        fixpointRewrite dir lattice rwFun entries blockMap1 initFact
+        fixpointRewrite dir lattice rwFun entry blockMap1 initFact
     return (cmmGraph {g_graph = GMany NothingO blockMap2 NothingO}, facts)
 
 fixpointRewrite
@@ -184,16 +182,16 @@ fixpointRewrite
        Direction
     -> DataflowLattice f
     -> RewriteFun f
-    -> [Label]
+    -> Label
     -> LabelMap CmmBlock
     -> FactBase f
     -> UniqSM (LabelMap CmmBlock, FactBase f)
-fixpointRewrite dir lattice do_block entries blockmap = loop start blockmap
+fixpointRewrite dir lattice do_block entry blockmap = loop start blockmap
   where
     -- Sorting the blocks helps to minimize the number of times we need to
     -- process blocks. For instance, for forward analysis we want to look at
     -- blocks in reverse postorder. Also, see comments for sortBlocks.
-    blocks     = sortBlocks dir entries blockmap
+    blocks     = sortBlocks dir entry blockmap
     num_blocks = length blocks
     block_arr  = {-# SCC "block_arr_rewrite" #-}
                  listArray (0, num_blocks - 1) blocks
@@ -219,7 +217,7 @@ fixpointRewrite dir lattice do_block entries blockmap = loop start blockmap
             do_block block fbase1
         let blocks2 = mapInsert (entryLabel new_block) new_block blocks1
             (todo2, fbase2) = {-# SCC "mapFoldWithKey_rewrite" #-}
-                mapFoldWithKey
+                mapFoldlWithKey
                     (updateFact join dep_blocks) (todo1, fbase1) out_facts
         loop todo2 blocks2 fbase2
     loop _ !blocks1 !fbase1 = return (blocks1, fbase1)
@@ -268,20 +266,15 @@ we'll propagate (x=4) to L4, and nuke the otherwise-good rewriting of L4.
 -- | Sort the blocks into the right order for analysis. This means reverse
 -- postorder for a forward analysis. For the backward one, we simply reverse
 -- that (see Note [Backward vs forward analysis]).
---
--- Note: We're using Hoopl's confusingly named `postorder_dfs_from` but AFAICS
--- it returns the *reverse* postorder of the blocks (it visits blocks in the
--- postorder and uses (:) to collect them, which gives the reverse of the
--- visitation order).
 sortBlocks
     :: NonLocal n
-    => Direction -> [Label] -> LabelMap (Block n C C) -> [Block n C C]
-sortBlocks direction entries blockmap =
+    => Direction -> Label -> LabelMap (Block n C C) -> [Block n C C]
+sortBlocks direction entry blockmap =
     case direction of
         Fwd -> fwd
         Bwd -> reverse fwd
   where
-    fwd = postorder_dfs_from blockmap entries
+    fwd = revPostorderFrom blockmap entry
 
 -- Note [Backward vs forward analysis]
 --
@@ -333,11 +326,11 @@ mkDepBlocks Bwd blocks = go blocks 0 mapEmpty
 updateFact
     :: JoinFun f
     -> LabelMap IntSet
+    -> (IntHeap, FactBase f)
     -> Label
     -> f -- out fact
     -> (IntHeap, FactBase f)
-    -> (IntHeap, FactBase f)
-updateFact fact_join dep_blocks lbl new_fact (todo, fbase)
+updateFact fact_join dep_blocks (todo, fbase) lbl new_fact
   = case lookupFact lbl fbase of
       Nothing ->
           -- Note [No old fact]

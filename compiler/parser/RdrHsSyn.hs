@@ -42,6 +42,7 @@ module   RdrHsSyn (
 
         -- Bunch of functions in the parser monad for
         -- checking and constructing values
+        checkBlockArguments,
         checkPrecP,           -- Int -> P Int
         checkContext,         -- HsType -> P HsContext
         checkInfixConstr,
@@ -54,6 +55,7 @@ module   RdrHsSyn (
         checkValSigLhs,
         checkDoAndIfThenElse,
         checkRecordSyntax,
+        checkEmptyGADTs,
         parseErrorSDoc, hintBangPat,
         splitTilde, splitTildeApps,
 
@@ -420,7 +422,7 @@ getMonoBind (L loc1 (FunBind { fun_id = fun_id1@(L _ f1),
         = let doc_decls' = doc_decl : doc_decls
           in go mtchs (combineSrcSpans loc loc2) binds doc_decls'
     go mtchs loc binds doc_decls
-        = ( L loc (makeFunBind fun_id1 (reverse mtchs))
+        = ( L loc (makeFunBind FromSource fun_id1 (reverse mtchs))
           , (reverse doc_decls) ++ binds)
         -- Reverse the final matches, to get it back in the right order
         -- Do the same thing with the trailing doc comments
@@ -782,6 +784,21 @@ checkRecordSyntax lr@(L loc r)
                       (text "Illegal record syntax (use TraditionalRecordSyntax):" <+>
                        ppr r)
 
+-- | Check if the gadt_constrlist is empty. Only raise parse error for
+-- `data T where` to avoid affecting existing error message, see #8258.
+checkEmptyGADTs :: Located ([AddAnn], [LConDecl GhcPs])
+                -> P (Located ([AddAnn], [LConDecl GhcPs]))
+checkEmptyGADTs gadts@(L span (_, []))               -- Empty GADT declaration.
+    = do opts <- fmap options getPState
+         if LangExt.GADTSyntax `extopt` opts         -- GADTs implies GADTSyntax
+            then return gadts
+            else parseErrorSDoc span $ vcat
+              [ text "Illegal keyword 'where' in data declaration"
+              , text "Perhaps you intended to use GADTs or a similar language"
+              , text "extension to enable syntax: data T where"
+              ]
+checkEmptyGADTs gadts = return gadts              -- Ordinary GADT declaration.
+
 checkTyClHdr :: Bool               -- True  <=> class header
                                    -- False <=> type header
              -> LHsType GhcPs
@@ -825,11 +842,45 @@ checkTyClHdr is_cls ty
       = parseErrorSDoc l (text "Malformed head of type or class declaration:"
                           <+> ppr ty)
 
+-- | Yield a parse error if we have a function applied directly to a do block
+-- etc. and BlockArguments is not enabled.
+checkBlockArguments :: LHsExpr GhcPs -> P ()
+checkBlockArguments expr = case unLoc expr of
+    HsDo DoExpr _ _ -> check "do block"
+    HsDo MDoExpr _ _ -> check "mdo block"
+    HsLam {} -> check "lambda expression"
+    HsCase {} -> check "case expression"
+    HsLamCase {} -> check "lambda-case expression"
+    HsLet {} -> check "let expression"
+    HsIf {} -> check "if expression"
+    HsProc {} -> check "proc expression"
+    _ -> return ()
+  where
+    check element = do
+      pState <- getPState
+      unless (extopt LangExt.BlockArguments (options pState)) $
+        parseErrorSDoc (getLoc expr) $
+          text "Unexpected " <> text element <> text " in function application:"
+           $$ nest 4 (ppr expr)
+           $$ text "You could write it with parentheses"
+           $$ text "Or perhaps you meant to enable BlockArguments?"
+
+-- | Validate the context constraints and break up a context into a list
+-- of predicates.
+--
+-- @
+--     (Eq a, Ord b)        -->  [Eq a, Ord b]
+--     Eq a                 -->  [Eq a]
+--     (Eq a)               -->  [Eq a]
+--     (((Eq a)))           -->  [Eq a]
+-- @
 checkContext :: LHsType GhcPs -> P ([AddAnn],LHsContext GhcPs)
 checkContext (L l orig_t)
   = check [] (L l orig_t)
  where
-  check anns (L lp (HsTupleTy _ ts))   -- (Eq a, Ord b) shows up as a tuple type
+  check anns (L lp (HsTupleTy HsBoxedOrConstraintTuple ts))
+    -- (Eq a, Ord b) shows up as a tuple type. Only boxed tuples can
+    -- be used as context constraints.
     = return (anns ++ mkParensApiAnn lp,L l ts)                -- Ditto ()
 
     -- don't let HsAppsTy get in the way
@@ -933,12 +984,13 @@ checkAPat msg loc e0 = do
                       | extopt LangExt.NPlusKPatterns opts && (plus == plus_RDR)
                       -> return (mkNPlusKPat (L nloc n) (L lloc lit))
 
-   OpApp l op _fix r  -> do l <- checkLPat msg l
-                            r <- checkLPat msg r
-                            case op of
-                               L cl (HsVar (L _ c)) | isDataOcc (rdrNameOcc c)
-                                      -> return (ConPatIn (L cl c) (InfixCon l r))
-                               _ -> patFail msg loc e0
+   OpApp l (L cl (HsVar (L _ c))) _fix r
+     | isDataOcc (rdrNameOcc c) -> do
+         l <- checkLPat msg l
+         r <- checkLPat msg r
+         return (ConPatIn (L cl c) (InfixCon l r))
+
+   OpApp _l _op _fix _r -> patFail msg loc e0
 
    HsPar e            -> checkLPat msg e >>= (return . ParPat)
    ExplicitList _ _ es  -> do ps <- mapM (checkLPat msg) es
@@ -1024,7 +1076,7 @@ checkFunBind msg strictness ann lhs_loc fun is_infix pats (L rhs_span grhss)
         let match_span = combineSrcSpans lhs_loc rhs_span
         -- Add back the annotations stripped from any HsPar values in the lhs
         -- mapM_ (\a -> a match_span) ann
-        return (ann, makeFunBind fun
+        return (ann, makeFunBind FromSource fun
                   [L match_span (Match { m_ctxt = FunRhs { mc_fun    = fun
                                                          , mc_fixity = is_infix
                                                          , mc_strictness = strictness }
@@ -1033,12 +1085,12 @@ checkFunBind msg strictness ann lhs_loc fun is_infix pats (L rhs_span grhss)
         -- The span of the match covers the entire equation.
         -- That isn't quite right, but it'll do for now.
 
-makeFunBind :: Located RdrName -> [LMatch GhcPs (LHsExpr GhcPs)]
+makeFunBind :: Origin -> Located RdrName -> [LMatch GhcPs (LHsExpr GhcPs)]
             -> HsBind GhcPs
 -- Like HsUtils.mkFunBind, but we need to be able to set the fixity too
-makeFunBind fn ms
+makeFunBind origin fn ms
   = FunBind { fun_id = fn,
-              fun_matches = mkMatchGroup FromSource ms,
+              fun_matches = mkMatchGroup origin ms,
               fun_co_fn = idHsWrapper,
               bind_fvs = placeHolderNames,
               fun_tick = [] }

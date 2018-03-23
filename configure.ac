@@ -55,13 +55,14 @@ AC_SUBST([release], [1])
 # First off, a distrib sanity check..
 AC_CONFIG_SRCDIR([mk/config.mk.in])
 
-dnl * We require autoconf version 2.60
-dnl We need 2.50 due to the use of AC_SYS_LARGEFILE and AC_MSG_NOTICE.
-dnl We need 2.52 due to the use of AS_TR_CPP and AS_TR_SH.
-dnl Using autoconf 2.59 started to give nonsense like this
-dnl  #define SIZEOF_CHAR 0
-dnl recently.
-AC_PREREQ([2.60])
+dnl * We require autoconf version 2.69 due to
+dnl   https://bugs.ruby-lang.org/issues/8179. Also see #14910.
+dnl * We need 2.50 due to the use of AC_SYS_LARGEFILE and AC_MSG_NOTICE.
+dnl * We need 2.52 due to the use of AS_TR_CPP and AS_TR_SH.
+dnl * Using autoconf 2.59 started to give nonsense like this
+dnl     #define SIZEOF_CHAR 0
+dnl   recently.
+AC_PREREQ([2.69])
 
 # -------------------------------------------------------------------------
 # Prepare to generate the following header files
@@ -158,8 +159,8 @@ if test "$WithGhc" = ""
 then
     AC_MSG_ERROR([GHC is required.])
 fi
-FP_COMPARE_VERSIONS([$GhcVersion],[-lt],[8.0],
-    [AC_MSG_ERROR([GHC version 8.0 or later is required to compile GHC.])])
+FP_COMPARE_VERSIONS([$GhcVersion],[-lt],[8.2],
+    [AC_MSG_ERROR([GHC version 8.2 or later is required to compile GHC.])])
 
 if test `expr $GhcMinVersion % 2` = "1"
 then
@@ -418,6 +419,10 @@ then
     AC_PATH_PROG([DllWrap],[dllwrap])
     AC_PATH_PROG([Windres],[windres])
     AC_PATH_PROG([Genlib],[genlib])
+else
+    AC_CHECK_TARGET_TOOL([Windres],[windres])
+    AC_CHECK_TARGET_TOOL([DllWrap],[dllwrap])
+    AC_CHECK_TARGET_TOOL([OBJDUMP],[objdump])
 fi
 
 DllWrapCmd="$DllWrap"
@@ -544,8 +549,10 @@ FIND_LD([$target],[GccUseLdOpt])
 CONF_GCC_LINKER_OPTS_STAGE1="$CONF_GCC_LINKER_OPTS_STAGE1 $GccUseLdOpt"
 CONF_GCC_LINKER_OPTS_STAGE2="$CONF_GCC_LINKER_OPTS_STAGE2 $GccUseLdOpt"
 LdCmd="$LD"
+LdNoGoldCmd="$LD_NO_GOLD"
 CFLAGS="$CFLAGS $GccUseLdOpt"
 AC_SUBST([LdCmd])
+AC_SUBST([LdNoGoldCmd])
 
 FP_PROG_LD_IS_GNU
 FP_PROG_LD_BUILD_ID
