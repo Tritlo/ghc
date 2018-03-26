@@ -508,8 +508,8 @@ tcCheckHoleFitUpToEq :: Bool        -- Whether to allow unsolved constraints.
                      -> TcM Bool
 tcCheckHoleFitUpToEq _ _ _ hole_ty ty | hole_ty `eqType` ty = return True
 tcCheckHoleFitUpToEq allowEq relevantCts holeVars hole_ty ty = discardErrs $
- do { (_, wanted, _) <- pushLevelAndCaptureConstraints $
-                           tcSubType_NC ExprSigCtxt ty hole_ty
+ do { -- pushTcLevelM_
+    ; (_, wanted ) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
     ; rem <- runTcSDeriveds $
                simpl_top $ addSimples wanted relevantCts
     -- We don't want any insoluble or simple constraints left,
@@ -517,28 +517,7 @@ tcCheckHoleFitUpToEq allowEq relevantCts holeVars hole_ty ty = discardErrs $
     ; return (checkIfOnlyNeedsEquality rem) }
     where
       checkIfOnlyNeedsEquality (WC simpl impl) =
-       -- If everything is solved, we have a match!
         (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)
-        -- oherwise, not every thing was solved, but the rest could be solved
-        -- by additional classes, we're also good
-        || (allowEq
-            && allBag isPSC simpl
-            && not (isEmptyBag impl)
-            && allBag (isUnsolved . ic_status) impl
-            && allBag (allBag isCNonCanonical . wc_simple . ic_wanted) impl
-            && allBag (allBag (isEqOfTy . ctEvPred . cc_ev)
-                              . wc_simple . ic_wanted) impl)
-      isUnsolved IC_Unsolved = True
-      isUnsolved _ = False
-      isEqOfTy ty | isEqPred ty =
-        case splitTyConApp ty of
-            (_ , [k1, k2, t1, t2]) | eqType k1 k2 ->
-              all isTyVarTy [t1,t2] || any (flip any [t1,t2] . eqType) holeVars
-            _ -> False
-      isEqOfTy _ = False
-      isPSC :: Ct -> Bool
-      isPSC (CDictCan {cc_pend_sc = True}) = True
-      isPSC _ = False
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool
