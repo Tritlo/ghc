@@ -489,34 +489,29 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes = tcCheckHoleFitUpToEq False emptyBag []
+tcSubsumes = tcCheckHoleFit emptyBag []
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
 -- perform unification.
-tcCheckHoleFit :: Cts -> [TcType] -> TcSigmaType -> TcSigmaType -> TcM Bool
-tcCheckHoleFit = tcCheckHoleFitUpToEq True
-
--- | A tcSubsumes that allows for unsolved constraints, provided that they
---  only pertain to the equality of two type variables or the instantiation
---  of refinement type variable types.
-tcCheckHoleFitUpToEq :: Bool        -- Whether to allow unsolved constraints.
-                     -> Cts         -- Any relevant Cts to the hole.
-                     -> [TcType]    -- The list of refinement TyVarTys.
-                     -> TcSigmaType -- The type of the hole.
-                     -> TcSigmaType -- The type to check whether fits.
-                     -> TcM Bool
-tcCheckHoleFitUpToEq _ _ _ hole_ty ty | hole_ty `eqType` ty = return True
-tcCheckHoleFitUpToEq allowEq relevantCts holeVars hole_ty ty = discardErrs $
- do { -- pushTcLevelM_
-    ; (_, wanted ) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
-    ; rem <- runTcSDeriveds $
-               simpl_top $ addSimples wanted relevantCts
+tcCheckHoleFit :: Cts         -- Any relevant Cts to the hole.
+               -> [TcType]    -- The list of refinement TyVarTys.
+               -> TcSigmaType -- The type of the hole.
+               -> TcSigmaType -- The type to check whether fits.
+               -> TcM Bool
+tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty = return True
+tcCheckHoleFit relevantCts holeVars hole_ty ty = discardErrs $
+ do { (_, wanted) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
+    ; traceTc "Checking hole fit {" empty
+    ; traceTc "wanteds are: " $ ppr wanted
+    ; rem <- runTcSDeriveds $ simpl_top $ addSimples wanted relevantCts
     -- We don't want any insoluble or simple constraints left,
     -- but solved implications are ok (and neccessary for e.g. undefined)
-    ; return (checkIfOnlyNeedsEquality rem) }
+    ; traceTc "rems was: " $ ppr rem
+    ; traceTc "}" empty
+    ; return (checkIfOK rem) }
     where
-      checkIfOnlyNeedsEquality (WC simpl impl) =
+      checkIfOK (WC simpl impl) =
         (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)
 
 ------------------

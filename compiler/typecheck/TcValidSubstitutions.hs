@@ -76,7 +76,7 @@ pprHoleFit showProv hf =
           ty = varType (hfId hf)
           matches = hfMatches hf
           holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
-          idAndTy = hsep [(pprPrefixOcc name <+> holeVs <+> dcolon), ppr ty]
+          idAndTy = hsep [pprPrefixOcc name <+> holeVs <+> dcolon, ppr ty]
           provenance = parens $ pprNameProvenance (hfEl hf)
 
 -- See Note [Valid substitutions include ...]
@@ -97,8 +97,8 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
         sortSubs graphSortSubs maxVSubs searchDiscards subs
      ; let vMsg = ppUnless (null subs) $
                     hang (text "Valid substitutions include") 2 $
-                    vcat (map (pprHoleFit showProvenance) sortedSubs)
-                     $$ ppWhen vDiscards subsDiscardMsg
+                      vcat (map (pprHoleFit showProvenance) sortedSubs)
+                        $$ ppWhen vDiscards subsDiscardMsg
      ; refMsg <- if refLevel >= Just 0 then
          do { maxRSubs <- maxRefSubstitutions <$> getDynFlags
             -- We can use from just, since we know that Nothing >= _ is False.
@@ -106,7 +106,7 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
             -- We make a new refinement type for each level of refinement, where
             -- the level of refinement indicates number of additional arguments
             -- to allow.
-            ; ref_tys <- mapM (\l -> (,) l <$> mkRefTy l ) refLvls
+            ; ref_tys <- mapM (\l -> (,) l <$> mkRefTy l) refLvls
             ; traceTc "ref_tys are" $ ppr ref_tys
             ; refDs <-
                 mapM (uncurry $ findSubs graphSortSubs maxRSubs rdr_env) ref_tys
@@ -260,7 +260,6 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
                      getMTy :: MetaDetails -> Maybe TcType
                      getMTy Flexi = Nothing
                      getMTy (Indirect t) = Just t
-                ; traceTc "refinementVars were: " (ppr  mtvs)
                 ; matches <- mapM (fmap getMTy . readMetaTyVar) mtvs
                 ; allFilled <- goptM Opt_AbstractRefSubstitutions `orM`
                                return (all isJust matches)
