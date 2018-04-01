@@ -3,7 +3,7 @@
 module TcErrors(
        reportUnsolved, reportAllUnsolved, warnAllUnsolved,
        warnDefaulting,
-       
+
        ReportErrCtxt,
 
        solverDepthErrorTcS
@@ -1152,7 +1152,8 @@ mkHoleError _ _ ct = pprPanic "mkHoleError" (ppr ct)
 -- We unwrap the ReportErrCtxt here, to avoid introducing a loop in module
 -- imports
 validSubstitutions :: ReportErrCtxt -> [Ct] -> Ct -> TcM SDoc
-validSubstitutions (CEC {cec_encl = implics}) = findValidSubstitutions implics
+validSubstitutions (CEC {cec_encl = implics, cec_tidy = lcl_env})
+  = findValidSubstitutions lcl_env implics
 
 -- See Note [Constraints include ...]
 givenConstraintsMsg :: ReportErrCtxt -> SDoc
@@ -2802,7 +2803,7 @@ relevantBindings want_filtering ctxt ct
        ; (tidy_env', docs, discards)
               <- go dflags env1 ct_tvs (maxRelevantBinds dflags)
                     emptyVarSet [] False
-                    (remove_shadowing $ tcl_bndrs lcl_env)
+                    (removeBindingShadowing $ tcl_bndrs lcl_env)
          -- tcl_bndrs has the innermost bindings first,
          -- which are probably the most relevant ones
 
@@ -2828,15 +2829,6 @@ relevantBindings want_filtering ctxt ct
     dec_max :: Maybe Int -> Maybe Int
     dec_max = fmap (\n -> n - 1)
 
-    ---- fixes #12177
-    ---- builds up a list of bindings whose OccName has not been seen before
-    remove_shadowing :: [TcBinder] -> [TcBinder]
-    remove_shadowing bindings = reverse $ fst $ foldl
-      (\(bindingAcc, seenNames) binding ->
-        if (occName binding) `elemOccSet` seenNames -- if we've seen it
-          then (bindingAcc, seenNames)              -- skip it
-          else (binding:bindingAcc, extendOccSet seenNames (occName binding)))
-      ([], emptyOccSet) bindings
 
     go :: DynFlags -> TidyEnv -> TcTyVarSet -> Maybe Int -> TcTyVarSet -> [SDoc]
        -> Bool                          -- True <=> some filtered out due to lack of fuel
@@ -2893,6 +2885,7 @@ relevantBindings want_filtering ctxt ct
                           -- Keep this binding, decrement fuel
                  else go dflags tidy_env' ct_tvs (dec_max n_left) new_seen
                          (doc:docs) discards tc_bndrs }
+
 
 discardMsg :: SDoc
 discardMsg = text "(Some bindings suppressed;" <+>

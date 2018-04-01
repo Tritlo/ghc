@@ -114,6 +114,7 @@ module TcRnTypes(
         ctEvRole,
 
         wrapType, wrapTypeWithImplication,
+        removeBindingShadowing,
 
         -- Constraint solver plugins
         TcPlugin(..), TcPluginResult(..), TcPluginSolver,
@@ -931,6 +932,18 @@ instance HasOccName TcBinder where
     occName (TcIdBndr id _)             = occName (idName id)
     occName (TcIdBndr_ExpType name _ _) = occName name
     occName (TcTvBndr name _)           = occName name
+
+
+
+---- fixes #12177
+---- builds up a list of bindings whose OccName has not been seen before
+removeBindingShadowing :: [TcBinder] -> [TcBinder]
+removeBindingShadowing bindings = reverse $ fst $ foldl
+    (\(bindingAcc, seenNames) binding ->
+    if (occName binding) `elemOccSet` seenNames -- if we've seen it
+        then (bindingAcc, seenNames)              -- skip it
+        else (binding:bindingAcc, extendOccSet seenNames (occName binding)))
+    ([], emptyOccSet) bindings
 
 ---------------------------
 -- Template Haskell stages and levels

@@ -1,4 +1,3 @@
-
 module TcValidSubstitutions ( findValidSubstitutions ) where
 
 import GhcPrelude
@@ -15,11 +14,12 @@ import DataCon
 import Name
 import RdrName ( GlobalRdrEnv, pprNameProvenance
                , GlobalRdrElt (..), globalRdrEnvElts )
-   
+
 import PrelNames ( gHC_ERR )
 import Id
 import Var
 import VarSet
+import VarEnv
 import Bag
 import ConLike          ( ConLike(..))
 import Util
@@ -27,7 +27,7 @@ import TcEnv (tcLookup)
 import Outputable
 import DynFlags
 import Maybes
-import FV ( fvVarList, fvVarSet )
+import FV ( fvVarList, fvVarSet, filterFV )
 
 import Control.Monad    ( filterM, replicateM )
 import Data.List        ( partition, sort, foldl' )
@@ -43,7 +43,9 @@ import Data.Function    ( on )
 -- element that was checked, the Id of that element as found by `tcLookup`,
 -- and the refinement level of the fit, which is the number of extra argument
 -- holes that this fit uses (e.g. if hfRefLvl is 2, the fit is for `Id _ _`).
-data HoleFit = HoleFit { hfEl :: GlobalRdrElt  -- The element that was checked
+data HoleFit = HoleFit { hfEl :: Maybe GlobalRdrElt -- The element that was
+                                                    -- if a global, nothing
+                                                    -- if it is a local.
                        , hfId :: Id            -- the elements id in the TcM
                        , hfRefLvl :: Int       -- The number of holes in this fit
                        , hfMatches :: [TcType] } -- What the refinement variables
@@ -60,7 +62,7 @@ instance Eq HoleFit where
 instance Ord HoleFit where
   compare a b = cmp a b
     where cmp  = if hfRefLvl a == hfRefLvl b
-                 then compare `on` (gre_name . hfEl)
+                 then compare `on` (idName . hfId)
                  else compare `on` hfRefLvl
 
 instance Outputable HoleFit where
@@ -71,18 +73,56 @@ instance Outputable HoleFit where
 -- refinement level.
 pprHoleFit :: Bool -> HoleFit -> SDoc
 pprHoleFit showProv hf =
-    if showProv then hang idAndTy 2 provenance else idAndTy
-    where name = gre_name (hfEl hf)
+    if showProv then hang display 2 provenance else display
+    where name = case hfEl hf of
+                      Just gre -> gre_name gre
+                      Nothing -> idName (hfId hf)
           ty = varType (hfId hf)
           matches = hfMatches hf
           holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
-          idAndTy = hsep [pprPrefixOcc name <+> holeVs <+> dcolon, ppr ty]
-          provenance = parens $ pprNameProvenance (hfEl hf)
+          idAndTy = pprPrefixOcc name <+> dcolon <+> ppr ty
+          display = if null matches
+            then idAndTy
+            else hang (pprPrefixOcc name <+> holeVs) 2 (text "where" <+> idAndTy)
+          provenance = parens $
+            case hfEl hf of
+              Just gre -> pprNameProvenance gre
+              Nothing -> text "bound at" <+> ppr (getSrcLoc name)
+
+
+getLocalBindings :: TidyEnv -> Ct -> TcM [Id]
+getLocalBindings tidy_orig ct
+ = do { (env1, _) <- zonkTidyOrigin tidy_orig (ctLocOrigin loc)
+      ; go env1 [] (removeBindingShadowing $ tcl_bndrs lcl_env) }
+  where
+    loc     = ctEvLoc (ctEvidence ct)
+    lcl_env = ctLocEnv loc
+
+    go :: TidyEnv -> [Id] -> [TcBinder] -> TcM [Id]
+    go _ sofar [] = return (reverse sofar)
+    go env sofar (tc_bndr : tc_bndrs) =
+        case tc_bndr of
+          TcTvBndr {} -> discard_it
+          TcIdBndr id _ -> keep_it id
+          TcIdBndr_ExpType name et _ -> discard_it
+            -- do { mb_ty <- readExpType_maybe et
+            --    ; case mb_ty of
+            --        Just ty -> keep_it name ty
+            --        Nothing -> discard_it
+     where
+        discard_it = go env sofar tc_bndrs
+        keep_it id = go env (id:sofar) tc_bndrs
+          -- = do { (env', ty') <- zonkTidyTcType env ty
+          --      ; go env' ((name,ty'):sofar) tc_bndrs }
+
+
+
 
 -- See Note [Valid substitutions include ...]
-findValidSubstitutions :: [Implication] -> [Ct] -> Ct -> TcM SDoc
-findValidSubstitutions implics simples ct | isExprHoleCt ct =
+findValidSubstitutions :: TidyEnv -> [Implication] -> [Ct] -> Ct -> TcM SDoc
+findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
+     ; lclBinds <- getLocalBindings tidy_env ct
      ; maxVSubs <- maxValidSubstitutions <$> getDynFlags
      ; showProvenance <- not <$> goptM Opt_UnclutterValidSubstitutions
      ; graphSortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
@@ -91,8 +131,10 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
      ; traceTc "hole_lvl is:" $ ppr hole_lvl
      ; traceTc "implics are: " $ ppr implics
      ; traceTc "simples are: " $ ppr simples
+     ; traceTc "locals are: " $ ppr lclBinds
+     ; let to_check = map Left lclBinds ++ map Right (globalRdrEnvElts rdr_env)
      ; (searchDiscards, subs) <-
-        findSubs graphSortSubs maxVSubs rdr_env 0 (wrapped_hole_ty, [])
+        findSubs graphSortSubs maxVSubs to_check 0 (wrapped_hole_ty, [])
      ; (vDiscards, sortedSubs) <-
         sortSubs graphSortSubs maxVSubs searchDiscards subs
      ; let vMsg = ppUnless (null subs) $
@@ -109,7 +151,7 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
             ; ref_tys <- mapM (\l -> (,) l <$> mkRefTy l) refLvls
             ; traceTc "ref_tys are" $ ppr ref_tys
             ; refDs <-
-                mapM (uncurry $ findSubs graphSortSubs maxRSubs rdr_env) ref_tys
+                mapM (uncurry $ findSubs graphSortSubs maxRSubs to_check) ref_tys
             ; (rDiscards, sortedRSubs) <-
                 sortSubs graphSortSubs maxRSubs (any fst refDs) $
                     concatMap snd refDs
@@ -124,6 +166,7 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
   where
     hole_loc = ctEvLoc $ ctEvidence ct
     hole_lvl = ctLocLevel hole_loc
+    hole_env = ctLocEnv hole_loc
 
     -- We make a refinement type by adding a new type variable in front
     -- of the type of t h hole, going from e.g. [Integer] -> Integer
@@ -148,7 +191,7 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
     -- such that local fits come before global fits, since local fits are
     -- probably more relevant to the user.
     sortSubs False _ discards subs = return (discards, sortedFits)
-        where (lclFits, gblFits) = partition (gre_lcl . hfEl) subs
+        where (lclFits, gblFits) = partition isLocalHoleFit subs
               sortedFits = lclFits ++ gblFits
     -- We sort the fits first, to prevent the order of
     -- suggestions being effected when identifiers are moved
@@ -157,23 +200,21 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
     sortSubs _ limit _ subs = possiblyDiscard limit <$>
                                 ((++) <$> sortByGraph (sort lclFits)
                                       <*> sortByGraph (sort gblFits))
-        where (lclFits, gblFits) = partition (gre_lcl . hfEl) subs
-
+        where (lclFits, gblFits) = partition isLocalHoleFit subs
 
     findSubs :: Bool               -- Whether we should sort the subs or not
              -> Maybe Int          -- How many we should output, if limited
-             -> GlobalRdrEnv       -- The elements to check whether fit
+             -> [Either Id GlobalRdrElt] -- The elements to check whether fit
              -> Int                -- The refinement level of the hole
              -> (TcType, [TcType]) -- The type to check for fits and ref vars
              -> TcM (Bool, [HoleFit])
     -- We don't check if no output is desired.
     findSubs _ (Just 0) _ _ _ = return (False, [])
-    findSubs sortSubs maxSubs rdr_env refLvl ht@(hole_ty, _) =
+    findSubs sortSubs maxSubs to_check refLvl ht@(hole_ty, _) =
       do { traceTc "checkingSubstitutionsFor {" $ ppr hole_ty
          ; let limit = if sortSubs then Nothing else maxSubs
          ; (discards, subs) <- setTcLevel hole_lvl $
-                                 go limit ht refLvl $
-                                    globalRdrEnvElts rdr_env
+                                 go limit ht refLvl to_check
          ; traceTc "}" empty
          ; return (discards, subs) }
     -- We extract the type of the hole from the constraint.
@@ -184,16 +225,22 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
     -- For checking, we wrap the type of the hole with all the givens
     -- from all the implications in the context.
     wrap_ty :: TcType -> TcSigmaType
-    wrap_ty ty = foldl' wrapTypeWithImplication ty implics
+    wrap_ty ty = foldl' w_ty ty implics
+        where w_ty ty impl = mkFunTys (map idType (ic_given impl)) ty
 
     wrapped_hole_ty :: TcSigmaType
     wrapped_hole_ty = wrap_ty hole_ty
+
+    isLocalHoleFit :: HoleFit -> Bool
+    isLocalHoleFit hf = case hfEl hf of
+                          Just gre -> gre_lcl gre
+                          Nothing -> True
 
     -- We rearrange the elements to make locals appear at the top of the list
     -- since they're most likely to be relevant to the user.
     localsFirst :: [HoleFit] -> [HoleFit]
     localsFirst elts = lcl ++ gbl
-      where (lcl, gbl) = partition (gre_lcl . hfEl) elts
+      where (lcl, gbl) = partition isLocalHoleFit elts
 
 
     -- These are the constraints whose every free unification variable is
@@ -221,12 +268,18 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
     -- constraints. Note that since we only pick constraints such that all their
     -- free variables are mentioned by the hole, the free variables of the hole
     -- are all the free variables of the constraints as well.
-    getHoleCloningSubst :: TcType -> TcM TCvSubst
-    getHoleCloningSubst hole_ty = mkTvSubstPrs <$> getClonedVars
-      where cloneFV :: TyVar -> TcM (TyVar, Type)
-            cloneFV fv = (,) fv <$> newFlexiTyVarTy (varType fv)
+    getHoleCloningSubst :: [TcType] -> TcM TCvSubst
+    getHoleCloningSubst tys = mkTvSubstPrs <$> getClonedVars
+      where -- cloneFV :: TyVar -> TcM (TyVar, Type)
+            -- cloneFV fv = (,) fv <$> newOpenFlexiTyVarTy (varType fv)
             getClonedVars :: TcM [(TyVar, Type)]
-            getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfType hole_ty)
+            getClonedVars = mapMaybeM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
+            cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
+            cloneFV fv | isTouchableMetaTyVar hole_lvl fv
+              = Just <$> ((,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv))
+            cloneFV _ = return  Nothing
+
+
 
     -- This applies the given substitution to the given constraint.
     applySubToCt :: TCvSubst -> Ct -> Ct
@@ -234,27 +287,41 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
       where subbedPredType = substTy sub $ ctPred ct
             ev = ctEvidence ct
 
+    applyCloning :: (TcType, [TcType])
+                 -> Type
+                 -> [Ct]
+                 -> TcM (TcType, [TcType], Type, [Ct])
+    applyCloning (hole_ty, vars) typ cts
+     = do { cloneSub <- getHoleCloningSubst [hole_ty, typ]
+          ; let cHoleTy = substTy cloneSub hole_ty
+                cCts = map (applySubToCt cloneSub) cts
+                cVars = map (substTy cloneSub) vars
+                cTy = substTy cloneSub typ
+
+          -- ; tidy_cHoleTy <- zonkTcType cHoleTy
+          -- ; tidy_cTy <- zonkTcType cTy
+          ; return (cHoleTy, cVars, cTy, cCts)
+          }
     -- The real work happens here, where we invoke the type checker
     -- to check whether we the given type fits into the hole!
     -- To check: Clone all relevant cts and the hole
     -- then solve the subsumption check AND check that all other
     -- the other constraints were solved.
     fitsHole :: (TcType, [TcType]) -> Type -> TcM (Maybe [TcType])
-    fitsHole (hole_ty, vars) typ =
+    fitsHole hole_ty typ =
       do { traceTc "checkingFitOf {" $ ppr typ
-         ; cloneSub <- getHoleCloningSubst hole_ty
-         ; let cHoleTy = substTy cloneSub hole_ty
-               cCts = map (applySubToCt cloneSub) relevantCts
-               cVars = map (substTy cloneSub) vars
-
-         ; absFits <- tcCheckHoleFit (listToBag cCts) cVars cHoleTy typ
+         ; traceTc "tys before are: " $ ppr (hole_ty, typ)
+         ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
+         ; absFits <- tcCheckHoleFit (listToBag cCts) cVars cHoleTy cTy
+         ; traceTc "Did it fit?" $ ppr absFits
+         ; traceTc "tys after are: " $ ppr (cHoleTy, cTy)
          ; traceTc "}" empty
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
          -- with the `-fabstract-refinement-substitutions` flag.
          ; if absFits then
-           if null vars then return (Just []) else
+           if null cVars then return (Just []) else
             do { let mtvs :: [TyVar]
                      mtvs = mapMaybe tcGetTyVar_maybe cVars
                      getMTy :: MetaDetails -> Maybe TcType
@@ -284,6 +351,10 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
       where hfType :: HoleFit -> TcSigmaType
             hfType = varType . hfId
 
+            tcSubsumesWCloning :: TcType -> TcType -> TcM Bool
+            tcSubsumesWCloning ht ty =
+              do { (cht, _, cty, _) <- applyCloning (ht, []) ty []
+                 ; setTcLevel hole_lvl $ tcSubsumes cht cty }
             go :: [(HoleFit, [HoleFit])] -> [HoleFit] -> TcM [HoleFit]
             go sofar [] = do { traceTc "subsumptionGraph was" $ ppr sofar
                              ; return $ localsFirst topSorted }
@@ -291,50 +362,72 @@ findValidSubstitutions implics simples ct | isExprHoleCt ct =
                     (graph, fromV, _) = graphFromEdges $ map toV sofar
                     topSorted = map ((\(h,_,_) -> h) . fromV) $ topSort graph
             go sofar (id:ids) =
-              do { adjs <- filterM (tcSubsumes (hfType id) . hfType) fits
+              do { adjs <- filterM (tcSubsumesWCloning (hfType id) . hfType) fits
                  ; go ((id, adjs):sofar) ids }
 
     -- Kickoff the checking of the elements.
     go :: Maybe Int -> (TcType, [TcType]) -> Int
-        -> [GlobalRdrElt] -> TcM (Bool, [HoleFit])
-    go = go_ []
+        -> [Either Id GlobalRdrElt] -> TcM (Bool, [HoleFit])
+    go = go_ [] emptyVarSet
+
+    -- We use this when checking against global matches,
+    -- where we want the refinement variables to be free
+    -- to unify with anything, but we want to hide
+    -- any local variables of the types.
+    -- wrapNonRefinementVariables :: (TcType, [TcType]) -> (TcType, [TcType])
+    -- wrapNonRefinementVariables (t, refvs) = (mkSpecForAllTys skols t, refvs)
+    --   where
+    --     skols =
+    --       fvVarList $ filterFV (not . flip elemVarSet rtyvs) $ tyCoFVsOfType t
+    --     rtyvs = fvVarSet (tyCoFVsOfTypes refvs)
 
     -- We iterate over the elements, checking each one in turn for whether it
     -- fits, and adding it to the results if it does.
     go_ :: [HoleFit]          -- What we've found so far.
+        -> VarSet             -- Ids we've already checked
         -> Maybe Int          -- How many we're allowed to find, if limited
         -> (TcType, [TcType]) -- The type to check, and refinement variables.
         -> Int                -- The refinement level of the hole we're checking
-        -> [GlobalRdrElt]     -- The elements we've yet to check.
+        -> [Either Id GlobalRdrElt]     -- The elements we've yet to check.
         -> TcM (Bool, [HoleFit])
-    go_ subs _ _ _ [] = return (False, reverse subs)
-    go_ subs (Just 0) _ _ _ = return (True, reverse subs)
-    go_ subs maxleft t r (el:elts) =
+    go_ subs _ _ _ _ [] = return (False, reverse subs)
+    go_ subs _ (Just 0) _ _ _ = return (True, reverse subs)
+    go_ subs seen maxleft t r (el:elts) =
       do { traceTc "lookingUp" $ ppr el
-         ; maybeThing <- lookup (gre_name el)
+         ; let ty_to_check = t -- case el of
+                                    -- Left _ -> t
+                                    -- Right _ -> wrapNonRefinementVariables t
+         ; maybeThing <- lookup el
          ; case maybeThing of
-             Just id | not_trivial id -> do {
-                             fits <- fitsHole t (varType id)
-                           ; case fits of
-                               Just matches -> keep_it (HoleFit el id r matches)
-                               _ -> discard_it }
+             Just id | (not_trivial id && not (id `elemVarSet` seen)) ->
+                       do { fits <- fitsHole ty_to_check (idType id)
+                          ; case fits of
+                              Just matches -> keep_it id
+                                              (HoleFit
+                                               (either (const Nothing) Just el)
+                                               id r matches)
+                              _ -> discard_it }
              _ -> discard_it }
-      where discard_it = go_ subs maxleft t r elts
-            keep_it fit = go_ (fit:subs) ((\n -> n - 1) <$> maxleft) t r elts
+      where discard_it = go_ subs seen maxleft t r elts
+            keep_it id fit =
+              go_ (fit:subs) (extendVarSet seen id)
+                  ((\n -> n - 1) <$> maxleft) t r elts
             -- We want to filter out undefined.
-            not_trivial id = nameModule (idName id) /= gHC_ERR
-            lookup name =
-              do { thing <- tcLookup name
+            not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
+            lookup :: Either Id GlobalRdrElt -> TcM (Maybe Id)
+            lookup (Left id) = return $ Just id
+            lookup (Right el) =
+              do { thing <- tcLookup (gre_name el)
                  ; case thing of
-                     ATcId {tct_id = id}         -> return $ Just id
-                     AGlobal (AnId id)           -> return $ Just id
+                     ATcId {tct_id = id} -> return $ Just id
+                     AGlobal (AnId id)   -> return $ Just id
                      AGlobal (AConLike (RealDataCon con))  ->
                        return $ Just (dataConWrapId con)
                      _ -> return Nothing }
 
 
 -- We don't (as of yet) handle holes in types, only in expressions.
-findValidSubstitutions _ _ _ = return empty
+findValidSubstitutions _ _ _ _ = return empty
 
 subsDiscardMsg :: SDoc
 subsDiscardMsg =
