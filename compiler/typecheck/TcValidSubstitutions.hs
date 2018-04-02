@@ -269,15 +269,22 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- free variables are mentioned by the hole, the free variables of the hole
     -- are all the free variables of the constraints as well.
     getHoleCloningSubst :: [TcType] -> TcM TCvSubst
-    getHoleCloningSubst tys = mkTvSubstPrs <$> getClonedVars
-      where -- cloneFV :: TyVar -> TcM (TyVar, Type)
-            -- cloneFV fv = (,) fv <$> newOpenFlexiTyVarTy (varType fv)
+    getHoleCloningSubst tys = mkTvSubstPrs <$> setTcLevel hole_lvl getClonedVars
+      where -- cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
+            --cloneFV fv = Just <$> ((,) fv <$> newOpenFlexiTyVarTy )
+            --cloneFV fv = Just <$> ((,) fv <$> newMetaTyVarTyAtLevel hole_lvl (varType fv))
+            -- getClonedVars :: TcM [(TyVar, Type)]
+            -- getClonedVars = mapMaybeM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
+            -- cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
+            -- cloneFV fv | isTouchableMetaTyVar hole_lvl fv
+            --   = Just <$> ((,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv))
+            -- cloneFV _ = return  Nothing
             getClonedVars :: TcM [(TyVar, Type)]
-            getClonedVars = mapMaybeM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
-            cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
+            getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
+            cloneFV :: TyVar -> TcM (TyVar, Type)
             cloneFV fv | isTouchableMetaTyVar hole_lvl fv
-              = Just <$> ((,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv))
-            cloneFV _ = return  Nothing
+              = (,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv)
+            cloneFV fv = (,) fv <$> newMetaTyVarTyAtLevel hole_lvl (varType fv)
 
 
 
