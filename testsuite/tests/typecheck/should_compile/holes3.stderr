@@ -9,6 +9,9 @@ holes3.hs:3:5: error:
     • Relevant bindings include f :: t (bound at holes3.hs:3:1)
       Valid substitutions include
         f :: forall t. t (defined at holes3.hs:3:1)
+        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
+          (imported from ‘Prelude’ at holes3.hs:1:8-13
+           (and originally defined in ‘GHC.Err’))
 
 holes3.hs:6:7: error:
     • Found hole: _gr :: Char
@@ -26,6 +29,9 @@ holes3.hs:6:7: error:
         minBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.Enum’))
+        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
+          (imported from ‘Prelude’ at holes3.hs:1:8-13
+           (and originally defined in ‘GHC.Err’))
 
 holes3.hs:8:5: error:
     • Found hole: _aa :: [Char]
@@ -40,6 +46,9 @@ holes3.hs:8:5: error:
         mempty :: forall a. Monoid a => a
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
+        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
+          (imported from ‘Prelude’ at holes3.hs:1:8-13
+           (and originally defined in ‘GHC.Err’))
 
 holes3.hs:11:15: error:
     • Found hole: _x :: b0
@@ -386,6 +395,12 @@ holes3.hs:11:15: error:
         repeat :: forall a. a -> [a]
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.List’))
+        error :: forall a. GHC.Stack.Types.HasCallStack => [Char] -> a
+          (imported from ‘Prelude’ at holes3.hs:1:8-13
+           (and originally defined in ‘GHC.Err’))
+        errorWithoutStackTrace :: forall a. [Char] -> a
+          (imported from ‘Prelude’ at holes3.hs:1:8-13
+           (and originally defined in ‘GHC.Err’))
         maybe :: forall b a. b -> (a -> b) -> Maybe a -> b
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘Data.Maybe’))
@@ -437,10 +452,10 @@ holes3.hs:11:15: error:
         fromIntegral :: forall a b. (Integral a, Num b) => a -> b
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.Real’))
-        ($) :: forall a (b :: TYPE r). (a -> b) -> a -> b
+        ($) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
-        ($!) :: forall a (b :: TYPE r). (a -> b) -> a -> b
+        ($!) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
         id :: forall a. a -> a
@@ -488,3 +503,6 @@ holes3.hs:11:15: error:
         seq :: forall a b. a -> b -> b
           (imported from ‘Prelude’ at holes3.hs:1:8-13
            (and originally defined in ‘GHC.Prim’))
+        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
+          (imported from ‘Prelude’ at holes3.hs:1:8-13
+           (and originally defined in ‘GHC.Err’))

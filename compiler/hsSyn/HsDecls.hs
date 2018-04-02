@@ -19,7 +19,7 @@
 module HsDecls (
   -- * Toplevel declarations
   HsDecl(..), LHsDecl, HsDataDefn(..), HsDeriving,
-  HsDerivingClause(..), LHsDerivingClause,
+  HsDerivingClause(..), LHsDerivingClause, NewOrData(..), newOrDataToFlavour,
 
   -- ** Class or type declarations
   TyClDecl(..), LTyClDecl,
@@ -35,7 +35,7 @@ module HsDecls (
   FamilyDecl(..), LFamilyDecl,
 
   -- ** Instance declarations
-  InstDecl(..), LInstDecl, NewOrData(..), FamilyInfo(..),
+  InstDecl(..), LInstDecl, FamilyInfo(..),
   TyFamInstDecl(..), LTyFamInstDecl, instDeclDataFamInsts,
   DataFamInstDecl(..), LDataFamInstDecl, pprDataFamInstFlavour, pprFamInstLHS,
   FamInstEqn, LFamInstEqn, FamEqn(..),
@@ -958,7 +958,7 @@ famDeclHasCusk _ (FamilyDecl { fdInfo      = ClosedTypeFamily _
                              , fdResultSig = L _ resultSig })
   = hsTvbAllKinded tyvars && hasReturnKindSignature resultSig
 famDeclHasCusk mb_class_cusk _ = mb_class_cusk `orElse` True
-        -- all un-associated open families have CUSKs!
+        -- all un-associated open families have CUSKs
 
 -- | Does this family declaration have user-supplied return kind signature?
 hasReturnKindSignature :: FamilyResultSig a -> Bool
@@ -1113,6 +1113,11 @@ data NewOrData
   = NewType                     -- ^ @newtype Blah ...@
   | DataType                    -- ^ @data Blah ...@
   deriving( Eq, Data )                -- Needed because Demand derives Eq
+
+-- | Convert a 'NewOrData' to a 'TyConFlavour'
+newOrDataToFlavour :: NewOrData -> TyConFlavour
+newOrDataToFlavour NewType  = NewtypeFlavour
+newOrDataToFlavour DataType = DataTypeFlavour
 
 -- | Located data Constructor Declaration
 type LConDecl pass = Located (ConDecl pass)
@@ -1659,7 +1664,18 @@ type LDerivDecl pass = Located (DerivDecl pass)
 
 -- | Deriving Declaration
 data DerivDecl pass = DerivDecl
-        { deriv_type         :: LHsSigType pass
+        { deriv_type         :: LHsSigWcType pass
+          -- ^ The instance type to derive.
+          --
+          -- It uses an 'LHsSigWcType' because the context is allowed to be a
+          -- single wildcard:
+          --
+          -- > deriving instance _ => Eq (Foo a)
+          --
+          -- Which signifies that the context should be inferred.
+
+          -- See Note [Inferring the instance context] in TcDerivInfer.
+
         , deriv_strategy     :: Maybe (Located DerivStrategy)
         , deriv_overlap_mode :: Maybe (Located OverlapMode)
          -- ^ - 'ApiAnnotation.AnnKeywordId' : 'ApiAnnotation.AnnDeriving',

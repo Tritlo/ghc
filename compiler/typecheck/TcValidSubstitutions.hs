@@ -161,7 +161,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                   vcat (map (pprHoleFit showProvenance) sortedRSubs)
                     $$ ppWhen rDiscards refSubsDiscardMsg }
        else return empty
-     ; traceTc "}" empty
+     ; traceTc "findingValidSubstitutionsFor }" empty
      ; return (vMsg $$ refMsg)}
   where
     hole_loc = ctEvLoc $ ctEvidence ct
@@ -270,21 +270,19 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- are all the free variables of the constraints as well.
     getHoleCloningSubst :: [TcType] -> TcM TCvSubst
     getHoleCloningSubst tys = mkTvSubstPrs <$> setTcLevel hole_lvl getClonedVars
-      where -- cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
-            --cloneFV fv = Just <$> ((,) fv <$> newOpenFlexiTyVarTy )
-            --cloneFV fv = Just <$> ((,) fv <$> newMetaTyVarTyAtLevel hole_lvl (varType fv))
-            -- getClonedVars :: TcM [(TyVar, Type)]
-            -- getClonedVars = mapMaybeM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
-            -- cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
-            -- cloneFV fv | isTouchableMetaTyVar hole_lvl fv
-            --   = Just <$> ((,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv))
-            -- cloneFV _ = return  Nothing
+      where cloneFV :: TyVar -> TcM (TyVar, Type)
+            cloneFV fv = ((,) fv) <$> pushTcLevelM_ (newFlexiTyVarTy (varType fv))
+            -- The subsumption check pushes the level, so as to be sure that
+            -- its invocation of the solver doesn't unify type variables floating
+            -- about that are unrelated to the subsumption check. However, these
+            -- cloned variables in the hole type *should* be unified, so we make
+            -- sure to bump the level before creating them
             getClonedVars :: TcM [(TyVar, Type)]
             getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
-            cloneFV :: TyVar -> TcM (TyVar, Type)
-            cloneFV fv | isTouchableMetaTyVar hole_lvl fv
-              = (,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv)
-            cloneFV fv = (,) fv <$> newMetaTyVarTyAtLevel hole_lvl (varType fv)
+            -- cloneFV :: TyVar -> TcM (TyVar, Type)
+            -- cloneFV fv | isTouchableMetaTyVar hole_lvl fv
+            --   = (,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv)
+            -- cloneFV fv = (,) fv <$> newMetaTyVarTyAtLevel hole_lvl (varType fv)
 
 
 

@@ -9,3 +9,6 @@
       In an equation for ‘it’: it = Just <$> _
     • Relevant bindings include
         it :: f (Maybe a) (bound at <interactive>:2:1)
+      Valid substitutions include
+        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
+          (imported from ‘Prelude’ (and originally defined in ‘GHC.Err’))

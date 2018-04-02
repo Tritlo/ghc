@@ -670,6 +670,15 @@ dnl --------------------------------------------------------------
 dnl End of configure script option section
 dnl --------------------------------------------------------------
 
+dnl ** Copy the files from the "fs" utility into the right folders.
+dnl --------------------------------------------------------------
+AC_MSG_NOTICE([Creating links for in-tree file handling routines.])
+ln -f -v utils/fs/fs.* utils/lndir/
+ln -f -v utils/fs/fs.* utils/unlit/
+ln -f -v utils/fs/fs.* rts/
+ln -f -v utils/fs/fs.h libraries/base/include/
+ln -f -v utils/fs/fs.c libraries/base/cbits/
+AC_MSG_NOTICE([Routines in place. Packages can now be build normally.])
 
 dnl --------------------------------------------------------------
 dnl ** Can the unix package be built?
@@ -1190,7 +1199,7 @@ case ${TargetOS} in
     linux|linux-android|freebsd|dragonfly|netbsd|openbsd|kfreebsdgnu|gnu|solaris2)
         RtsLinkerUseMmap=1
         ;;
-    darwin|ios)
+    darwin|ios|watchos|tvos)
         # Don't use mmap on powerpc/darwin as the mmap there doesn't support
         # reallocating. Reallocating is needed to allocate jump islands just
         # after each object image. Jumps to these jump islands use relative
