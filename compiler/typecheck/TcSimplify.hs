@@ -513,18 +513,17 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes = tcCheckHoleFit emptyBag []
+tcSubsumes = tcCheckHoleFit emptyBag
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
 -- perform unification.
 tcCheckHoleFit :: Cts         -- Any relevant Cts to the hole.
-               -> [TcType]    -- The list of refinement TyVarTys.
                -> TcSigmaType -- The type of the hole.
                -> TcSigmaType -- The type to check whether fits.
                -> TcM Bool
-tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty = return True
-tcCheckHoleFit relevantCts holeVars hole_ty ty = discardErrs $
+tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty = return True
+tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
  do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
     ; traceTc "Checking hole fit {" empty

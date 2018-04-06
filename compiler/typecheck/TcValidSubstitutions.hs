@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-} -- We don't want to spread the HasOccName
+                                      -- instance for Either
 module TcValidSubstitutions ( findValidSubstitutions ) where
 
 import GhcPrelude
@@ -12,8 +14,7 @@ import TcType
 import Type
 import DataCon
 import Name
-import RdrName ( GlobalRdrEnv, pprNameProvenance
-               , GlobalRdrElt (..), globalRdrEnvElts )
+import RdrName ( pprNameProvenance , GlobalRdrElt (..), globalRdrEnvElts )
 
 import PrelNames ( gHC_ERR )
 import Id
@@ -27,16 +28,12 @@ import TcEnv (tcLookup)
 import Outputable
 import DynFlags
 import Maybes
-import FV ( fvVarList, fvVarSet, filterFV )
+import FV ( fvVarList, fvVarSet )
 
 import Control.Monad    ( filterM, replicateM )
 import Data.List        ( partition, sort, foldl' )
 import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
-
-
-
-
 
 
 -- HoleFit is the type we use for a fit in valid substitutions. It contains the
@@ -111,7 +108,7 @@ getLocalBindings tidy_orig ct
         case tc_bndr of
           TcTvBndr {} -> discard_it
           TcIdBndr id _ -> keep_it id
-          TcIdBndr_ExpType name et _ -> discard_it
+          TcIdBndr_ExpType _ _ _ -> discard_it
      where
         discard_it = go env sofar tc_bndrs
         keep_it id = go env (id:sofar) tc_bndrs
@@ -174,7 +171,6 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
   where
     hole_loc = ctEvLoc $ ctEvidence ct
     hole_lvl = ctLocLevel hole_loc
-    hole_env = ctLocEnv hole_loc
 
     -- We make a refinement type by adding a new type variable in front
     -- of the type of t h hole, going from e.g. [Integer] -> Integer
@@ -331,7 +327,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
          ; traceTc "fvs are" $ ppr $
              fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
          ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
-         ; absFits <- tcCheckHoleFit (listToBag cCts) cVars cHoleTy cTy
+         ; absFits <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
          ; traceTc "tys after are: " $ ppr (cHoleTy, cTy)
          ; traceTc "}" empty
