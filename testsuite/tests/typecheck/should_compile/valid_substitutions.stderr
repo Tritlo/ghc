@@ -21,18 +21,16 @@ valid_substitutions.hs:17:17: warning: [-Wtyped-holes (in -Wdefault)]
         x :: Int (bound at valid_substitutions.hs:16:12)
         c :: Int -> IO Int (bound at valid_substitutions.hs:16:1)
       Valid substitutions include
-        a :: Int -> IO Int (defined at valid_substitutions.hs:12:1)
-        b :: Int -> IO Int (defined at valid_substitutions.hs:14:1)
-        c :: Int -> IO Int (defined at valid_substitutions.hs:16:1)
+        x :: a0 (bound at valid_substitutions.hs:16:12)
+        c :: Int -> IO Int (bound at valid_substitutions.hs:16:1)
+        a :: Int -> IO Int (bound at valid_substitutions.hs:12:1)
+        b :: Int -> IO Int (bound at valid_substitutions.hs:14:1)
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
         pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
 
 valid_substitutions.hs:21:8: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: [Maybe a] -> [a]
@@ -45,16 +43,12 @@ valid_substitutions.hs:21:8: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include
         test :: [Maybe a] -> [a] (bound at valid_substitutions.hs:21:1)
       Valid substitutions include
-        test :: forall a. [Maybe a] -> [a]
-          (defined at valid_substitutions.hs:21:1)
+        test :: [Maybe a] -> [a] (bound at valid_substitutions.hs:21:1)
         catMaybes :: forall a. [Maybe a] -> [a]
           (imported from ‘Data.Maybe’ at valid_substitutions.hs:5:1-17)
         mempty :: forall a. Monoid a => a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
 
 valid_substitutions.hs:24:9: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Integer -> ValidSubs.Moo
@@ -65,13 +59,10 @@ valid_substitutions.hs:24:9: warning: [-Wtyped-holes (in -Wdefault)]
           (bound at valid_substitutions.hs:24:1)
       Valid substitutions include
         test2 :: Integer -> ValidSubs.Moo
-          (defined at valid_substitutions.hs:24:1)
+          (bound at valid_substitutions.hs:24:1)
         ValidSubs.Moo :: Integer -> ValidSubs.Moo
           (imported qualified from ‘ValidSubs’ at valid_substitutions.hs:6:1-26
            (and originally defined at ValidSubs.hs:4:12-22))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
 
 valid_substitutions.hs:27:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Integer -> Maybe Integer
@@ -90,9 +81,6 @@ valid_substitutions.hs:27:5: warning: [-Wtyped-holes (in -Wdefault)]
         pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
 
 valid_substitutions.hs:30:5: warning: [-Wdeferred-type-errors (in -Wdefault)]
     • Ambiguous type variable ‘a1’ arising from a use of ‘show’
@@ -118,9 +106,9 @@ valid_substitutions.hs:30:10: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include
         f :: String (bound at valid_substitutions.hs:30:1)
       Valid substitutions include
-        f :: String (defined at valid_substitutions.hs:30:1)
-        h :: String (defined at valid_substitutions.hs:34:1)
         k :: Maybe Integer (defined at valid_substitutions.hs:27:1)
+        f :: String (bound at valid_substitutions.hs:30:1)
+        h :: String (bound at valid_substitutions.hs:34:1)
         EQ :: Ordering
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Types’))
@@ -218,9 +206,6 @@ valid_substitutions.hs:34:14: warning: [-Wtyped-holes (in -Wdefault)]
         minBound :: forall a. Bounded a => a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Enum’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
 
 valid_substitutions.hs:37:8: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: [Char] -> IO ()
@@ -241,18 +226,9 @@ valid_substitutions.hs:37:8: warning: [-Wtyped-holes (in -Wdefault)]
         fail :: forall (m :: * -> *). Monad m => forall a. String -> m a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
-        error :: forall a. GHC.Stack.Types.HasCallStack => [Char] -> a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
-        errorWithoutStackTrace :: forall a. [Char] -> a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))
         print :: forall a. Show a => a -> IO ()
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘System.IO’))
         mempty :: forall a. Monoid a => a
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
-           (and originally defined in ‘GHC.Err’))

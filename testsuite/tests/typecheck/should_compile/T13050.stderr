@@ -9,9 +9,9 @@ T13050.hs:4:9: warning: [-Wtyped-holes (in -Wdefault)]
         x :: Int (bound at T13050.hs:4:3)
         f :: Int -> Int -> Int (bound at T13050.hs:4:1)
       Valid substitutions include
-        f :: Int -> Int -> Int (defined at T13050.hs:4:1)
-        g :: Int -> Int -> Int (defined at T13050.hs:5:1)
-        q :: Int -> Int -> Int (defined at T13050.hs:6:1)
+        f :: Int -> Int -> Int (bound at T13050.hs:4:1)
+        g :: Int -> Int -> Int (bound at T13050.hs:5:1)
+        q :: Int -> Int -> Int (bound at T13050.hs:6:1)
         gcd :: forall a. Integral a => a -> a -> a
           (imported from ‘Prelude’ at T13050.hs:1:8-17
            (and originally defined in ‘GHC.Real’))
@@ -66,9 +66,6 @@ T13050.hs:4:9: warning: [-Wtyped-holes (in -Wdefault)]
         seq :: forall a b. a -> b -> b
           (imported from ‘Prelude’ at T13050.hs:1:8-17
            (and originally defined in ‘GHC.Prim’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at T13050.hs:1:8-17
-           (and originally defined in ‘GHC.Err’))
 
 T13050.hs:5:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Int -> Int -> Int
@@ -80,9 +77,9 @@ T13050.hs:5:11: warning: [-Wtyped-holes (in -Wdefault)]
         x :: Int (bound at T13050.hs:5:3)
         g :: Int -> Int -> Int (bound at T13050.hs:5:1)
       Valid substitutions include
+        g :: Int -> Int -> Int (bound at T13050.hs:5:1)
         f :: Int -> Int -> Int (defined at T13050.hs:4:1)
-        g :: Int -> Int -> Int (defined at T13050.hs:5:1)
-        q :: Int -> Int -> Int (defined at T13050.hs:6:1)
+        q :: Int -> Int -> Int (bound at T13050.hs:6:1)
         gcd :: forall a. Integral a => a -> a -> a
           (imported from ‘Prelude’ at T13050.hs:1:8-17
            (and originally defined in ‘GHC.Real’))
@@ -137,9 +134,6 @@ T13050.hs:5:11: warning: [-Wtyped-holes (in -Wdefault)]
         seq :: forall a b. a -> b -> b
           (imported from ‘Prelude’ at T13050.hs:1:8-17
            (and originally defined in ‘GHC.Prim’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at T13050.hs:1:8-17
-           (and originally defined in ‘GHC.Err’))
 
 T13050.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _a :: Int -> Int -> Int
@@ -152,9 +146,9 @@ T13050.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
         x :: Int (bound at T13050.hs:6:3)
         q :: Int -> Int -> Int (bound at T13050.hs:6:1)
       Valid substitutions include
+        q :: Int -> Int -> Int (bound at T13050.hs:6:1)
         f :: Int -> Int -> Int (defined at T13050.hs:4:1)
         g :: Int -> Int -> Int (defined at T13050.hs:5:1)
-        q :: Int -> Int -> Int (defined at T13050.hs:6:1)
         gcd :: forall a. Integral a => a -> a -> a
           (imported from ‘Prelude’ at T13050.hs:1:8-17
            (and originally defined in ‘GHC.Real’))
@@ -209,6 +203,3 @@ T13050.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
         seq :: forall a b. a -> b -> b
           (imported from ‘Prelude’ at T13050.hs:1:8-17
            (and originally defined in ‘GHC.Prim’))
-        undefined :: forall a. GHC.Stack.Types.HasCallStack => a
-          (imported from ‘Prelude’ at T13050.hs:1:8-17
-           (and originally defined in ‘GHC.Err’))

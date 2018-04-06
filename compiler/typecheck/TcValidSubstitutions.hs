@@ -67,6 +67,12 @@ instance Ord HoleFit where
 
 instance Outputable HoleFit where
     ppr = pprHoleFit False
+    
+instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
+    occName = either occName occName
+    
+instance HasOccName GlobalRdrElt where
+    occName = occName . gre_name
 
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
@@ -88,7 +94,6 @@ pprHoleFit showProv hf =
             case hfEl hf of
               Just gre -> pprNameProvenance gre
               Nothing -> text "bound at" <+> ppr (getSrcLoc name)
-
 
 getLocalBindings :: TidyEnv -> Ct -> TcM [Id]
 getLocalBindings tidy_orig ct
@@ -115,6 +120,12 @@ getLocalBindings tidy_orig ct
           -- = do { (env', ty') <- zonkTidyTcType env ty
           --      ; go env' ((name,ty'):sofar) tc_bndrs }
 
+setTcTyVarLevel :: TcTyVar -> TcLevel -> TcTyVar
+setTcTyVarLevel tv nlvl =
+  case tcTyVarDetails tv of
+    MetaTv {} -> setMetaTyVarTcLevel tv nlvl
+    SkolemTv _ b -> setTcTyVarDetails tv (SkolemTv nlvl b)
+    RuntimeUnk -> tv
 
 
 
@@ -176,8 +187,10 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- of only concrete substitutions like `sum`.
     mkRefTy :: Int -> TcM (TcType, [TcType])
     mkRefTy refLvl = (\v -> (wrapHoleWithArgs v, v)) <$> newTyVarTys
-     where newTyVarTys = replicateM refLvl $
-             setTcLevel hole_lvl newOpenFlexiTyVarTy
+     where newTyVarTys =
+             replicateM refLvl $ mkTyVarTy . setLvl <$>
+                (newOpenTypeKind >>= newFlexiTyVar)
+           setLvl = flip setTcTyVarLevel (pushTcLevel hole_lvl)
            wrapHoleWithArgs args = (wrap_ty . mkFunTys args) hole_ty
 
 
@@ -271,22 +284,14 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- are all the free variables of the constraints as well.
     getHoleCloningSubst :: [TcType] -> TcM TCvSubst
     getHoleCloningSubst tys = mkTvSubstPrs <$> getClonedVars
-      where cloneFV :: TcTyVar -> TcM (Maybe (TcTyVar, Type))
+      where cloneFV :: TcTyVar -> TcM (TcTyVar, Type)
             -- The subsumption check pushes the level, so as to be sure that
             -- its invocation of the solver doesn't unify type variables floating
             -- about that are unrelated to the subsumption check. However, these
             -- cloned variables in the hole type *should* be unified, so we make
             -- sure to bump the level before creating them
-            cloneFV fv | tlvl >= hole_lvl  
-              =  Just . (,) fv . mkTyVarTy . bumpTcLevel <$> cloneTyVar fv
-              where tlvl = tcTyVarLevel fv
-                    nlvl = pushTcLevel tlvl
-                    bumpTcLevel :: TcTyVar -> TcTyVar
-                    bumpTcLevel tv = 
-                      case tcTyVarDetails tv of
-                        MetaTv {} -> setMetaTyVarTcLevel tv nlvl
-                        SkolemTv _ b -> setTcTyVarDetails tv (SkolemTv nlvl b)
-                        RuntimeUnk -> tv
+            cloneFV fv = (,) fv . mkTyVarTy . setLvl <$> cloneTyVar fv
+              where setLvl = flip setTcTyVarLevel (pushTcLevel hole_lvl)
                     cloneTyVar :: TcTyVar -> TcM TcTyVar
                     cloneTyVar fv | isMetaTyVar fv = cloneMetaTyVar fv
                     cloneTyVar fv
@@ -294,13 +299,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                            ; let details = tcTyVarDetails fv
                            ; ntv <- newFlexiTyVar (varType fv)
                            ; return $ setTcTyVarDetails ntv details }
-            cloneFV _ = return Nothing
             getClonedVars :: TcM [(TyVar, Type)]
-            getClonedVars = mapMaybeM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
-            -- cloneFV :: TyVar -> TcM (TyVar, Type)
-            -- cloneFV fv | isTouchableMetaTyVar hole_lvl fv
-            --   = (,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv)
-            -- cloneFV fv = (,) fv <$> newMetaTyVarTyAtLevel hole_lvl (varType fv)
+            getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
 
 
 
@@ -389,10 +389,11 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
               do { adjs <- filterM (tcSubsumesWCloning (hfType id) . hfType) fits
                  ; go ((id, adjs):sofar) ids }
 
+    
     -- Kickoff the checking of the elements.
     go :: Maybe Int -> (TcType, [TcType]) -> Int
         -> [Either Id GlobalRdrElt] -> TcM (Bool, [HoleFit])
-    go = go_ [] emptyVarSet
+    go limit ty rlvl = go_ [] emptyVarSet limit ty rlvl . removeBindingShadowing
 
     -- We use this when checking against global matches,
     -- where we want the refinement variables to be free
@@ -416,26 +417,21 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
         -> TcM (Bool, [HoleFit])
     go_ subs _ _ _ _ [] = return (False, reverse subs)
     go_ subs _ (Just 0) _ _ _ = return (True, reverse subs)
-    go_ subs seen maxleft t r (el:elts) =
+    go_ subs seen maxleft ty rlvl (el:elts) =
       do { traceTc "lookingUp" $ ppr el
-         ; let ty_to_check = t -- case el of
-                                    -- Left _ -> t
-                                    -- Right _ -> wrapNonRefinementVariables t
          ; maybeThing <- lookup el
          ; case maybeThing of
-             Just id | (not_trivial id && not (id `elemVarSet` seen)) ->
-                       do { fits <- fitsHole ty_to_check (idType id)
+             Just id | not_trivial id ->
+                       do { fits <- fitsHole ty (idType id)
                           ; case fits of
-                              Just matches -> keep_it id
-                                              (HoleFit
-                                               (either (const Nothing) Just el)
-                                               id r matches)
+                              Just matches -> keep_it id matches
                               _ -> discard_it }
              _ -> discard_it }
-      where discard_it = go_ subs seen maxleft t r elts
-            keep_it id fit =
-              go_ (fit:subs) (extendVarSet seen id)
-                  ((\n -> n - 1) <$> maxleft) t r elts
+      where discard_it = go_ subs seen maxleft ty rlvl elts
+            keep_it id ms = go_ (fit:subs) (extendVarSet seen id)
+                              ((\n -> n - 1) <$> maxleft) ty rlvl elts
+              where fit = HoleFit mbel id rlvl ms
+                    mbel = either (const Nothing) Just el
             -- We want to filter out undefined.
             not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
             lookup :: Either Id GlobalRdrElt -> TcM (Maybe Id)
