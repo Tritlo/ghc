@@ -176,7 +176,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- of only concrete substitutions like `sum`.
     mkRefTy :: Int -> TcM (TcType, [TcType])
     mkRefTy refLvl = (\v -> (wrapHoleWithArgs v, v)) <$> newTyVarTys
-     where newTyVarTys = replicateM refLvl newOpenFlexiTyVarTy
+     where newTyVarTys = replicateM refLvl $
+             setTcLevel hole_lvl newOpenFlexiTyVarTy
            wrapHoleWithArgs args = (wrap_ty . mkFunTys args) hole_ty
 
 
@@ -269,16 +270,20 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- free variables are mentioned by the hole, the free variables of the hole
     -- are all the free variables of the constraints as well.
     getHoleCloningSubst :: [TcType] -> TcM TCvSubst
-    getHoleCloningSubst tys = mkTvSubstPrs <$> setTcLevel hole_lvl getClonedVars
-      where cloneFV :: TyVar -> TcM (TyVar, Type)
-            cloneFV fv = ((,) fv) <$> pushTcLevelM_ (newFlexiTyVarTy (varType fv))
+    getHoleCloningSubst tys = mkTvSubstPrs <$> getClonedVars
+      where cloneFV :: TyVar -> TcM (Maybe (TyVar, Type))
+            cloneFV fv | tvl >= hole_lvl
+              = fmap Just $
+                  ((,) fv) <$> (setTcLevel (pushTcLevel tvl) (newFlexiTyVarTy (varType fv)))
+              where tvl = tcTyVarLevel fv
+            cloneFV _ = return Nothing
             -- The subsumption check pushes the level, so as to be sure that
             -- its invocation of the solver doesn't unify type variables floating
             -- about that are unrelated to the subsumption check. However, these
             -- cloned variables in the hole type *should* be unified, so we make
             -- sure to bump the level before creating them
             getClonedVars :: TcM [(TyVar, Type)]
-            getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
+            getClonedVars = mapMaybeM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
             -- cloneFV :: TyVar -> TcM (TyVar, Type)
             -- cloneFV fv | isTouchableMetaTyVar hole_lvl fv
             --   = (,) fv <$> (mkTyVarTy <$> cloneMetaTyVar fv)
@@ -316,6 +321,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     fitsHole hole_ty typ =
       do { traceTc "checkingFitOf {" $ ppr typ
          ; traceTc "tys before are: " $ ppr (hole_ty, typ)
+         ; traceTc "fvs are" $ ppr $ (fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ])
          ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
          ; absFits <- tcCheckHoleFit (listToBag cCts) cVars cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
