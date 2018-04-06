@@ -46,10 +46,11 @@ import Data.Function    ( on )
 data HoleFit = HoleFit { hfEl :: Maybe GlobalRdrElt -- The element that was
                                                     -- if a global, nothing
                                                     -- if it is a local.
-                       , hfId :: Id            -- the elements id in the TcM
-                       , hfRefLvl :: Int       -- The number of holes in this fit
-                       , hfMatches :: [TcType] } -- What the refinement variables
-                                                 -- got matched with, if any.
+                       , hfId :: Id       -- the elements id in the TcM
+                       , hfRefLvl :: Int  -- The number of holes in this fit
+                       , hfMatches :: [TcType] } -- What the refinement
+                                                 -- variables got matched with,
+                                                 -- if anything
 
 -- We define an Eq and Ord instance to be able to build a graph.
 instance Eq HoleFit where
@@ -67,10 +68,10 @@ instance Ord HoleFit where
 
 instance Outputable HoleFit where
     ppr = pprHoleFit False
-    
+
 instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
     occName = either occName occName
-    
+
 instance HasOccName GlobalRdrElt where
     occName = occName . gre_name
 
@@ -89,7 +90,8 @@ pprHoleFit showProv hf =
           idAndTy = pprPrefixOcc name <+> dcolon <+> ppr ty
           display = if null matches
             then idAndTy
-            else hang (pprPrefixOcc name <+> holeVs) 2 (text "where" <+> idAndTy)
+            else hang (pprPrefixOcc name <+> holeVs) 2
+                   (text "where" <+> idAndTy)
           provenance = parens $
             case hfEl hf of
               Just gre -> pprNameProvenance gre
@@ -110,15 +112,9 @@ getLocalBindings tidy_orig ct
           TcTvBndr {} -> discard_it
           TcIdBndr id _ -> keep_it id
           TcIdBndr_ExpType name et _ -> discard_it
-            -- do { mb_ty <- readExpType_maybe et
-            --    ; case mb_ty of
-            --        Just ty -> keep_it name ty
-            --        Nothing -> discard_it
      where
         discard_it = go env sofar tc_bndrs
         keep_it id = go env (id:sofar) tc_bndrs
-          -- = do { (env', ty') <- zonkTidyTcType env ty
-          --      ; go env' ((name,ty'):sofar) tc_bndrs }
 
 setTcTyVarLevel :: TcTyVar -> TcLevel -> TcTyVar
 setTcTyVarLevel tv nlvl =
@@ -161,8 +157,9 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
             -- to allow.
             ; ref_tys <- mapM (\l -> (,) l <$> mkRefTy l) refLvls
             ; traceTc "ref_tys are" $ ppr ref_tys
-            ; refDs <-
-                mapM (uncurry $ findSubs graphSortSubs maxRSubs to_check) ref_tys
+            ; refDs <- mapM
+                         (uncurry $ findSubs graphSortSubs maxRSubs to_check)
+                         ref_tys
             ; (rDiscards, sortedRSubs) <-
                 sortSubs graphSortSubs maxRSubs (any fst refDs) $
                     concatMap snd refDs
@@ -286,10 +283,10 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     getHoleCloningSubst tys = mkTvSubstPrs <$> getClonedVars
       where cloneFV :: TcTyVar -> TcM (TcTyVar, Type)
             -- The subsumption check pushes the level, so as to be sure that
-            -- its invocation of the solver doesn't unify type variables floating
-            -- about that are unrelated to the subsumption check. However, these
-            -- cloned variables in the hole type *should* be unified, so we make
-            -- sure to bump the level before creating them
+            -- its invocation of the solver doesn't unify type variables
+            -- floating about that are unrelated to the subsumption check.
+            -- However, these -- cloned variables in the hole type *should* be
+            -- unified, so we make sure to bump the level before creating them.
             cloneFV fv = (,) fv . mkTyVarTy . setLvl <$> cloneTyVar fv
               where setLvl = flip setTcTyVarLevel (pushTcLevel hole_lvl)
                     cloneTyVar :: TcTyVar -> TcM TcTyVar
@@ -320,9 +317,6 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                 cCts = map (applySubToCt cloneSub) cts
                 cVars = map (substTy cloneSub) vars
                 cTy = substTy cloneSub typ
-
-          -- ; tidy_cHoleTy <- zonkTcType cHoleTy
-          -- ; tidy_cTy <- zonkTcType cTy
           ; return (cHoleTy, cVars, cTy, cCts)
           }
     -- The real work happens here, where we invoke the type checker
@@ -334,7 +328,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     fitsHole hole_ty typ =
       do { traceTc "checkingFitOf {" $ ppr typ
          ; traceTc "tys before are: " $ ppr (hole_ty, typ)
-         ; traceTc "fvs are" $ ppr $ fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
+         ; traceTc "fvs are" $ ppr $
+             fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
          ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
          ; absFits <- tcCheckHoleFit (listToBag cCts) cVars cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
@@ -386,25 +381,14 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                     (graph, fromV, _) = graphFromEdges $ map toV sofar
                     topSorted = map ((\(h,_,_) -> h) . fromV) $ topSort graph
             go sofar (id:ids) =
-              do { adjs <- filterM (tcSubsumesWCloning (hfType id) . hfType) fits
+              do { adjs <-
+                     filterM (tcSubsumesWCloning (hfType id) . hfType) fits
                  ; go ((id, adjs):sofar) ids }
 
-    
     -- Kickoff the checking of the elements.
     go :: Maybe Int -> (TcType, [TcType]) -> Int
         -> [Either Id GlobalRdrElt] -> TcM (Bool, [HoleFit])
     go limit ty rlvl = go_ [] emptyVarSet limit ty rlvl . removeBindingShadowing
-
-    -- We use this when checking against global matches,
-    -- where we want the refinement variables to be free
-    -- to unify with anything, but we want to hide
-    -- any local variables of the types.
-    -- wrapNonRefinementVariables :: (TcType, [TcType]) -> (TcType, [TcType])
-    -- wrapNonRefinementVariables (t, refvs) = (mkSpecForAllTys skols t, refvs)
-    --   where
-    --     skols =
-    --       fvVarList $ filterFV (not . flip elemVarSet rtyvs) $ tyCoFVsOfType t
-    --     rtyvs = fvVarSet (tyCoFVsOfTypes refvs)
 
     -- We iterate over the elements, checking each one in turn for whether it
     -- fits, and adding it to the results if it does.
