@@ -10,178 +10,91 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include
         g :: [a] -> a (bound at constraint_substitutions.hs:4:1)
       Valid substitutions include
-        g :: forall a. Ord a => [a] -> a
-          (defined at constraint_substitutions.hs:4:1)
+        g :: [a] -> a
         maximum :: forall (t :: * -> *).
                    Foldable t =>
                    forall a. Ord a => t a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
         minimum :: forall (t :: * -> *).
                    Foldable t =>
                    forall a. Ord a => t a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
         head :: forall a. [a] -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
         last :: forall a. [a] -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
       Valid refinement substitutions include
-        (<$) _ _ :: forall (f :: * -> *).
-                    Functor f =>
-                    forall a b. a -> f b -> f a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<*) _ _ :: forall (f :: * -> *).
-                    Applicative f =>
-                    forall a b. f a -> f b -> f a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        foldr _ _ :: forall (t :: * -> *).
-                     Foldable t =>
-                     forall a b. (a -> b -> b) -> b -> t a -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
-        foldl1 _ :: forall (t :: * -> *).
-                    Foldable t =>
-                    forall a. (a -> a -> a) -> t a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
-        foldr1 _ :: forall (t :: * -> *).
-                    Foldable t =>
-                    forall a. (a -> a -> a) -> t a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
-        foldl _ _ :: forall (t :: * -> *).
-                     Foldable t =>
-                     forall b a. (b -> a -> b) -> b -> t a -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
-        last _ :: forall a. [a] -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        head _ _ :: forall a. [a] -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        head _ :: forall a. [a] -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        last _ _ :: forall a. [a] -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        (!!) _ _ :: forall a. [a] -> Int -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        id _ :: forall a. a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        flip _ _ :: forall a b c. (a -> b -> c) -> b -> a -> c
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        const _ :: forall a b. a -> b -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        asTypeOf _ _ :: forall a. a -> a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        const _ _ :: forall a b. a -> b -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (=<<) _ _ :: forall (m :: * -> *) a b.
-                     Monad m =>
-                     (a -> m b) -> m a -> m b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (.) _ _ :: forall b c a. (b -> c) -> (a -> b) -> a -> c
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($!) _ _ :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($!) _ :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        uncurry _ _ :: forall a b c. (a -> b -> c) -> (a, b) -> c
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        curry _ _ :: forall a b c. ((a, b) -> c) -> a -> b -> c
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        pure _ :: forall (f :: * -> *). Applicative f => forall a. a -> f a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<*>) _ _ :: forall (f :: * -> *).
-                     Applicative f =>
-                     forall a b. f (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        return _ :: forall (m :: * -> *). Monad m => forall a. a -> m a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        return _ _ :: forall (m :: * -> *). Monad m => forall a. a -> m a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        pure _ _ :: forall (f :: * -> *).
-                    Applicative f =>
-                    forall a. a -> f a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        fmap _ _ :: forall (f :: * -> *).
-                    Functor f =>
-                    forall a b. (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<$>) _ _ :: forall (f :: * -> *) a b.
-                     Functor f =>
-                     (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Functor’))
-        (>>) _ _ :: forall (m :: * -> *).
-                    Monad m =>
-                    forall a b. m a -> m b -> m b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (*>) _ _ :: forall (f :: * -> *).
-                    Applicative f =>
-                    forall a b. f a -> f b -> f b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (>>=) _ _ :: forall (m :: * -> *).
-                     Monad m =>
-                     forall a b. m a -> (a -> m b) -> m b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        fail _ :: forall (m :: * -> *). Monad m => forall a. String -> m a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        fail _ _ :: forall (m :: * -> *).
-                    Monad m =>
-                    forall a. String -> m a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($) _ _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($) _ :: forall a (b :: TYPE r). (a -> b) -> a -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        id _ _ :: forall a. a -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        snd _ _ :: forall a b. (a, b) -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        snd _ :: forall a b. (a, b) -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        fst _ :: forall a b. (a, b) -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        fst _ _ :: forall a b. (a, b) -> a
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        seq _ _ :: forall a b. a -> b -> b
-          (imported from ‘Prelude’ at constraint_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Prim’))
+        (<$) (_ :: t0) (_ :: [t0] -> b0)
+          where (<$) :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. a -> f b -> f a
+        (<*) (_ :: [t0] -> t0) (_ :: [t0] -> b0)
+          where (<*) :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a b. f a -> f b -> f a
+        foldr (_ :: t0 -> t0 -> t0) (_ :: t0)
+          where foldr :: forall (t :: * -> *).
+                         Foldable t =>
+                         forall a b. (a -> b -> b) -> b -> t a -> b
+        foldl1 (_ :: t0 -> t0 -> t0)
+          where foldl1 :: forall (t :: * -> *).
+                          Foldable t =>
+                          forall a. (a -> a -> a) -> t a -> a
+        foldr1 (_ :: t0 -> t0 -> t0)
+          where foldr1 :: forall (t :: * -> *).
+                          Foldable t =>
+                          forall a. (a -> a -> a) -> t a -> a
+        foldl (_ :: t0 -> t0 -> t0) (_ :: t0)
+          where foldl :: forall (t :: * -> *).
+                         Foldable t =>
+                         forall b a. (b -> a -> b) -> b -> t a -> b
+        head (_ :: [[t0] -> t0]) where head :: forall a. [a] -> a
+        last (_ :: [[t0] -> t0]) where last :: forall a. [a] -> a
+        (!!) (_ :: [[t0] -> t0]) (_ :: Int)
+          where (!!) :: forall a. [a] -> Int -> a
+        asTypeOf (_ :: [t0] -> t0) (_ :: [t0] -> t0)
+          where asTypeOf :: forall a. a -> a -> a
+        const (_ :: t0) where const :: forall a b. a -> b -> a
+        (=<<) (_ :: a0 -> [t0] -> t0) (_ :: [t0] -> a0)
+          where (=<<) :: forall (m :: * -> *) a b.
+                         Monad m =>
+                         (a -> m b) -> m a -> m b
+        (.) (_ :: b0 -> t0) (_ :: [t0] -> b0)
+          where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
+        uncurry (_ :: a0 -> b0 -> [t0] -> t0) (_ :: (a0, b0))
+          where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
+        (<*>) (_ :: [t0] -> a0 -> t0) (_ :: [t0] -> a0)
+          where (<*>) :: forall (f :: * -> *).
+                         Applicative f =>
+                         forall a b. f (a -> b) -> f a -> f b
+        return (_ :: t0)
+          where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
+        pure (_ :: t0)
+          where pure :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a. a -> f a
+        fmap (_ :: a0 -> t0) (_ :: [t0] -> a0)
+          where fmap :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. (a -> b) -> f a -> f b
+        (<$>) (_ :: a0 -> t0) (_ :: [t0] -> a0)
+          where (<$>) :: forall (f :: * -> *) a b.
+                         Functor f =>
+                         (a -> b) -> f a -> f b
+        (>>) (_ :: [t0] -> a0) (_ :: [t0] -> t0)
+          where (>>) :: forall (m :: * -> *).
+                        Monad m =>
+                        forall a b. m a -> m b -> m b
+        (*>) (_ :: [t0] -> a0) (_ :: [t0] -> t0)
+          where (*>) :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a b. f a -> f b -> f b
+        (>>=) (_ :: [t0] -> a0) (_ :: a0 -> [t0] -> t0)
+          where (>>=) :: forall (m :: * -> *).
+                         Monad m =>
+                         forall a b. m a -> (a -> m b) -> m b
+        fail (_ :: String)
+          where fail :: forall (m :: * -> *).
+                        Monad m =>
+                        forall a. String -> m a
+        ($) (_ :: [t0] -> t0) where ($) :: forall a b. (a -> b) -> a -> b
+        ($!) (_ :: [t0] -> t0) where ($!) :: forall a b. (a -> b) -> a -> b
+        id (_ :: [t0] -> t0) where id :: forall a. a -> a
+        snd (_ :: (a0, [t0] -> t0)) where snd :: forall a b. (a, b) -> b
+        fst (_ :: ([t0] -> t0, b0)) where fst :: forall a b. (a, b) -> a
