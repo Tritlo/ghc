@@ -515,7 +515,7 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes = tcCheckHoleFit emptyBag
+tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag ty_a ty_b
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
@@ -523,21 +523,21 @@ tcSubsumes = tcCheckHoleFit emptyBag
 tcCheckHoleFit :: Cts         -- Any relevant Cts to the hole.
                -> TcSigmaType -- The type of the hole.
                -> TcSigmaType -- The type to check whether fits.
-               -> TcM Bool
-tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty = return True
+               -> TcM (Bool, EvBindMap)
+tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty
+    = return (True, emptyEvBindMap)
 tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
  do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
     ; traceTc "Checking hole fit {" empty
     ; traceTc "wanteds are: " $ ppr wanted
-    ; rem <- pushTcLevelM_ $
-               runTcSDeriveds $
-                 simpl_top $ addSimples wanted relevantCts
+    ; (rem, binds) <- pushTcLevelM_ $
+                        runTcS $ simpl_top $ addSimples wanted relevantCts
     -- We don't want any insoluble or simple constraints left,
     -- but solved implications are ok (and neccessary for e.g. undefined)
-    ; traceTc "rems was: " $ ppr rem
+    ; traceTc "rems was:" $ ppr rem
     ; traceTc "}" empty
-    ; return (checkIfOK rem) }
+    ; return ((checkIfOK rem), binds) }
     where
       checkIfOK (WC simpl impl) =
         (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)

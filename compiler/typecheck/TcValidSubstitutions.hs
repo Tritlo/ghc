@@ -44,6 +44,7 @@ data HoleFit = HoleFit { hfEl :: Maybe GlobalRdrElt -- The element that was
                                                     -- if a global, nothing
                                                     -- if it is a local.
                        , hfId :: Id       -- the elements id in the TcM
+                       , hfTy :: TcType
                        , hfRefLvl :: Int  -- The number of holes in this fit
                        , hfMatches :: [TcType] } -- What the refinement
                                                  -- variables got matched with,
@@ -81,7 +82,7 @@ pprHoleFit showProv hf =
     where name = case hfEl hf of
                       Just gre -> gre_name gre
                       Nothing -> idName (hfId hf)
-          ty = varType (hfId hf)
+          ty = hfTy hf
           matches = hfMatches hf
           holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
           idAndTy = pprPrefixOcc name <+> dcolon <+> ppr ty
@@ -106,9 +107,8 @@ getLocalBindings tidy_orig ct
     go _ sofar [] = return (reverse sofar)
     go env sofar (tc_bndr : tc_bndrs) =
         case tc_bndr of
-          TcTvBndr {} -> discard_it
           TcIdBndr id _ -> keep_it id
-          TcIdBndr_ExpType _ _ _ -> discard_it
+          _ -> discard_it
      where
         discard_it = go env sofar tc_bndrs
         keep_it id = go env (id:sofar) tc_bndrs
@@ -123,7 +123,9 @@ setTcTyVarLevel tv nlvl =
 
 
 -- See Note [Valid substitutions include ...]
-findValidSubstitutions :: TidyEnv -> [Implication] -> [Ct] -> Ct -> TcM SDoc
+findValidSubstitutions :: TidyEnv -> [Implication]
+                       -> [Ct] -> Ct
+                       -> TcM (TidyEnv, SDoc)
 findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; lclBinds <- getLocalBindings tidy_env ct
@@ -141,11 +143,12 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
         findSubs graphSortSubs maxVSubs to_check 0 (wrapped_hole_ty, [])
      ; (vDiscards, sortedSubs) <-
         sortSubs graphSortSubs maxVSubs searchDiscards subs
+     ; (tidy_env, tidy_subs) <- zonkSubs tidy_env sortedSubs
      ; let vMsg = ppUnless (null subs) $
                     hang (text "Valid substitutions include") 2 $
-                      vcat (map (pprHoleFit showProvenance) sortedSubs)
+                      vcat (map (pprHoleFit showProvenance) tidy_subs)
                         $$ ppWhen vDiscards subsDiscardMsg
-     ; refMsg <- if refLevel >= Just 0 then
+     ; (tidy_env, refMsg) <- if refLevel >= Just 0 then
          do { maxRSubs <- maxRefSubstitutions <$> getDynFlags
             -- We can use from just, since we know that Nothing >= _ is False.
             ; let refLvls = [1..(fromJust refLevel)]
@@ -160,14 +163,15 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
             ; (rDiscards, sortedRSubs) <-
                 sortSubs graphSortSubs maxRSubs (any fst refDs) $
                     concatMap snd refDs
-            ; return $
+            ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env sortedRSubs
+            ; return (tidy_env,
                 ppUnless (null sortedRSubs) $
                   hang (text "Valid refinement substitutions include") 2 $
-                  vcat (map (pprHoleFit showProvenance) sortedRSubs)
-                    $$ ppWhen rDiscards refSubsDiscardMsg }
-       else return empty
+                  vcat (map (pprHoleFit showProvenance) tidy_rsubs)
+                    $$ ppWhen rDiscards refSubsDiscardMsg) }
+       else return (tidy_env, empty)
      ; traceTc "findingValidSubstitutionsFor }" empty
-     ; return (vMsg $$ refMsg)}
+     ; return (tidy_env, vMsg $$ refMsg) }
   where
     hole_loc = ctEvLoc $ ctEvidence ct
     hole_lvl = ctLocLevel hole_loc
@@ -327,9 +331,10 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
          ; traceTc "fvs are" $ ppr $
              fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
          ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
-         ; absFits <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
+         ; (absFits, binds) <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
-         ; traceTc "tys after are: " $ ppr (cHoleTy, cTy)
+         ; traceTc "tys after are:" $ ppr (cHoleTy, cTy)
+         ; traceTc "binds are:" $ ppr binds
          ; traceTc "}" empty
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
@@ -345,9 +350,19 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                 ; matches <- mapM (fmap getMTy . readMetaTyVar) mtvs
                 ; allFilled <- goptM Opt_AbstractRefSubstitutions `orM`
                                return (all isJust matches)
-                ; if allFilled then return (Just (catMaybes matches))
+                ; if allFilled then Just <$> return (catMaybes matches)
                   else return Nothing }
             else return Nothing }
+
+    zonkSubs :: TidyEnv -> [HoleFit] -> TcM (TidyEnv, [HoleFit])
+    zonkSubs = zonkSubs' []
+      where zonkSubs' zs env [] = return (env, reverse zs)
+            zonkSubs' zs env (hf:hfs) = do { (env', z) <- zonkSub env hf
+                                           ; zonkSubs' (z:zs) env' hfs }
+            zonkSub env hf@(HoleFit {hfTy = ty, hfMatches = m})
+              = do { (env', ty') <- zonkTidyTcType env ty
+                   ; (env'', m') <- zonkTidyTcTypes env' m
+                   ; return (env'', hf {hfTy = ty', hfMatches = m' } ) }
 
     -- Based on the flags, we might possibly discard some or all the
     -- fits we've found.
@@ -410,7 +425,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
       where discard_it = go_ subs seen maxleft ty rlvl elts
             keep_it id ms = go_ (fit:subs) (extendVarSet seen id)
                               ((\n -> n - 1) <$> maxleft) ty rlvl elts
-              where fit = HoleFit mbel id rlvl ms
+              where fit = HoleFit mbel id (idType id) rlvl ms
                     mbel = either (const Nothing) Just el
             -- We want to filter out undefined.
             not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
@@ -427,7 +442,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
 
 
 -- We don't (as of yet) handle holes in types, only in expressions.
-findValidSubstitutions _ _ _ _ = return empty
+findValidSubstitutions env _ _ _ = return (env, empty)
 
 subsDiscardMsg :: SDoc
 subsDiscardMsg =

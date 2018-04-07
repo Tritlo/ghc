@@ -1122,8 +1122,9 @@ mkHoleError tidy_simples ctxt ct@(CHoleCan { cc_hole = hole })
                | otherwise = empty
 
        ; no_show_valid_substitutions <- goptM Opt_NoShowValidSubstitutions
-       ; sub_msg <- if no_show_valid_substitutions then return empty
-                    else validSubstitutions ctxt tidy_simples ct
+       ; (ctxt, sub_msg) <- if no_show_valid_substitutions
+                            then return (ctxt, empty)
+                            else validSubstitutions ctxt tidy_simples ct
        ; mkErrorMsgFromCt ctxt ct $
             important hole_msg `mappend`
             relevant_bindings (binds_msg $$ constraints_msg) `mappend`
@@ -1186,9 +1187,10 @@ mkHoleError _ _ ct = pprPanic "mkHoleError" (ppr ct)
 
 -- We unwrap the ReportErrCtxt here, to avoid introducing a loop in module
 -- imports
-validSubstitutions :: ReportErrCtxt -> [Ct] -> Ct -> TcM SDoc
-validSubstitutions (CEC {cec_encl = implics, cec_tidy = lcl_env})
-  = findValidSubstitutions lcl_env implics
+validSubstitutions :: ReportErrCtxt -> [Ct] -> Ct -> TcM (ReportErrCtxt, SDoc)
+validSubstitutions ctxt@(CEC {cec_encl = implics, cec_tidy = lcl_env}) simps ct
+  = do { (tidy_env, msg) <- findValidSubstitutions lcl_env implics simps ct
+       ; return (ctxt {cec_tidy = tidy_env}, msg) }
 
 -- See Note [Constraints include ...]
 givenConstraintsMsg :: ReportErrCtxt -> SDoc

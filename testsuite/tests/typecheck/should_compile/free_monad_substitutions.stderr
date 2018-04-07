@@ -20,7 +20,7 @@ free_monad_substitutions.hs:12:28: warning: [-Wtyped-holes (in -Wdefault)]
         f :: a -> b (bound at free_monad_substitutions.hs:10:10)
         fmap :: (a -> b) -> Free f a -> Free f b
           (bound at free_monad_substitutions.hs:10:5)
-      Valid substitutions include go :: t1
+      Valid substitutions include go :: Free f1 a -> Free f2 b
       Valid refinement substitutions include
         (=<<) (_ :: a0
                     -> (Free t0 t1 -> Free t2 t3)
@@ -30,31 +30,31 @@ free_monad_substitutions.hs:12:28: warning: [-Wtyped-holes (in -Wdefault)]
           where (=<<) :: forall (m :: * -> *) a b.
                          Monad m =>
                          (a -> m b) -> m a -> m b
-        (<$>) (_ :: a0 -> t0 (Free t0 t1) -> t2 (Free t2 t3))
-              (_ :: (Free t0 t1 -> Free t2 t3) -> a0)
+        (<$>) (_ :: a1 -> t4 (Free t4 t5) -> t6 (Free t6 t7))
+              (_ :: (Free t4 t5 -> Free t6 t7) -> a1)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        pure (_ :: t0 (Free t0 t1) -> t2 (Free t2 t3))
+        pure (_ :: t8 (Free t8 t9) -> t10 (Free t10 t11))
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        (<*>) (_ :: (Free t0 t1 -> Free t2 t3)
-                    -> a0 -> t0 (Free t0 t1) -> t2 (Free t2 t3))
-              (_ :: (Free t0 t1 -> Free t2 t3) -> a0)
+        (<*>) (_ :: (Free t12 t13 -> Free t14 t15)
+                    -> a2 -> t12 (Free t12 t13) -> t14 (Free t14 t15))
+              (_ :: (Free t12 t13 -> Free t14 t15) -> a2)
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        (>>=) (_ :: (Free t0 t1 -> Free t2 t3) -> a0)
-              (_ :: a0
-                    -> (Free t0 t1 -> Free t2 t3)
-                    -> t0 (Free t0 t1)
-                    -> t2 (Free t2 t3))
+        (>>=) (_ :: (Free t16 t17 -> Free t18 t19) -> a3)
+              (_ :: a3
+                    -> (Free t16 t17 -> Free t18 t19)
+                    -> t16 (Free t16 t17)
+                    -> t18 (Free t18 t19))
           where (>>=) :: forall (m :: * -> *).
                          Monad m =>
                          forall a b. m a -> (a -> m b) -> m b
-        ($) (_ :: (Free t0 t1 -> Free t2 t3)
-                  -> t0 (Free t0 t1) -> t2 (Free t2 t3))
+        ($) (_ :: (Free t20 t21 -> Free t22 t23)
+                  -> t20 (Free t20 t21) -> t22 (Free t22 t23))
           where ($) :: forall a b. (a -> b) -> a -> b
 
 free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
@@ -80,37 +80,38 @@ free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
           where (=<<) :: forall (m :: * -> *) a b.
                          Monad m =>
                          (a -> m b) -> m a -> m b
-        (=<<) (_ :: a0 -> Free t1 t0 -> Free t1 t2) (_ :: Free t0 t1 -> a0)
+        (=<<) (_ :: a0 -> Free t4 t3 -> Free t4 t5) (_ :: Free t4 t3 -> a0)
           where (=<<) :: forall (m :: * -> *) a b.
                          Monad m =>
                          (a -> m b) -> m a -> m b
-        (<$>) (_ :: a0 -> Free t0 t1) (_ :: Free t0 t1 -> a0)
+        (<$>) (_ :: a1 -> Free t6 t7) (_ :: Free t6 t8 -> a1)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        pure (_ :: Free t0 t1)
+        pure (_ :: Free t9 t10)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        (<*>) (_ :: Free t1 t0 -> a0 -> Free t1 t2) (_ :: Free t0 t1 -> a0)
+        (<*>) (_ :: Free t12 t11 -> a2 -> Free t12 t13)
+              (_ :: Free t12 t11 -> a2)
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        (<*>) (_ :: Free t0 (t1 -> t2))
+        (<*>) (_ :: Free t14 (t15 -> t16))
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        fmap (_ :: t0 -> t1)
+        fmap (_ :: t17 -> t18)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        fmap (_ :: a0 -> Free t0 t1) (_ :: Free t0 t1 -> a0)
+        fmap (_ :: a3 -> Free t19 t20) (_ :: Free t19 t21 -> a3)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        (<$>) (_ :: t0 -> t1)
+        (<$>) (_ :: t22 -> t23)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        ($) (_ :: Free t1 t0 -> Free t1 t2)
+        ($) (_ :: Free t25 t24 -> Free t25 t26)
           where ($) :: forall a b. (a -> b) -> a -> b

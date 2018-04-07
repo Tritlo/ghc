@@ -24,11 +24,11 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
         head :: forall a. [a] -> a
         last :: forall a. [a] -> a
       Valid refinement substitutions include
-        (<$) (_ :: a0) (_ :: f0 b0)
+        (<$) (_ :: Integer) (_ :: [Integer] -> b0)
           where (<$) :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. a -> f b -> f a
-        (<*) (_ :: f0 a0) (_ :: f0 b0)
+        (<*) (_ :: [Integer] -> Integer) (_ :: [Integer] -> b1)
           where (<*) :: forall (f :: * -> *).
                         Applicative f =>
                         forall a b. f a -> f b -> f a
@@ -52,63 +52,63 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
         head (_ :: [t0 -> [Integer] -> Integer])
           where head :: forall a. [a] -> a
         head (_ :: [[Integer] -> Integer]) where head :: forall a. [a] -> a
-        last (_ :: [t0 -> [Integer] -> Integer])
+        last (_ :: [t1 -> [Integer] -> Integer])
           where last :: forall a. [a] -> a
         (!!) (_ :: [[Integer] -> Integer]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
         id (_ :: [Integer] -> Integer) where id :: forall a. a -> a
-        flip (_ :: [Integer] -> b0 -> Integer) (_ :: b0)
+        flip (_ :: [Integer] -> b2 -> Integer) (_ :: b2)
           where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
         const (_ :: Integer) where const :: forall a b. a -> b -> a
         asTypeOf (_ :: [Integer] -> Integer) (_ :: [Integer] -> Integer)
           where asTypeOf :: forall a. a -> a -> a
-        const (_ :: [Integer] -> Integer) (_ :: b0)
+        const (_ :: [Integer] -> Integer) (_ :: b3)
           where const :: forall a b. a -> b -> a
-        (=<<) (_ :: a0 -> m0 b0) (_ :: m0 a0)
+        (=<<) (_ :: a0 -> [Integer] -> Integer) (_ :: [Integer] -> a0)
           where (=<<) :: forall (m :: * -> *) a b.
                          Monad m =>
                          (a -> m b) -> m a -> m b
-        (.) (_ :: b0 -> Integer) (_ :: [Integer] -> b0)
+        (.) (_ :: b4 -> Integer) (_ :: [Integer] -> b4)
           where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
-        ($!) (_ :: a0 -> [Integer] -> Integer) (_ :: a0)
+        ($!) (_ :: a1 -> [Integer] -> Integer) (_ :: a1)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        uncurry (_ :: a0 -> b0 -> [Integer] -> Integer) (_ :: (a0, b0))
+        uncurry (_ :: a2 -> b5 -> [Integer] -> Integer) (_ :: (a2, b5))
           where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
-        curry (_ :: (a0, [Integer]) -> Integer) (_ :: a0)
+        curry (_ :: (a3, [Integer]) -> Integer) (_ :: a3)
           where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
-        pure (_ :: a0)
+        pure (_ :: Integer)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        (<*>) (_ :: f0 (a0 -> b0)) (_ :: f0 a0)
+        (<*>) (_ :: [Integer] -> a4 -> Integer) (_ :: [Integer] -> a4)
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        return (_ :: a0)
+        return (_ :: Integer)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        return (_ :: a0)
+        return (_ :: [Integer] -> Integer)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        pure (_ :: a0)
+        pure (_ :: [Integer] -> Integer)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        fmap (_ :: a0 -> b0) (_ :: f0 a0)
+        fmap (_ :: a5 -> Integer) (_ :: [Integer] -> a5)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        (<$>) (_ :: a0 -> b0) (_ :: f0 a0)
+        (<$>) (_ :: a6 -> Integer) (_ :: [Integer] -> a6)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        (>>) (_ :: m0 a0) (_ :: m0 b0)
+        (>>) (_ :: [Integer] -> a7) (_ :: [Integer] -> Integer)
           where (>>) :: forall (m :: * -> *).
                         Monad m =>
                         forall a b. m a -> m b -> m b
-        (*>) (_ :: f0 a0) (_ :: f0 b0)
+        (*>) (_ :: [Integer] -> a8) (_ :: [Integer] -> Integer)
           where (*>) :: forall (f :: * -> *).
                         Applicative f =>
                         forall a b. f a -> f b -> f b
-        (>>=) (_ :: m0 a0) (_ :: a0 -> m0 b0)
+        (>>=) (_ :: [Integer] -> a9) (_ :: a9 -> [Integer] -> Integer)
           where (>>=) :: forall (m :: * -> *).
                          Monad m =>
                          forall a b. m a -> (a -> m b) -> m b
@@ -120,22 +120,22 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
-        ($) (_ :: a0 -> [Integer] -> Integer) (_ :: a0)
+        ($) (_ :: a10 -> [Integer] -> Integer) (_ :: a10)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($) (_ :: [Integer] -> Integer)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($!) (_ :: [Integer] -> Integer)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t0 -> [Integer] -> Integer) where id :: forall a. a -> a
-        snd (_ :: (a0, t0 -> [Integer] -> Integer))
+        id (_ :: t2 -> [Integer] -> Integer) where id :: forall a. a -> a
+        snd (_ :: (a11, t3 -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
-        snd (_ :: (a0, [Integer] -> Integer))
+        snd (_ :: (a12, [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
-        fst (_ :: ([Integer] -> Integer, b0))
+        fst (_ :: ([Integer] -> Integer, b6))
           where fst :: forall a b. (a, b) -> a
-        fst (_ :: (t0 -> [Integer] -> Integer, b0))
+        fst (_ :: (t4 -> [Integer] -> Integer, b7))
           where fst :: forall a b. (a, b) -> a
-        seq (_ :: a0) (_ :: [Integer] -> Integer)
+        seq (_ :: a13) (_ :: [Integer] -> Integer)
           where seq :: forall a b. a -> b -> b
 
 abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
@@ -151,11 +151,11 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
         pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
       Valid refinement substitutions include
-        (<$) (_ :: a0) (_ :: f0 b0)
+        (<$) (_ :: [Integer] -> Integer) (_ :: Integer -> b0)
           where (<$) :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. a -> f b -> f a
-        (<*) (_ :: f0 a0) (_ :: f0 b0)
+        (<*) (_ :: Integer -> [Integer] -> Integer) (_ :: Integer -> b1)
           where (<*) :: forall (f :: * -> *).
                         Applicative f =>
                         forall a b. f a -> f b -> f a
@@ -173,7 +173,7 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where head :: forall a. [a] -> a
         head (_ :: [t0 -> Integer -> [Integer] -> Integer])
           where head :: forall a. [a] -> a
-        last (_ :: [t0 -> Integer -> [Integer] -> Integer])
+        last (_ :: [t1 -> Integer -> [Integer] -> Integer])
           where last :: forall a. [a] -> a
         (!!) (_ :: [Integer -> [Integer] -> Integer]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
@@ -181,63 +181,66 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where id :: forall a. a -> a
         flip (_ :: [Integer] -> Integer -> Integer)
           where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
-        flip (_ :: Integer -> b0 -> [Integer] -> Integer) (_ :: b0)
+        flip (_ :: Integer -> b2 -> [Integer] -> Integer) (_ :: b2)
           where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
-        const (_ :: Integer -> [Integer] -> Integer) (_ :: b0)
+        const (_ :: Integer -> [Integer] -> Integer) (_ :: b3)
           where const :: forall a b. a -> b -> a
         asTypeOf (_ :: Integer -> [Integer] -> Integer)
                  (_ :: Integer -> [Integer] -> Integer)
           where asTypeOf :: forall a. a -> a -> a
         const (_ :: [Integer] -> Integer)
           where const :: forall a b. a -> b -> a
-        (=<<) (_ :: a0 -> m0 b0) (_ :: m0 a0)
+        (=<<) (_ :: a0 -> Integer -> [Integer] -> Integer)
+              (_ :: Integer -> a0)
           where (=<<) :: forall (m :: * -> *) a b.
                          Monad m =>
                          (a -> m b) -> m a -> m b
-        (.) (_ :: b0 -> [Integer] -> Integer) (_ :: Integer -> b0)
+        (.) (_ :: b4 -> [Integer] -> Integer) (_ :: Integer -> b4)
           where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
         ($!) (_ :: Integer -> [Integer] -> Integer)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        uncurry (_ :: a0 -> b0 -> Integer -> [Integer] -> Integer)
-                (_ :: (a0, b0))
+        uncurry (_ :: a1 -> b5 -> Integer -> [Integer] -> Integer)
+                (_ :: (a1, b5))
           where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
-        curry (_ :: (a0, Integer) -> [Integer] -> Integer) (_ :: a0)
+        curry (_ :: (a2, Integer) -> [Integer] -> Integer) (_ :: a2)
           where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
         curry (_ :: (Integer, [Integer]) -> Integer)
           where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
-        pure (_ :: a0)
+        pure (_ :: [Integer] -> Integer)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        (<*>) (_ :: f0 (a0 -> b0)) (_ :: f0 a0)
+        (<*>) (_ :: Integer -> a3 -> [Integer] -> Integer)
+              (_ :: Integer -> a3)
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        return (_ :: a0)
+        return (_ :: [Integer] -> Integer)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        return (_ :: a0)
+        return (_ :: Integer -> [Integer] -> Integer)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        pure (_ :: a0)
+        pure (_ :: Integer -> [Integer] -> Integer)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        fmap (_ :: a0 -> b0) (_ :: f0 a0)
+        fmap (_ :: a4 -> [Integer] -> Integer) (_ :: Integer -> a4)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        (<$>) (_ :: a0 -> b0) (_ :: f0 a0)
+        (<$>) (_ :: a5 -> [Integer] -> Integer) (_ :: Integer -> a5)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        (>>) (_ :: m0 a0) (_ :: m0 b0)
+        (>>) (_ :: Integer -> a6) (_ :: Integer -> [Integer] -> Integer)
           where (>>) :: forall (m :: * -> *).
                         Monad m =>
                         forall a b. m a -> m b -> m b
-        (*>) (_ :: f0 a0) (_ :: f0 b0)
+        (*>) (_ :: Integer -> a7) (_ :: Integer -> [Integer] -> Integer)
           where (*>) :: forall (f :: * -> *).
                         Applicative f =>
                         forall a b. f a -> f b -> f b
-        (>>=) (_ :: m0 a0) (_ :: a0 -> m0 b0)
+        (>>=) (_ :: Integer -> a8)
+              (_ :: a8 -> Integer -> [Integer] -> Integer)
           where (>>=) :: forall (m :: * -> *).
                          Monad m =>
                          forall a b. m a -> (a -> m b) -> m b
@@ -249,21 +252,21 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
-        ($) (_ :: a0 -> Integer -> [Integer] -> Integer) (_ :: a0)
+        ($) (_ :: a9 -> Integer -> [Integer] -> Integer) (_ :: a9)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($) (_ :: Integer -> [Integer] -> Integer)
           where ($) :: forall a b. (a -> b) -> a -> b
-        ($!) (_ :: a0 -> Integer -> [Integer] -> Integer) (_ :: a0)
+        ($!) (_ :: a10 -> Integer -> [Integer] -> Integer) (_ :: a10)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t0 -> Integer -> [Integer] -> Integer)
+        id (_ :: t2 -> Integer -> [Integer] -> Integer)
           where id :: forall a. a -> a
-        snd (_ :: (a0, t0 -> Integer -> [Integer] -> Integer))
+        snd (_ :: (a11, t3 -> Integer -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
-        snd (_ :: (a0, Integer -> [Integer] -> Integer))
+        snd (_ :: (a12, Integer -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
-        fst (_ :: (Integer -> [Integer] -> Integer, b0))
+        fst (_ :: (Integer -> [Integer] -> Integer, b6))
           where fst :: forall a b. (a, b) -> a
-        fst (_ :: (t0 -> Integer -> [Integer] -> Integer, b0))
+        fst (_ :: (t4 -> Integer -> [Integer] -> Integer, b7))
           where fst :: forall a b. (a, b) -> a
-        seq (_ :: a0) (_ :: Integer -> [Integer] -> Integer)
+        seq (_ :: a13) (_ :: Integer -> [Integer] -> Integer)
           where seq :: forall a b. a -> b -> b

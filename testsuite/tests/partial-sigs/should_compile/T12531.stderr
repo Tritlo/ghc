@@ -7,4 +7,4 @@ T12531.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include
         x :: Int# (bound at T12531.hs:6:3)
         f :: Int# -> Int (bound at T12531.hs:6:1)
-      Valid substitutions include x :: p1 (bound at T12531.hs:6:3)
+      Valid substitutions include x :: Int# (bound at T12531.hs:6:3)
