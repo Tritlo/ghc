@@ -9,6 +9,7 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
       In an equation for ‘g’: g = _
     • Relevant bindings include
         g :: [a] -> a (bound at constraint_substitutions.hs:4:1)
+      Constraints include Ord a (from constraint_substitutions.hs:3:1-22)
       Valid substitutions include
         g :: [a] -> a
         maximum :: forall (t :: * -> *).

@@ -25,5 +25,6 @@ local_substitutions.hs:8:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include
         a :: a (bound at local_substitutions.hs:8:7)
         mshow :: a -> a (bound at local_substitutions.hs:8:1)
+      Constraints include Show a (from local_substitutions.hs:7:1-25)
       Valid substitutions include
         a :: a (bound at local_substitutions.hs:8:7)

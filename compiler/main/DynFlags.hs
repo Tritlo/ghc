@@ -4279,7 +4279,8 @@ validSubstitutionDefaults
      , Opt_ShowProvOfSubstitutions
      , Opt_ShowMatchesOfSubstitutions
      , Opt_ShowValidSubstitutions
-     , Opt_SortValidSubstitutions ]
+     , Opt_SortValidSubstitutions
+     , Opt_ShowHoleConstraints ]
 
 
 validSubstitutionsImpliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]

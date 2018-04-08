@@ -20,6 +20,8 @@ free_monad_substitutions.hs:12:28: warning: [-Wtyped-holes (in -Wdefault)]
         f :: a -> b (bound at free_monad_substitutions.hs:10:10)
         fmap :: (a -> b) -> Free f a -> Free f b
           (bound at free_monad_substitutions.hs:10:5)
+      Constraints include
+        Functor f (from free_monad_substitutions.hs:9:10-38)
       Valid substitutions include go :: Free f1 a -> Free f2 b
       Valid refinement substitutions include
         (=<<) (_ :: a0
@@ -71,6 +73,8 @@ free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
         f :: f (Free f a) (bound at free_monad_substitutions.hs:22:10)
         (>>=) :: Free f a -> (a -> Free f b) -> Free f b
           (bound at free_monad_substitutions.hs:21:12)
+      Constraints include
+        Applicative f (from free_monad_substitutions.hs:20:10-40)
       Valid refinement substitutions include
         (=<<) (_ :: a -> Free f b)
           where (=<<) :: forall (m :: * -> *) a b.
