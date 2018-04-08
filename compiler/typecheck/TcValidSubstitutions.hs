@@ -207,7 +207,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      where newTyVarTys =
              replicateM refLvl $ mkTyVarTy . setLvl <$>
                 (newOpenTypeKind >>= newFlexiTyVar)
-           setLvl = flip setTcTyVarLevel (pushTcLevel hole_lvl)
+           setLvl = flip setTcTyVarLevel hole_lvl
            wrapHoleWithArgs args = (wrap_ty . mkFunTys args) hole_ty
 
 
