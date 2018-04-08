@@ -523,11 +523,11 @@ tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag ty_a ty_b
 tcCheckHoleFit :: Cts         -- Any relevant Cts to the hole.
                -> TcSigmaType -- The type of the hole.
                -> TcSigmaType -- The type to check whether fits.
-               -> TcM (Bool, EvBindMap)
+               -> TcM (Bool, (HsWrapper, EvBindMap))
 tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty
-    = return (True, emptyEvBindMap)
+    = return (True, (idHsWrapper, emptyEvBindMap))
 tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
- do {  (_, wanted, _) <- pushLevelAndCaptureConstraints $
+ do {  (_, wanted, wrp) <- pushLevelAndCaptureConstraints $
                            tcSubType_NC ExprSigCtxt ty hole_ty
     ; traceTc "Checking hole fit {" empty
     ; traceTc "wanteds are: " $ ppr wanted
@@ -537,7 +537,7 @@ tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
     -- but solved implications are ok (and neccessary for e.g. undefined)
     ; traceTc "rems was:" $ ppr rem
     ; traceTc "}" empty
-    ; return ((checkIfOK rem), binds) }
+    ; return (checkIfOK rem, (wrp, binds) ) }
     where
       checkIfOK (WC simpl impl) =
         (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)

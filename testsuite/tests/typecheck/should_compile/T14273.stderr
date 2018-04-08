@@ -40,6 +40,7 @@ T14273.hs:7:32: warning: [-Wtyped-holes (in -Wdefault)]
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Types’))
         pi :: forall a. Floating a => a
+          with pi @Double
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Float’))
         otherwise :: Bool

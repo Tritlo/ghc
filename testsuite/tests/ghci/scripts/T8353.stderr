@@ -13,9 +13,11 @@ Defer03.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
         f :: Int (bound at Defer03.hs:7:1)
         a :: Int (defined at Defer03.hs:4:1)
         maxBound :: forall a. Bounded a => a
+          with maxBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
         minBound :: forall a. Bounded a => a
+          with minBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
 
@@ -33,9 +35,11 @@ Defer03.hs:7:5: error:
         f :: Int (bound at Defer03.hs:7:1)
         a :: Int (defined at Defer03.hs:4:1)
         maxBound :: forall a. Bounded a => a
+          with maxBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
         minBound :: forall a. Bounded a => a
+          with minBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
 
@@ -53,9 +57,11 @@ Defer03.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
         f :: Int (bound at Defer03.hs:7:1)
         a :: Int (defined at Defer03.hs:4:1)
         maxBound :: forall a. Bounded a => a
+          with maxBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
         minBound :: forall a. Bounded a => a
+          with minBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
 
@@ -73,9 +79,11 @@ Defer03.hs:7:5: error:
         f :: Int (bound at Defer03.hs:7:1)
         a :: Int (defined at Defer03.hs:4:1)
         maxBound :: forall a. Bounded a => a
+          with maxBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
         minBound :: forall a. Bounded a => a
+          with minBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
 
@@ -93,8 +101,10 @@ Defer03.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
         f :: Int (bound at Defer03.hs:7:1)
         a :: Int (defined at Defer03.hs:4:1)
         maxBound :: forall a. Bounded a => a
+          with maxBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))
         minBound :: forall a. Bounded a => a
+          with minBound @Int
           (imported from ‘Prelude’ at Defer03.hs:1:8-11
            (and originally defined in ‘GHC.Enum’))

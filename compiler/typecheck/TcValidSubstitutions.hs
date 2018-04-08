@@ -10,11 +10,13 @@ import TcSimplify ( tcCheckHoleFit, tcSubsumes )
 import TcRnTypes
 import TcRnMonad
 import TcMType
+import TcEvidence
 import TcType
 import Type
 import DataCon
 import Name
 import RdrName ( pprNameProvenance , GlobalRdrElt (..), globalRdrEnvElts )
+
 
 import PrelNames ( gHC_ERR )
 import Id
@@ -43,9 +45,10 @@ import Data.Function    ( on )
 data HoleFit = HoleFit { hfEl :: Maybe GlobalRdrElt -- The element that was
                                                     -- if a global, nothing
                                                     -- if it is a local.
-                       , hfId :: Id       -- the elements id in the TcM
-                       , hfTy :: TcType
+                       , hfId :: Id       -- The elements id in the TcM
+                       , hfTy :: TcType   -- The type of the id, possibly zonked
                        , hfRefLvl :: Int  -- The number of holes in this fit
+                       , hfWrp :: [TcType] -- The wrapper for the match
                        , hfMatches :: [TcType] } -- What the refinement
                                                  -- variables got matched with,
                                                  -- if anything
@@ -77,19 +80,24 @@ instance HasOccName GlobalRdrElt where
 -- with added '_' to represent any extra arguments in case of a non-zero
 -- refinement level.
 pprHoleFit :: Bool -> HoleFit -> SDoc
-pprHoleFit showProv hf =
-    if showProv then hang display 2 provenance else display
+pprHoleFit clutter hf =
+    if clutter then hang display 2 provenance else display
     where name = case hfEl hf of
                       Just gre -> gre_name gre
                       Nothing -> idName (hfId hf)
           ty = hfTy hf
-          matches = hfMatches hf
+          matches =  hfMatches hf
+          wrap = hfWrp hf
+          tyApp = sep $ map ((text "@" <>) . pprParendType) wrap
           holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
-          idAndTy = pprPrefixOcc name <+> dcolon <+> ppr ty
-          display = if null matches
-            then idAndTy
-            else hang (pprPrefixOcc name <+> holeVs) 2
-                   (text "where" <+> idAndTy)
+          occDisp = pprPrefixOcc name
+          idAt = occDisp <+> tyApp
+          tyDisp = dcolon <+> ppr ty
+          has = not . null
+          wrapDisp = ppWhen (has wrap && clutter) $ text "with" <+> idAt
+          funcInfo = ppWhen (has matches) $ text "where" <+> occDisp <+> tyDisp
+          subDisp = occDisp <+> if has matches then holeVs else tyDisp
+          display =  subDisp $$ nest 2 (wrapDisp $+$ funcInfo)
           provenance = parens $
             case hfEl hf of
               Just gre -> pprNameProvenance gre
@@ -130,7 +138,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; lclBinds <- getLocalBindings tidy_env ct
      ; maxVSubs <- maxValidSubstitutions <$> getDynFlags
-     ; showProvenance <- not <$> goptM Opt_UnclutterValidSubstitutions
+     ; clutter <- not <$> goptM Opt_UnclutterValidSubstitutions
      ; graphSortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
      ; refLevel <- refLevelSubstitutions <$> getDynFlags
      ; traceTc "findingValidSubstitutionsFor { " $ ppr ct
@@ -144,9 +152,9 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      ; (vDiscards, sortedSubs) <-
         sortSubs graphSortSubs maxVSubs searchDiscards subs
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env sortedSubs
-     ; let vMsg = ppUnless (null subs) $
+     ; let vMsg = ppUnless (null tidy_subs) $
                     hang (text "Valid substitutions include") 2 $
-                      vcat (map (pprHoleFit showProvenance) tidy_subs)
+                      vcat (map (pprHoleFit clutter) tidy_subs)
                         $$ ppWhen vDiscards subsDiscardMsg
      ; (tidy_env, refMsg) <- if refLevel >= Just 0 then
          do { maxRSubs <- maxRefSubstitutions <$> getDynFlags
@@ -165,9 +173,9 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                     concatMap snd refDs
             ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env sortedRSubs
             ; return (tidy_env,
-                ppUnless (null sortedRSubs) $
+                ppUnless (null tidy_rsubs) $
                   hang (text "Valid refinement substitutions include") 2 $
-                  vcat (map (pprHoleFit showProvenance) tidy_rsubs)
+                  vcat (map (pprHoleFit clutter) tidy_rsubs)
                     $$ ppWhen rDiscards refSubsDiscardMsg) }
        else return (tidy_env, empty)
      ; traceTc "findingValidSubstitutionsFor }" empty
@@ -319,29 +327,39 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                 cTy = substTy cloneSub typ
           ; return (cHoleTy, cVars, cTy, cCts)
           }
+
+    unfoldWrapper :: HsWrapper -> [Type]
+    unfoldWrapper = reverse . unfWrp'
+      where unfWrp' (WpTyApp ty) = [ty]
+            unfWrp' (WpCompose w1 w2) = unfWrp' w1 ++ unfWrp' w2
+            unfWrp' _ = []
+
     -- The real work happens here, where we invoke the type checker
     -- to check whether we the given type fits into the hole!
     -- To check: Clone all relevant cts and the hole
     -- then solve the subsumption check AND check that all other
     -- the other constraints were solved.
-    fitsHole :: (TcType, [TcType]) -> Type -> TcM (Maybe [TcType])
+    fitsHole :: (TcType, [TcType]) -> Type -> TcM (Maybe ([TcType], [TcType]))
     fitsHole hole_ty typ =
       do { traceTc "checkingFitOf {" $ ppr typ
          ; traceTc "tys before are: " $ ppr (hole_ty, typ)
          ; traceTc "fvs are" $ ppr $
              fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
          ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
-         ; (absFits, binds) <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
+         ; (absFits, (wrp, binds))
+            <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
          ; traceTc "tys after are:" $ ppr (cHoleTy, cTy)
          ; traceTc "binds are:" $ ppr binds
-         ; traceTc "}" empty
+         ; traceTc "wrap is: " $ ppr wrp
+         ; let unwrp = unfoldWrapper wrp
+
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
          -- with the `-fabstract-refinement-substitutions` flag.
          ; if absFits then
-           if null cVars then return (Just []) else
+           if null cVars then return (Just (unwrp, [])) else
             do { let mtvs :: [TyVar]
                      mtvs = mapMaybe tcGetTyVar_maybe cVars
                      getMTy :: MetaDetails -> Maybe TcType
@@ -350,7 +368,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                 ; matches <- mapM (fmap getMTy . readMetaTyVar) mtvs
                 ; allFilled <- goptM Opt_AbstractRefSubstitutions `orM`
                                return (all isJust matches)
-                ; if allFilled then Just <$> return (catMaybes matches)
+                ; if allFilled
+                  then Just <$> return (unwrp, catMaybes matches)
                   else return Nothing }
             else return Nothing }
 
@@ -359,10 +378,12 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
       where zonkSubs' zs env [] = return (env, reverse zs)
             zonkSubs' zs env (hf:hfs) = do { (env', z) <- zonkSub env hf
                                            ; zonkSubs' (z:zs) env' hfs }
-            zonkSub env hf@(HoleFit {hfTy = ty, hfMatches = m})
-              = do { (env', ty') <- zonkTidyTcType env ty
-                   ; (env'', m') <- zonkTidyTcTypes env' m
-                   ; return (env'', hf {hfTy = ty', hfMatches = m' } ) }
+            zonkSub env hf@(HoleFit {hfTy = ty, hfMatches = m, hfWrp = wrp})
+              = do { (env, ty') <- zonkTidyTcType env ty
+                   ; (env, m') <- zonkTidyTcTypes env m
+                   ; (env, wrp') <- zonkTidyTcTypes env wrp
+                   ; let zFit = hf {hfTy = ty', hfMatches = m', hfWrp = wrp' }
+                   ; return (env, zFit ) }
 
     -- Based on the flags, we might possibly discard some or all the
     -- fits we've found.
@@ -419,13 +440,13 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
              Just id | not_trivial id ->
                        do { fits <- fitsHole ty (idType id)
                           ; case fits of
-                              Just matches -> keep_it id matches
+                              Just (wrp, matches) -> keep_it id wrp matches
                               _ -> discard_it }
              _ -> discard_it }
       where discard_it = go_ subs seen maxleft ty rlvl elts
-            keep_it id ms = go_ (fit:subs) (extendVarSet seen id)
+            keep_it id wrp ms = go_ (fit:subs) (extendVarSet seen id)
                               ((\n -> n - 1) <$> maxleft) ty rlvl elts
-              where fit = HoleFit mbel id (idType id) rlvl ms
+              where fit = HoleFit mbel id (idType id) rlvl wrp ms
                     mbel = either (const Nothing) Just el
             -- We want to filter out undefined.
             not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
@@ -447,7 +468,8 @@ findValidSubstitutions env _ _ _ = return (env, empty)
 subsDiscardMsg :: SDoc
 subsDiscardMsg =
     text "(Some substitutions suppressed;" <+>
-    text "use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)"
+    text "use -fmax-valid-substitutions=N" <+>
+    text "or -fno-max-valid-substitutions)"
 
 refSubsDiscardMsg :: SDoc
 refSubsDiscardMsg =

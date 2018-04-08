@@ -48,18 +48,22 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where foldl :: forall (t :: * -> *).
                          Foldable t =>
                          forall b a. (b -> a -> b) -> b -> t a -> b
-        last (_ :: [[Integer] -> Integer]) where last :: forall a. [a] -> a
+        last (_ :: [[Integer] -> Integer])
+          where last :: forall a. [a] -> a
         head (_ :: [t0 -> [Integer] -> Integer])
           where head :: forall a. [a] -> a
-        head (_ :: [[Integer] -> Integer]) where head :: forall a. [a] -> a
+        head (_ :: [[Integer] -> Integer])
+          where head :: forall a. [a] -> a
         last (_ :: [t1 -> [Integer] -> Integer])
           where last :: forall a. [a] -> a
         (!!) (_ :: [[Integer] -> Integer]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
-        id (_ :: [Integer] -> Integer) where id :: forall a. a -> a
+        id (_ :: [Integer] -> Integer)
+          where id :: forall a. a -> a
         flip (_ :: [Integer] -> b2 -> Integer) (_ :: b2)
           where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
-        const (_ :: Integer) where const :: forall a b. a -> b -> a
+        const (_ :: Integer)
+          where const :: forall a b. a -> b -> a
         asTypeOf (_ :: [Integer] -> Integer) (_ :: [Integer] -> Integer)
           where asTypeOf :: forall a. a -> a -> a
         const (_ :: [Integer] -> Integer) (_ :: b3)
@@ -126,14 +130,15 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($!) (_ :: [Integer] -> Integer)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t2 -> [Integer] -> Integer) where id :: forall a. a -> a
-        snd (_ :: (a11, t3 -> [Integer] -> Integer))
+        id (_ :: t5 -> [Integer] -> Integer)
+          where id :: forall a. a -> a
+        snd (_ :: (a11, t6 -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         snd (_ :: (a12, [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         fst (_ :: ([Integer] -> Integer, b6))
           where fst :: forall a b. (a, b) -> a
-        fst (_ :: (t4 -> [Integer] -> Integer, b7))
+        fst (_ :: (t7 -> [Integer] -> Integer, b7))
           where fst :: forall a b. (a, b) -> a
         seq (_ :: a13) (_ :: [Integer] -> Integer)
           where seq :: forall a b. a -> b -> b
@@ -258,15 +263,15 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($!) (_ :: a10 -> Integer -> [Integer] -> Integer) (_ :: a10)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t2 -> Integer -> [Integer] -> Integer)
+        id (_ :: t5 -> Integer -> [Integer] -> Integer)
           where id :: forall a. a -> a
-        snd (_ :: (a11, t3 -> Integer -> [Integer] -> Integer))
+        snd (_ :: (a11, t6 -> Integer -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         snd (_ :: (a12, Integer -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         fst (_ :: (Integer -> [Integer] -> Integer, b6))
           where fst :: forall a b. (a, b) -> a
-        fst (_ :: (t4 -> Integer -> [Integer] -> Integer, b7))
+        fst (_ :: (t7 -> Integer -> [Integer] -> Integer, b7))
           where fst :: forall a b. (a, b) -> a
         seq (_ :: a13) (_ :: Integer -> [Integer] -> Integer)
           where seq :: forall a b. a -> b -> b

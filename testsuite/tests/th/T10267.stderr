@@ -24,11 +24,20 @@ T10267.hs:8:1: error:
     • Relevant bindings include i :: a -> a (bound at T10267.hs:8:1)
       Valid substitutions include
         i :: a -> a (bound at T10267.hs:8:1)
-        j :: forall a. a -> a (bound at T10267.hs:8:1)
-        k :: forall a. a -> a (defined at T10267.hs:14:3)
-        l :: forall a. a -> a (defined at T10267.hs:23:3)
-        foo :: forall a. a -> a (defined at T10267.hs:33:1)
+        j :: forall a. a -> a
+          with j @t0
+          (bound at T10267.hs:8:1)
+        k :: forall a. a -> a
+          with k @t1
+          (defined at T10267.hs:14:3)
+        l :: forall a. a -> a
+          with l @t2
+          (defined at T10267.hs:23:3)
+        foo :: forall a. a -> a
+          with foo @t3
+          (defined at T10267.hs:33:1)
         id :: forall a. a -> a
+          with id @t4
           (imported from ‘Prelude’ at T10267.hs:3:8-13
            (and originally defined in ‘GHC.Base’))
 
@@ -44,11 +53,20 @@ T10267.hs:14:3: error:
     • Relevant bindings include k :: a -> a (bound at T10267.hs:14:3)
       Valid substitutions include
         k :: a -> a (bound at T10267.hs:14:3)
-        j :: forall a. a -> a (bound at T10267.hs:8:1)
-        i :: forall a. a -> a (bound at T10267.hs:8:1)
-        l :: forall a. a -> a (defined at T10267.hs:23:3)
-        foo :: forall a. a -> a (defined at T10267.hs:33:1)
+        j :: forall a. a -> a
+          with j @t0
+          (bound at T10267.hs:8:1)
+        i :: forall a. a -> a
+          with i @t1
+          (bound at T10267.hs:8:1)
+        l :: forall a. a -> a
+          with l @t2
+          (defined at T10267.hs:23:3)
+        foo :: forall a. a -> a
+          with foo @t3
+          (defined at T10267.hs:33:1)
         id :: forall a. a -> a
+          with id @t4
           (imported from ‘Prelude’ at T10267.hs:3:8-13
            (and originally defined in ‘GHC.Base’))
 

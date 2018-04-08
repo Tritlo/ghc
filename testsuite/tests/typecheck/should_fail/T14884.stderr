@@ -10,20 +10,25 @@ T14884.hs:4:5: error:
         foldMap :: forall (t :: * -> *).
                    Foldable t =>
                    forall m a. Monoid m => (a -> m) -> t a -> m
+          with foldMap @[] @(IO ()) @Char
           (imported from ‘Prelude’ at T14884.hs:1:8-13
            (and originally defined in ‘Data.Foldable’))
         mapM_ :: forall (t :: * -> *) (m :: * -> *) a b.
                  (Foldable t, Monad m) =>
                  (a -> m b) -> t a -> m ()
+          with mapM_ @[] @IO @Char @()
           (imported from ‘Prelude’ at T14884.hs:1:8-13
            (and originally defined in ‘Data.Foldable’))
         ($) :: forall a b. (a -> b) -> a -> b
+          with ($) @'GHC.Types.LiftedRep @[Char] @(IO ())
           (imported from ‘Prelude’ at T14884.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
         ($!) :: forall a b. (a -> b) -> a -> b
+          with ($!) @'GHC.Types.LiftedRep @[Char] @(IO ())
           (imported from ‘Prelude’ at T14884.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
         id :: forall a. a -> a
+          with id @([Char] -> IO ())
           (imported from ‘Prelude’ at T14884.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
 

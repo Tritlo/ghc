@@ -92,26 +92,26 @@ free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        (<*>) (_ :: Free t12 t11 -> a2 -> Free t12 t13)
-              (_ :: Free t12 t11 -> a2)
+        (<*>) (_ :: Free t13 t12 -> a2 -> Free t13 t14)
+              (_ :: Free t13 t12 -> a2)
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        (<*>) (_ :: Free t14 (t15 -> t16))
+        (<*>) (_ :: Free t15 (t16 -> t17))
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        fmap (_ :: t17 -> t18)
+        fmap (_ :: t18 -> t19)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        fmap (_ :: a3 -> Free t19 t20) (_ :: Free t19 t21 -> a3)
+        fmap (_ :: a3 -> Free t21 t22) (_ :: Free t21 t23 -> a3)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        (<$>) (_ :: t22 -> t23)
+        (<$>) (_ :: t24 -> t25)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        ($) (_ :: Free t25 t24 -> Free t25 t26)
+        ($) (_ :: Free t28 t27 -> Free t28 t29)
           where ($) :: forall a b. (a -> b) -> a -> b
