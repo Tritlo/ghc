@@ -38,6 +38,26 @@ import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
 
 
+data HoleFitDispConfig = HFDC { showWrap :: Bool
+                              , showType :: Bool
+                              , showProv :: Bool
+                              , showMatches :: Bool }
+
+debugHoleFitDispConfig :: HoleFitDispConfig
+debugHoleFitDispConfig = HFDC True True True True
+
+-- We read the various -no-show-*-of-substitutions flags
+-- and set the display config accordingly.
+getHoleFitDispConfig :: TcM HoleFitDispConfig
+getHoleFitDispConfig
+  = do { sWrap <- goptM Opt_ShowTypeAppOfSubstitutions
+       ; sType <- goptM Opt_ShowTypeOfSubstitutions
+       ; sProv <- goptM Opt_ShowProvOfSubstitutions
+       ; sMatc <- goptM Opt_ShowMatchesOfSubstitutions
+       ; return HFDC{ showWrap = sWrap, showProv = sProv
+                    , showType = sType, showMatches = sMatc } }
+
+
 -- HoleFit is the type we use for a fit in valid substitutions. It contains the
 -- element that was checked, the Id of that element as found by `tcLookup`,
 -- and the refinement level of the fit, which is the number of extra argument
@@ -68,7 +88,7 @@ instance Ord HoleFit where
                  else compare `on` hfRefLvl
 
 instance Outputable HoleFit where
-    ppr = pprHoleFit False
+    ppr = pprHoleFit debugHoleFitDispConfig
 
 instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
     occName = either occName occName
@@ -79,9 +99,8 @@ instance HasOccName GlobalRdrElt where
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
 -- refinement level.
-pprHoleFit :: Bool -> HoleFit -> SDoc
-pprHoleFit clutter hf =
-    if clutter then hang display 2 provenance else display
+pprHoleFit :: HoleFitDispConfig -> HoleFit -> SDoc
+pprHoleFit (HFDC sWrp sTy sProv sMs) hf = hang display 2 provenance
     where name = case hfEl hf of
                       Just gre -> gre_name gre
                       Nothing -> idName (hfId hf)
@@ -90,23 +109,22 @@ pprHoleFit clutter hf =
           wrap = hfWrp hf
           tyApp = sep $ map ((text "@" <>) . pprParendType) wrap
           holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
+          holeDisp = if sMs then holeVs
+                     else sep $ replicate (length matches) $ text "_"
           occDisp = pprPrefixOcc name
-          idAt = occDisp <+> tyApp
-          tyDisp = dcolon <+> ppr ty
+          tyDisp = ppWhen sTy $ dcolon <+> ppr ty
           has = not . null
-          -- TODO: add flags to control output. Suggested flags are:
-          -- -fno-show-type-app-substitutions
-          -- -fno-show-func-type-substitutions
-          -- -fno-show-hole-matches-substitutions
-          -- -fno-show-provenance-substitutions
-          wrapDisp = ppWhen (has wrap && clutter) $ text "with" <+> idAt
-          funcInfo = ppWhen (has matches) $ text "where" <+> occDisp <+> tyDisp
-          subDisp = occDisp <+> if has matches then holeVs else tyDisp
+          wrapDisp = ppWhen (sWrp && has wrap)
+                      $ text "with" <+> occDisp <+> tyApp
+          funcInfo = ppWhen (has matches) $
+                       ppWhen sTy $ text "where" <+> occDisp <+> tyDisp
+          subDisp = occDisp <+> if has matches then holeDisp else tyDisp
           display =  subDisp $$ nest 2 (wrapDisp $+$ funcInfo)
-          provenance = parens $
-            case hfEl hf of
-              Just gre -> pprNameProvenance gre
-              Nothing -> text "bound at" <+> ppr (getSrcLoc name)
+          provenance = ppWhen sProv $
+            parens $
+                case hfEl hf of
+                    Just gre -> pprNameProvenance gre
+                    Nothing -> text "bound at" <+> ppr (getSrcLoc name)
 
 getLocalBindings :: TidyEnv -> Ct -> TcM [Id]
 getLocalBindings tidy_orig ct
@@ -146,8 +164,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
      ; lclBinds <- getLocalBindings tidy_env ct
      ; maxVSubs <- maxValidSubstitutions <$> getDynFlags
-     ; clutter <- not <$> goptM Opt_UnclutterValidSubstitutions
-     ; graphSortSubs <- not <$> goptM Opt_NoSortValidSubstitutions
+     ; hfdc <- getHoleFitDispConfig
+     ; graphSortSubs <- goptM Opt_SortValidSubstitutions
      ; refLevel <- refLevelSubstitutions <$> getDynFlags
      ; traceTc "findingValidSubstitutionsFor { " $ ppr ct
      ; traceTc "hole_lvl is:" $ ppr hole_lvl
@@ -162,7 +180,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env sortedSubs
      ; let vMsg = ppUnless (null tidy_subs) $
                     hang (text "Valid substitutions include") 2 $
-                      vcat (map (pprHoleFit clutter) tidy_subs)
+                      vcat (map (pprHoleFit hfdc) tidy_subs)
                         $$ ppWhen vDiscards subsDiscardMsg
      ; (tidy_env, refMsg) <- if refLevel >= Just 0 then
          do { maxRSubs <- maxRefSubstitutions <$> getDynFlags
@@ -183,7 +201,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
             ; return (tidy_env,
                 ppUnless (null tidy_rsubs) $
                   hang (text "Valid refinement substitutions include") 2 $
-                  vcat (map (pprHoleFit clutter) tidy_rsubs)
+                  vcat (map (pprHoleFit hfdc) tidy_rsubs)
                     $$ ppWhen rDiscards refSubsDiscardMsg) }
        else return (tidy_env, empty)
      ; traceTc "findingValidSubstitutionsFor }" empty

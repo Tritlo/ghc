@@ -563,10 +563,16 @@ data GeneralFlag
    | Opt_PprCaseAsLet
    | Opt_PprShowTicks
    | Opt_ShowHoleConstraints
-   | Opt_NoShowValidSubstitutions
-   | Opt_UnclutterValidSubstitutions
-   | Opt_NoSortValidSubstitutions
+   -- Options relating to the display of valid substitutions
+   | Opt_ShowValidSubstitutions
+   | Opt_SortValidSubstitutions
    | Opt_AbstractRefSubstitutions
+   | Opt_UnclutterValidSubstitutions
+   | Opt_ShowTypeAppOfSubstitutions
+   | Opt_ShowTypeOfSubstitutions
+   | Opt_ShowProvOfSubstitutions
+   | Opt_ShowMatchesOfSubstitutions
+
    | Opt_ShowLoadedModules
    | Opt_HexWordLiterals -- See Note [Print Hexadecimal Literals]
 
@@ -3997,10 +4003,14 @@ fFlagsDeps = [
   flagSpec "show-warning-groups"              Opt_ShowWarnGroups,
   flagSpec "hide-source-paths"                Opt_HideSourcePaths,
   flagSpec "show-hole-constraints"            Opt_ShowHoleConstraints,
-  flagSpec "no-show-valid-substitutions"      Opt_NoShowValidSubstitutions,
-  flagSpec "no-sort-valid-substitutions"      Opt_NoSortValidSubstitutions,
-  flagSpec "abstract-refinement-substitutions" Opt_AbstractRefSubstitutions,
-  flagSpec "unclutter-valid-substitutions"    Opt_UnclutterValidSubstitutions,
+  flagSpec "show-valid-substitutions"         Opt_ShowValidSubstitutions,
+  flagSpec "sort-valid-substitutions"         Opt_SortValidSubstitutions,
+  flagSpec "abstract-refinement-substitutions"  Opt_AbstractRefSubstitutions,
+  flagSpec "unclutter-valid-substitutions"      Opt_UnclutterValidSubstitutions,
+  flagSpec "show-type-app-of-substitutions"     Opt_ShowTypeAppOfSubstitutions,
+  flagSpec "show-type-of-substitutions"         Opt_ShowTypeOfSubstitutions,
+  flagSpec "show-provenance-of-substitutions"   Opt_ShowProvOfSubstitutions,
+  flagSpec "show-hole-matches-of-substitutions" Opt_ShowMatchesOfSubstitutions,
   flagSpec "show-loaded-modules"              Opt_ShowLoadedModules,
   flagSpec "whole-archive-hs-libs"            Opt_WholeArchiveHsLibs
   ]
@@ -4258,8 +4268,24 @@ defaultFlags settings
     ++ default_PIC platform
 
     ++ concatMap (wayGeneralFlags platform) (defaultWays settings)
+    ++ validSubstitutionDefaults
 
     where platform = sTargetPlatform settings
+
+validSubstitutionDefaults :: [GeneralFlag]
+validSubstitutionDefaults
+  =  [ Opt_ShowTypeAppOfSubstitutions
+     , Opt_ShowTypeOfSubstitutions
+     , Opt_ShowProvOfSubstitutions
+     , Opt_ShowMatchesOfSubstitutions
+     , Opt_ShowValidSubstitutions
+     , Opt_SortValidSubstitutions ]
+
+
+validSubstitutionsImpliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]
+validSubstitutionsImpliedGFlags
+  = [ (Opt_UnclutterValidSubstitutions, turnOff, Opt_ShowTypeAppOfSubstitutions)
+    , (Opt_UnclutterValidSubstitutions, turnOff, Opt_ShowProvOfSubstitutions) ]
 
 default_PIC :: Platform -> [GeneralFlag]
 default_PIC platform =
@@ -4279,7 +4305,7 @@ impliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]
 impliedGFlags = [(Opt_DeferTypeErrors, turnOn, Opt_DeferTypedHoles)
                 ,(Opt_DeferTypeErrors, turnOn, Opt_DeferOutOfScopeVariables)
                 ,(Opt_Strictness, turnOn, Opt_WorkerWrapper)
-                ]
+                ] ++ validSubstitutionsImpliedGFlags
 
 -- General flags that are switched on/off when other general flags are switched
 -- off

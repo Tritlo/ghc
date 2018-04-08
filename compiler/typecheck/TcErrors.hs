@@ -1119,10 +1119,10 @@ mkHoleError tidy_simples ctxt ct@(CHoleCan { cc_hole = hole })
                   = givenConstraintsMsg ctxt
                | otherwise = empty
 
-       ; no_show_valid_substitutions <- goptM Opt_NoShowValidSubstitutions
-       ; (ctxt, sub_msg) <- if no_show_valid_substitutions
-                            then return (ctxt, empty)
-                            else validSubstitutions ctxt tidy_simples ct
+       ; show_valid_substitutions <- goptM Opt_ShowValidSubstitutions
+       ; (ctxt, sub_msg) <- if show_valid_substitutions
+                            then validSubstitutions ctxt tidy_simples ct
+                            else return (ctxt, empty)
        ; mkErrorMsgFromCt ctxt ct $
             important hole_msg `mappend`
             relevant_bindings (binds_msg $$ constraints_msg) `mappend`
