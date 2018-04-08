@@ -44,7 +44,7 @@ data HoleFitDispConfig = HFDC { showWrap :: Bool
                               , showMatches :: Bool }
 
 debugHoleFitDispConfig :: HoleFitDispConfig
-debugHoleFitDispConfig = HFDC True True True True
+debugHoleFitDispConfig = HFDC True True False False
 
 -- We read the various -no-show-*-of-substitutions flags
 -- and set the display config accordingly.
@@ -386,7 +386,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
          ; traceTc "wrap is: " $ ppr wrp
         -- We apply the inverse substitution to match the cloned variables back
         -- to the originals
-         ; invSubbedWrp <- substTys invSub <$> zonkTcTypes (unfoldWrapper wrp)
+         ; invSubbedWrp <- map (substTyAddInScope invSub)
+                             <$> zonkTcTypes (unfoldWrapper wrp)
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
@@ -403,7 +404,8 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                                return (all isJust matches)
                 ; if allFilled
                   then do { let ms = catMaybes matches
-                          ; invSubbedMs <- substTys invSub <$> zonkTcTypes ms
+                          ; invSubbedMs <- map (substTyAddInScope invSub)
+                                             <$> zonkTcTypes ms
                           ; return $ Just (invSubbedWrp, invSubbedMs) }
                   else return Nothing }
             else return Nothing }
