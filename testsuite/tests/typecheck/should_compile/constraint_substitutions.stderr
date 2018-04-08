@@ -20,75 +20,75 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
         head :: forall a. [a] -> a
         last :: forall a. [a] -> a
       Valid refinement substitutions include
-        (<$) (_ :: t4) (_ :: [t4] -> b0)
+        (<$) (_ :: a) (_ :: [a] -> b0)
           where (<$) :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. a -> f b -> f a
-        (<*) (_ :: [t5] -> t5) (_ :: [t5] -> b1)
+        (<*) (_ :: [a] -> a) (_ :: [a] -> b1)
           where (<*) :: forall (f :: * -> *).
                         Applicative f =>
                         forall a b. f a -> f b -> f a
-        foldr (_ :: t6 -> t6 -> t6) (_ :: t6)
+        foldr (_ :: a -> a -> a) (_ :: a)
           where foldr :: forall (t :: * -> *).
                          Foldable t =>
                          forall a b. (a -> b -> b) -> b -> t a -> b
-        foldl1 (_ :: t7 -> t7 -> t7)
+        foldl1 (_ :: a -> a -> a)
           where foldl1 :: forall (t :: * -> *).
                           Foldable t =>
                           forall a. (a -> a -> a) -> t a -> a
-        foldr1 (_ :: t8 -> t8 -> t8)
+        foldr1 (_ :: a -> a -> a)
           where foldr1 :: forall (t :: * -> *).
                           Foldable t =>
                           forall a. (a -> a -> a) -> t a -> a
-        foldl (_ :: t9 -> t9 -> t9) (_ :: t9)
+        foldl (_ :: a -> a -> a) (_ :: a)
           where foldl :: forall (t :: * -> *).
                          Foldable t =>
                          forall b a. (b -> a -> b) -> b -> t a -> b
-        head (_ :: [[t10] -> t10])
+        head (_ :: [[a] -> a])
           where head :: forall a. [a] -> a
-        last (_ :: [[t11] -> t11])
+        last (_ :: [[a] -> a])
           where last :: forall a. [a] -> a
-        (!!) (_ :: [[t12] -> t12]) (_ :: Int)
+        (!!) (_ :: [[a] -> a]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
-        asTypeOf (_ :: [t13] -> t13) (_ :: [t13] -> t13)
+        asTypeOf (_ :: [a] -> a) (_ :: [a] -> a)
           where asTypeOf :: forall a. a -> a -> a
-        const (_ :: t14)
+        const (_ :: a)
           where const :: forall a b. a -> b -> a
-        (=<<) (_ :: a0 -> [t15] -> t15) (_ :: [t15] -> a0)
+        (=<<) (_ :: a0 -> [a] -> a) (_ :: [a] -> a0)
           where (=<<) :: forall (m :: * -> *) a b.
                          Monad m =>
                          (a -> m b) -> m a -> m b
-        (.) (_ :: b2 -> t16) (_ :: [t16] -> b2)
+        (.) (_ :: b2 -> a) (_ :: [a] -> b2)
           where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
-        uncurry (_ :: a1 -> b3 -> [t17] -> t17) (_ :: (a1, b3))
+        uncurry (_ :: a1 -> b3 -> [a] -> a) (_ :: (a1, b3))
           where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
-        (<*>) (_ :: [t18] -> a2 -> t18) (_ :: [t18] -> a2)
+        (<*>) (_ :: [a] -> a2 -> a) (_ :: [a] -> a2)
           where (<*>) :: forall (f :: * -> *).
                          Applicative f =>
                          forall a b. f (a -> b) -> f a -> f b
-        return (_ :: t19)
+        return (_ :: a)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        pure (_ :: t20)
+        pure (_ :: a)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        fmap (_ :: a3 -> t21) (_ :: [t21] -> a3)
+        fmap (_ :: a3 -> a) (_ :: [a] -> a3)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        (<$>) (_ :: a4 -> t22) (_ :: [t22] -> a4)
+        (<$>) (_ :: a4 -> a) (_ :: [a] -> a4)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
-        (>>) (_ :: [t23] -> a5) (_ :: [t23] -> t23)
+        (>>) (_ :: [a] -> a5) (_ :: [a] -> a)
           where (>>) :: forall (m :: * -> *).
                         Monad m =>
                         forall a b. m a -> m b -> m b
-        (*>) (_ :: [t24] -> a6) (_ :: [t24] -> t24)
+        (*>) (_ :: [a] -> a6) (_ :: [a] -> a)
           where (*>) :: forall (f :: * -> *).
                         Applicative f =>
                         forall a b. f a -> f b -> f b
-        (>>=) (_ :: [t25] -> a7) (_ :: a7 -> [t25] -> t25)
+        (>>=) (_ :: [a] -> a7) (_ :: a7 -> [a] -> a)
           where (>>=) :: forall (m :: * -> *).
                          Monad m =>
                          forall a b. m a -> (a -> m b) -> m b
@@ -96,13 +96,13 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
-        ($) (_ :: [t27] -> t27)
+        ($) (_ :: [a] -> a)
           where ($) :: forall a b. (a -> b) -> a -> b
-        ($!) (_ :: [t28] -> t28)
+        ($!) (_ :: [a] -> a)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: [t29] -> t29)
+        id (_ :: [a] -> a)
           where id :: forall a. a -> a
-        snd (_ :: (a8, [t30] -> t30))
+        snd (_ :: (a8, [a] -> a))
           where snd :: forall a b. (a, b) -> b
-        fst (_ :: ([t31] -> t31, b4))
+        fst (_ :: ([a] -> a, b4))
           where fst :: forall a b. (a, b) -> a

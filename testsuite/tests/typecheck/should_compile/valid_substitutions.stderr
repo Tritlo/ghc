@@ -47,10 +47,10 @@ valid_substitutions.hs:21:8: warning: [-Wtyped-holes (in -Wdefault)]
       Valid substitutions include
         test :: [Maybe a] -> [a] (bound at valid_substitutions.hs:21:1)
         catMaybes :: forall a. [Maybe a] -> [a]
-          with catMaybes @t0
+          with catMaybes @a
           (imported from ‘Data.Maybe’ at valid_substitutions.hs:5:1-17)
         mempty :: forall a. Monoid a => a
-          with mempty @([Maybe t1] -> [t1])
+          with mempty @([Maybe a] -> [a])
           (imported from ‘Prelude’ at valid_substitutions.hs:3:1-40
            (and originally defined in ‘GHC.Base’))
 

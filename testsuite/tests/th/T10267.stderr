@@ -25,19 +25,19 @@ T10267.hs:8:1: error:
       Valid substitutions include
         i :: a -> a (bound at T10267.hs:8:1)
         j :: forall a. a -> a
-          with j @t0
+          with j @a
           (bound at T10267.hs:8:1)
         k :: forall a. a -> a
-          with k @t1
+          with k @a
           (defined at T10267.hs:14:3)
         l :: forall a. a -> a
-          with l @t2
+          with l @a
           (defined at T10267.hs:23:3)
         foo :: forall a. a -> a
-          with foo @t3
+          with foo @a
           (defined at T10267.hs:33:1)
         id :: forall a. a -> a
-          with id @t4
+          with id @a
           (imported from ‘Prelude’ at T10267.hs:3:8-13
            (and originally defined in ‘GHC.Base’))
 
@@ -54,19 +54,19 @@ T10267.hs:14:3: error:
       Valid substitutions include
         k :: a -> a (bound at T10267.hs:14:3)
         j :: forall a. a -> a
-          with j @t0
+          with j @a
           (bound at T10267.hs:8:1)
         i :: forall a. a -> a
-          with i @t1
+          with i @a
           (bound at T10267.hs:8:1)
         l :: forall a. a -> a
-          with l @t2
+          with l @a
           (defined at T10267.hs:23:3)
         foo :: forall a. a -> a
-          with foo @t3
+          with foo @a
           (defined at T10267.hs:33:1)
         id :: forall a. a -> a
-          with id @t4
+          with id @a
           (imported from ‘Prelude’ at T10267.hs:3:8-13
            (and originally defined in ‘GHC.Base’))
 

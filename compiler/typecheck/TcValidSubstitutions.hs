@@ -94,6 +94,11 @@ pprHoleFit clutter hf =
           idAt = occDisp <+> tyApp
           tyDisp = dcolon <+> ppr ty
           has = not . null
+          -- TODO: add flags to control output. Suggested flags are:
+          -- -fno-show-type-app-substitutions
+          -- -fno-show-func-type-substitutions
+          -- -fno-show-hole-matches-substitutions
+          -- -fno-show-provenance-substitutions
           wrapDisp = ppWhen (has wrap && clutter) $ text "with" <+> idAt
           funcInfo = ppWhen (has matches) $ text "where" <+> occDisp <+> tyDisp
           subDisp = occDisp <+> if has matches then holeVs else tyDisp
@@ -131,8 +136,11 @@ setTcTyVarLevel tv nlvl =
 
 
 -- See Note [Valid substitutions include ...]
-findValidSubstitutions :: TidyEnv -> [Implication]
-                       -> [Ct] -> Ct
+findValidSubstitutions :: TidyEnv        -- The tidy_env for zonking
+                       -> [Implication]  -- Enclosing implications for givens
+                       -> [Ct]           -- Simple constraints for relevant
+                                         -- unsolved constraints
+                       -> Ct             -- The hole constraint
                        -> TcM (TidyEnv, SDoc)
 findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
@@ -181,8 +189,12 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      ; traceTc "findingValidSubstitutionsFor }" empty
      ; return (tidy_env, vMsg $$ refMsg) }
   where
-    hole_loc = ctEvLoc $ ctEvidence ct
-    hole_lvl = ctLocLevel hole_loc
+    -- We extract the type, the tcLevel and the types free variables
+    -- from from the constraint.
+    hole_ty :: TcPredType
+    hole_ty = ctPred ct
+    hole_fvs = tyCoFVsOfType hole_ty
+    hole_lvl = ctLocLevel $ ctEvLoc $ ctEvidence ct
 
     -- We make a refinement type by adding a new type variable in front
     -- of the type of t h hole, going from e.g. [Integer] -> Integer
@@ -236,10 +248,6 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                                  go limit ht refLvl to_check
          ; traceTc "}" empty
          ; return (discards, subs) }
-    -- We extract the type of the hole from the constraint.
-    hole_ty :: TcPredType
-    hole_ty = ctPred ct
-    hole_fvs = tyCoFVsOfType hole_ty
 
     -- For checking, we wrap the type of the hole with all the givens
     -- from all the implications in the context.
@@ -287,15 +295,18 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- constraints. Note that since we only pick constraints such that all their
     -- free variables are mentioned by the hole, the free variables of the hole
     -- are all the free variables of the constraints as well.
-    getHoleCloningSubst :: [TcType] -> TcM TCvSubst
-    getHoleCloningSubst tys = mkTvSubstPrs <$> getClonedVars
-      where cloneFV :: TcTyVar -> TcM (TcTyVar, Type)
+    getHoleCloningSubst :: [TcType] -> TcM (TCvSubst, TCvSubst)
+    getHoleCloningSubst tys = do { cVars <- getClonedVars
+                                 ; let sub = mkSub cVars
+                                       invSub = mkSub $ map flipPair cVars
+                                 ; return (sub, invSub) }
+      where cloneFV :: TcTyVar -> TcM (TcTyVar, TcTyVar)
             -- The subsumption check pushes the level, so as to be sure that
             -- its invocation of the solver doesn't unify type variables
             -- floating about that are unrelated to the subsumption check.
             -- However, these -- cloned variables in the hole type *should* be
             -- unified, so we make sure to bump the level before creating them.
-            cloneFV fv = (,) fv . mkTyVarTy . setLvl <$> cloneTyVar fv
+            cloneFV fv = (,) fv . setLvl <$> cloneTyVar fv
               where setLvl = flip setTcTyVarLevel (pushTcLevel hole_lvl)
                     cloneTyVar :: TcTyVar -> TcM TcTyVar
                     cloneTyVar fv | isMetaTyVar fv = cloneMetaTyVar fv
@@ -304,8 +315,10 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                            ; let details = tcTyVarDetails fv
                            ; ntv <- newFlexiTyVar (varType fv)
                            ; return $ setTcTyVarDetails ntv details }
-            getClonedVars :: TcM [(TyVar, Type)]
+            getClonedVars :: TcM [(TyVar, TyVar)]
             getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
+            flipPair (a,b) = (b,a)
+            mkSub = mkTvSubstPrs . map (fmap mkTyVarTy)
 
 
 
@@ -318,14 +331,14 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     applyCloning :: (TcType, [TcType])
                  -> Type
                  -> [Ct]
-                 -> TcM (TcType, [TcType], Type, [Ct])
+                 -> TcM (TcType, [TcType], Type, [Ct], TCvSubst)
     applyCloning (hole_ty, vars) typ cts
-     = do { cloneSub <- getHoleCloningSubst [hole_ty, typ]
+     = do { (cloneSub, invSub) <- getHoleCloningSubst [hole_ty, typ]
           ; let cHoleTy = substTy cloneSub hole_ty
                 cCts = map (applySubToCt cloneSub) cts
                 cVars = map (substTy cloneSub) vars
                 cTy = substTy cloneSub typ
-          ; return (cHoleTy, cVars, cTy, cCts)
+          ; return (cHoleTy, cVars, cTy, cCts, invSub)
           }
 
     unfoldWrapper :: HsWrapper -> [Type]
@@ -345,21 +358,23 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
          ; traceTc "tys before are: " $ ppr (hole_ty, typ)
          ; traceTc "fvs are" $ ppr $
              fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
-         ; (cHoleTy, cVars, cTy, cCts) <- applyCloning hole_ty typ relevantCts
+         ; (cHoleTy, cVars, cTy, cCts, invSub)
+            <- applyCloning hole_ty typ relevantCts
          ; (absFits, (wrp, binds))
             <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
          ; traceTc "tys after are:" $ ppr (cHoleTy, cTy)
          ; traceTc "binds are:" $ ppr binds
          ; traceTc "wrap is: " $ ppr wrp
-         ; let unwrp = unfoldWrapper wrp
-
+        -- We apply the inverse substitution to match the cloned variables back
+        -- to the originals
+         ; invSubbedWrp <- substTys invSub <$> zonkTcTypes (unfoldWrapper wrp)
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
          -- with the `-fabstract-refinement-substitutions` flag.
          ; if absFits then
-           if null cVars then return (Just (unwrp, [])) else
+           if null cVars then return (Just (invSubbedWrp, [])) else
             do { let mtvs :: [TyVar]
                      mtvs = mapMaybe tcGetTyVar_maybe cVars
                      getMTy :: MetaDetails -> Maybe TcType
@@ -369,7 +384,9 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                 ; allFilled <- goptM Opt_AbstractRefSubstitutions `orM`
                                return (all isJust matches)
                 ; if allFilled
-                  then Just <$> return (unwrp, catMaybes matches)
+                  then do { let ms = catMaybes matches
+                          ; invSubbedMs <- substTys invSub <$> zonkTcTypes ms
+                          ; return $ Just (invSubbedWrp, invSubbedMs) }
                   else return Nothing }
             else return Nothing }
 
@@ -378,7 +395,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
       where zonkSubs' zs env [] = return (env, reverse zs)
             zonkSubs' zs env (hf:hfs) = do { (env', z) <- zonkSub env hf
                                            ; zonkSubs' (z:zs) env' hfs }
-            zonkSub env hf@(HoleFit {hfTy = ty, hfMatches = m, hfWrp = wrp})
+            zonkSub env hf@HoleFit{hfTy = ty, hfMatches = m, hfWrp = wrp}
               = do { (env, ty') <- zonkTidyTcType env ty
                    ; (env, m') <- zonkTidyTcTypes env m
                    ; (env, wrp') <- zonkTidyTcTypes env wrp
@@ -404,7 +421,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
 
             tcSubsumesWCloning :: TcType -> TcType -> TcM Bool
             tcSubsumesWCloning ht ty =
-              do { (cht, _, cty, _) <- applyCloning (ht, []) ty []
+              do { (cht, _, cty, _, _) <- applyCloning (ht, []) ty []
                  ; setTcLevel hole_lvl $ tcSubsumes cht cty }
             go :: [(HoleFit, [HoleFit])] -> [HoleFit] -> TcM [HoleFit]
             go sofar [] = do { traceTc "subsumptionGraph was" $ ppr sofar

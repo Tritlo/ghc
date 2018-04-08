@@ -54,7 +54,7 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where head :: forall a. [a] -> a
         head (_ :: [[Integer] -> Integer])
           where head :: forall a. [a] -> a
-        last (_ :: [t1 -> [Integer] -> Integer])
+        last (_ :: [t0 -> [Integer] -> Integer])
           where last :: forall a. [a] -> a
         (!!) (_ :: [[Integer] -> Integer]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
@@ -130,15 +130,15 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($!) (_ :: [Integer] -> Integer)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t5 -> [Integer] -> Integer)
+        id (_ :: t0 -> [Integer] -> Integer)
           where id :: forall a. a -> a
-        snd (_ :: (a11, t6 -> [Integer] -> Integer))
+        snd (_ :: (a11, t0 -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         snd (_ :: (a12, [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         fst (_ :: ([Integer] -> Integer, b6))
           where fst :: forall a b. (a, b) -> a
-        fst (_ :: (t7 -> [Integer] -> Integer, b7))
+        fst (_ :: (t0 -> [Integer] -> Integer, b7))
           where fst :: forall a b. (a, b) -> a
         seq (_ :: a13) (_ :: [Integer] -> Integer)
           where seq :: forall a b. a -> b -> b
@@ -178,7 +178,7 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where head :: forall a. [a] -> a
         head (_ :: [t0 -> Integer -> [Integer] -> Integer])
           where head :: forall a. [a] -> a
-        last (_ :: [t1 -> Integer -> [Integer] -> Integer])
+        last (_ :: [t0 -> Integer -> [Integer] -> Integer])
           where last :: forall a. [a] -> a
         (!!) (_ :: [Integer -> [Integer] -> Integer]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
@@ -263,15 +263,15 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where ($) :: forall a b. (a -> b) -> a -> b
         ($!) (_ :: a10 -> Integer -> [Integer] -> Integer) (_ :: a10)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t5 -> Integer -> [Integer] -> Integer)
+        id (_ :: t0 -> Integer -> [Integer] -> Integer)
           where id :: forall a. a -> a
-        snd (_ :: (a11, t6 -> Integer -> [Integer] -> Integer))
+        snd (_ :: (a11, t0 -> Integer -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         snd (_ :: (a12, Integer -> [Integer] -> Integer))
           where snd :: forall a b. (a, b) -> b
         fst (_ :: (Integer -> [Integer] -> Integer, b6))
           where fst :: forall a b. (a, b) -> a
-        fst (_ :: (t7 -> Integer -> [Integer] -> Integer, b7))
+        fst (_ :: (t0 -> Integer -> [Integer] -> Integer, b7))
           where fst :: forall a b. (a, b) -> a
         seq (_ :: a13) (_ :: Integer -> [Integer] -> Integer)
           where seq :: forall a b. a -> b -> b
