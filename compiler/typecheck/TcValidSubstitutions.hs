@@ -33,7 +33,7 @@ import Maybes
 import FV ( fvVarList, fvVarSet )
 
 import Control.Monad    ( filterM, replicateM )
-import Data.List        ( partition, sort, foldl' )
+import Data.List        ( partition, sort, foldl', sortOn, nubBy )
 import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
 
@@ -57,6 +57,24 @@ getHoleFitDispConfig
        ; return HFDC{ showWrap = sWrap, showProv = sProv
                     , showType = sType, showMatches = sMatc } }
 
+-- Which sorting algorithm to use
+data SortingAlg = NoSorting      -- Do not sort the fits at all
+                | BySize         -- Sort them by the size of the match
+                | BySubsumption  -- Sort by full subsumption
+                deriving (Eq, Ord)
+
+getSortingAlg :: TcM SortingAlg
+getSortingAlg =
+    do { shouldSort <- goptM Opt_SortValidSubstitutions
+       ; subsumSort <- goptM Opt_SortBySubsumSubstitutions
+       ; sizeSort <- goptM Opt_SortBySizeSubstitutions
+       ; return $ if not shouldSort
+                    then NoSorting
+                    else if subsumSort
+                         then BySubsumption
+                         else if sizeSort
+                              then BySize
+                              else NoSorting }
 
 -- HoleFit is the type we use for a fit in valid substitutions. It contains the
 -- element that was checked, the Id of that element as found by `tcLookup`,
@@ -151,8 +169,6 @@ setTcTyVarLevel tv nlvl =
     SkolemTv _ b -> setTcTyVarDetails tv (SkolemTv nlvl b)
     RuntimeUnk -> tv
 
-
-
 -- See Note [Valid substitutions include ...]
 findValidSubstitutions :: TidyEnv        -- The tidy_env for zonking
                        -> [Implication]  -- Enclosing implications for givens
@@ -165,7 +181,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      ; lclBinds <- getLocalBindings tidy_env ct
      ; maxVSubs <- maxValidSubstitutions <$> getDynFlags
      ; hfdc <- getHoleFitDispConfig
-     ; graphSortSubs <- goptM Opt_SortValidSubstitutions
+     ; sortingAlg <- getSortingAlg
      ; refLevel <- refLevelSubstitutions <$> getDynFlags
      ; traceTc "findingValidSubstitutionsFor { " $ ppr ct
      ; traceTc "hole_lvl is:" $ ppr hole_lvl
@@ -174,13 +190,13 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      ; traceTc "locals are: " $ ppr lclBinds
      ; let to_check = map Left lclBinds ++ map Right (globalRdrEnvElts rdr_env)
      ; (searchDiscards, subs) <-
-        findSubs graphSortSubs maxVSubs to_check 0 (wrapped_hole_ty, [])
-     ; (vDiscards, sortedSubs) <-
-        sortSubs graphSortSubs maxVSubs searchDiscards subs
-     ; (tidy_env, tidy_subs) <- zonkSubs tidy_env sortedSubs
-     ; let vMsg = ppUnless (null tidy_subs) $
+        findSubs sortingAlg maxVSubs to_check 0 (wrapped_hole_ty, [])
+     ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
+     ; (vDiscards, tidy_sorted_subs) <-
+        sortSubs sortingAlg maxVSubs searchDiscards tidy_subs
+     ; let vMsg = ppUnless (null tidy_sorted_subs) $
                     hang (text "Valid substitutions include") 2 $
-                      vcat (map (pprHoleFit hfdc) tidy_subs)
+                      vcat (map (pprHoleFit hfdc) tidy_sorted_subs)
                         $$ ppWhen vDiscards subsDiscardMsg
      ; (tidy_env, refMsg) <- if refLevel >= Just 0 then
          do { maxRSubs <- maxRefSubstitutions <$> getDynFlags
@@ -192,16 +208,15 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
             ; ref_tys <- mapM (\l -> (,) l <$> mkRefTy l) refLvls
             ; traceTc "ref_tys are" $ ppr ref_tys
             ; refDs <- mapM
-                         (uncurry $ findSubs graphSortSubs maxRSubs to_check)
+                         (uncurry $ findSubs sortingAlg maxRSubs to_check)
                          ref_tys
-            ; (rDiscards, sortedRSubs) <-
-                sortSubs graphSortSubs maxRSubs (any fst refDs) $
-                    concatMap snd refDs
-            ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env sortedRSubs
+            ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env $ concatMap snd refDs
+            ; (rDiscards, tidy_sorted_rsubs) <-
+                sortSubs sortingAlg maxRSubs (any fst refDs) tidy_rsubs
             ; return (tidy_env,
-                ppUnless (null tidy_rsubs) $
+                ppUnless (null tidy_sorted_rsubs) $
                   hang (text "Valid refinement substitutions include") 2 $
-                  vcat (map (pprHoleFit hfdc) tidy_rsubs)
+                  vcat (map (pprHoleFit hfdc) tidy_sorted_rsubs)
                     $$ ppWhen rDiscards refSubsDiscardMsg) }
        else return (tidy_env, empty)
      ; traceTc "findingValidSubstitutionsFor }" empty
@@ -229,29 +244,34 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
            wrapHoleWithArgs args = (wrap_ty . mkFunTys args) hole_ty
 
 
-    sortSubs :: Bool          -- Whether we should sort the subs or not
-                              -- by subsumption or not
+    sortSubs :: SortingAlg    -- How we should sort the substitutions
              -> Maybe Int     -- How many we should output, if limited.
              -> Bool          -- Whether there were any discards in the
                               -- initial search
              -> [HoleFit]     -- The subs to sort
              -> TcM (Bool, [HoleFit])
-    -- If we don't want to sort by the subsumption graph, we just sort it
+    -- If we don't want to sort, we just sort it
     -- such that local fits come before global fits, since local fits are
     -- probably more relevant to the user.
-    sortSubs False _ discards subs = return (discards, sortedFits)
+    sortSubs NoSorting _ discards subs = return (discards, sortedFits)
         where (lclFits, gblFits) = partition isLocalHoleFit subs
               sortedFits = lclFits ++ gblFits
+    sortSubs BySize limit _ subs
+        = possiblyDiscard limit <$>
+            ((++) <$> sortBySize (sort lclFits)
+                  <*> sortBySize (sort gblFits))
+        where (lclFits, gblFits) = partition isLocalHoleFit subs
     -- We sort the fits first, to prevent the order of
     -- suggestions being effected when identifiers are moved
     -- around in modules. We use (<*>) to expose the
     -- parallelism, in case it becomes useful later.
-    sortSubs _ limit _ subs = possiblyDiscard limit <$>
-                                ((++) <$> sortByGraph (sort lclFits)
-                                      <*> sortByGraph (sort gblFits))
+    sortSubs BySubsumption limit _ subs
+        = possiblyDiscard limit <$>
+            ((++) <$> sortByGraph (sort lclFits)
+                  <*> sortByGraph (sort gblFits))
         where (lclFits, gblFits) = partition isLocalHoleFit subs
 
-    findSubs :: Bool               -- Whether we should sort the subs or not
+    findSubs :: SortingAlg         -- Whether we should sort the subs or not
              -> Maybe Int          -- How many we should output, if limited
              -> [Either Id GlobalRdrElt] -- The elements to check whether fit
              -> Int                -- The refinement level of the hole
@@ -259,9 +279,9 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
              -> TcM (Bool, [HoleFit])
     -- We don't check if no output is desired.
     findSubs _ (Just 0) _ _ _ = return (False, [])
-    findSubs sortSubs maxSubs to_check refLvl ht@(hole_ty, _) =
+    findSubs sortAlg maxSubs to_check refLvl ht@(hole_ty, _) =
       do { traceTc "checkingSubstitutionsFor {" $ ppr hole_ty
-         ; let limit = if sortSubs then Nothing else maxSubs
+         ; let limit = if sortAlg > NoSorting then Nothing else maxSubs
          ; (discards, subs) <- setTcLevel hole_lvl $
                                  go limit ht refLvl to_check
          ; traceTc "}" empty
@@ -427,6 +447,15 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     possiblyDiscard :: Maybe Int -> [HoleFit] -> (Bool, [HoleFit])
     possiblyDiscard (Just max) fits = (fits `lengthExceeds` max, take max fits)
     possiblyDiscard Nothing fits = (False, fits)
+
+    -- Sort by size uses as a measure for relevance the sizes of the
+    -- different types needed to instantiate the fit to the type of the hole.
+    -- This is much quicker than sorting by subsumption, and gives reasonable
+    -- results in most cases.
+    sortBySize :: [HoleFit] -> TcM [HoleFit]
+    sortBySize = return . sortOn sizeOfFit
+      where sizeOfFit :: HoleFit -> TypeSize
+            sizeOfFit = sizeTypes . nubBy tcEqType .  hfWrp
 
     -- Based on a suggestion by phadej on #ghc, we can sort the found fits
     -- by constructing a subsumption graph, and then do a topological sort of

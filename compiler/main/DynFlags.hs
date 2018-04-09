@@ -566,6 +566,8 @@ data GeneralFlag
    -- Options relating to the display of valid substitutions
    | Opt_ShowValidSubstitutions
    | Opt_SortValidSubstitutions
+   | Opt_SortBySizeSubstitutions
+   | Opt_SortBySubsumSubstitutions
    | Opt_AbstractRefSubstitutions
    | Opt_UnclutterValidSubstitutions
    | Opt_ShowTypeAppOfSubstitutions
@@ -4005,6 +4007,8 @@ fFlagsDeps = [
   flagSpec "show-hole-constraints"            Opt_ShowHoleConstraints,
   flagSpec "show-valid-substitutions"         Opt_ShowValidSubstitutions,
   flagSpec "sort-valid-substitutions"         Opt_SortValidSubstitutions,
+  flagSpec "sort-by-size-substitutions"         Opt_SortBySizeSubstitutions,
+  flagSpec "sort-by-subsumption-substitutions"  Opt_SortBySubsumSubstitutions,
   flagSpec "abstract-refinement-substitutions"  Opt_AbstractRefSubstitutions,
   flagSpec "unclutter-valid-substitutions"      Opt_UnclutterValidSubstitutions,
   flagSpec "show-type-app-of-substitutions"     Opt_ShowTypeAppOfSubstitutions,
@@ -4280,6 +4284,7 @@ validSubstitutionDefaults
      , Opt_ShowMatchesOfSubstitutions
      , Opt_ShowValidSubstitutions
      , Opt_SortValidSubstitutions
+     , Opt_SortBySizeSubstitutions
      , Opt_ShowHoleConstraints ]
 
 

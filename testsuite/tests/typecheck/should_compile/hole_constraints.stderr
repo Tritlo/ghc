@@ -26,8 +26,8 @@ hole_constraints.hs:12:6: warning: [-Wtyped-holes (in -Wdefault)]
         Show a (from hole_constraints.hs:11:1-25)
         Eq a (from hole_constraints.hs:11:1-25)
       Valid substitutions include
-        f1 :: forall a. Eq a => a
         f2 :: a
+        f1 :: forall a. Eq a => a
 
 hole_constraints.hs:16:35: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: [a]
@@ -41,8 +41,8 @@ hole_constraints.hs:16:35: warning: [-Wtyped-holes (in -Wdefault)]
         f3 :: [a] (bound at hole_constraints.hs:16:30)
       Constraints include Eq a (from hole_constraints.hs:16:10-22)
       Valid substitutions include
-        f1 :: forall a. Eq a => a
         f3 :: [a]
+        f1 :: forall a. Eq a => a
         mempty :: forall a. Monoid a => a
 
 hole_constraints.hs:20:19: warning: [-Wtyped-holes (in -Wdefault)]
@@ -70,7 +70,7 @@ hole_constraints.hs:27:32: warning: [-Wtyped-holes (in -Wdefault)]
         foo :: AnyShow -> String (bound at hole_constraints.hs:27:1)
       Constraints include Show a (from hole_constraints.hs:27:19-27)
       Valid substitutions include
-        f2 :: forall a. (Show a, Eq a) => a
-        f1 :: forall a. Eq a => a
         f3 :: forall a. C a => a
+        f1 :: forall a. Eq a => a
+        f2 :: forall a. (Show a, Eq a) => a
         mempty :: forall a. Monoid a => a

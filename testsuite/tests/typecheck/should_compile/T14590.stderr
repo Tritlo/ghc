@@ -13,6 +13,30 @@ T14590.hs:4:13: warning: [-Wtyped-holes (in -Wdefault)]
         f2 :: Int -> Int -> Int (bound at T14590.hs:5:1)
         f3 :: Int -> Int -> Int (bound at T14590.hs:6:1)
         f4 :: Int -> Int -> Int (bound at T14590.hs:7:1)
+        seq :: forall a b. a -> b -> b
+          with seq @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Prim’))
+        (-) :: forall a. Num a => a -> a -> a
+          with (-) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          with asTypeOf @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          with const @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        subtract :: forall a. Num a => a -> a -> a
+          with subtract @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
+          with (^) @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Real’))
         gcd :: forall a. Integral a => a -> a -> a
           with gcd @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -21,6 +45,14 @@ T14590.hs:4:13: warning: [-Wtyped-holes (in -Wdefault)]
           with lcm @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Real’))
+        (*) :: forall a. Num a => a -> a -> a
+          with (*) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          with (+) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
         div :: forall a. Integral a => a -> a -> a
           with div @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -45,34 +77,6 @@ T14590.hs:4:13: warning: [-Wtyped-holes (in -Wdefault)]
           with min @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Classes’))
-        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
-          with (^) @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Real’))
-        (-) :: forall a. Num a => a -> a -> a
-          with (-) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        subtract :: forall a. Num a => a -> a -> a
-          with subtract @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (*) :: forall a. Num a => a -> a -> a
-          with (*) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (+) :: forall a. Num a => a -> a -> a
-          with (+) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        asTypeOf :: forall a. a -> a -> a
-          with asTypeOf @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
-        const :: forall a b. a -> b -> a
-          with const @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
           with return @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -81,10 +85,6 @@ T14590.hs:4:13: warning: [-Wtyped-holes (in -Wdefault)]
           with pure @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
-        seq :: forall a b. a -> b -> b
-          with seq @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Prim’))
 
 T14590.hs:5:13: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _a :: Int -> Int -> Int
@@ -101,6 +101,30 @@ T14590.hs:5:13: warning: [-Wtyped-holes (in -Wdefault)]
         f1 :: Int -> Int -> Int (defined at T14590.hs:4:1)
         f3 :: Int -> Int -> Int (bound at T14590.hs:6:1)
         f4 :: Int -> Int -> Int (bound at T14590.hs:7:1)
+        seq :: forall a b. a -> b -> b
+          with seq @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Prim’))
+        (-) :: forall a. Num a => a -> a -> a
+          with (-) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          with asTypeOf @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          with const @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        subtract :: forall a. Num a => a -> a -> a
+          with subtract @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
+          with (^) @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Real’))
         gcd :: forall a. Integral a => a -> a -> a
           with gcd @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -109,6 +133,14 @@ T14590.hs:5:13: warning: [-Wtyped-holes (in -Wdefault)]
           with lcm @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Real’))
+        (*) :: forall a. Num a => a -> a -> a
+          with (*) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          with (+) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
         div :: forall a. Integral a => a -> a -> a
           with div @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -133,34 +165,6 @@ T14590.hs:5:13: warning: [-Wtyped-holes (in -Wdefault)]
           with min @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Classes’))
-        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
-          with (^) @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Real’))
-        (-) :: forall a. Num a => a -> a -> a
-          with (-) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        subtract :: forall a. Num a => a -> a -> a
-          with subtract @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (*) :: forall a. Num a => a -> a -> a
-          with (*) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (+) :: forall a. Num a => a -> a -> a
-          with (+) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        asTypeOf :: forall a. a -> a -> a
-          with asTypeOf @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
-        const :: forall a b. a -> b -> a
-          with const @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
           with return @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -169,10 +173,6 @@ T14590.hs:5:13: warning: [-Wtyped-holes (in -Wdefault)]
           with pure @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
-        seq :: forall a b. a -> b -> b
-          with seq @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Prim’))
 
 T14590.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Int -> Int -> Int
@@ -188,6 +188,30 @@ T14590.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
         f1 :: Int -> Int -> Int (defined at T14590.hs:4:1)
         f2 :: Int -> Int -> Int (defined at T14590.hs:5:1)
         f4 :: Int -> Int -> Int (bound at T14590.hs:7:1)
+        seq :: forall a b. a -> b -> b
+          with seq @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Prim’))
+        (-) :: forall a. Num a => a -> a -> a
+          with (-) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          with asTypeOf @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          with const @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        subtract :: forall a. Num a => a -> a -> a
+          with subtract @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
+          with (^) @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Real’))
         gcd :: forall a. Integral a => a -> a -> a
           with gcd @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -196,6 +220,14 @@ T14590.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
           with lcm @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Real’))
+        (*) :: forall a. Num a => a -> a -> a
+          with (*) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          with (+) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
         div :: forall a. Integral a => a -> a -> a
           with div @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -220,34 +252,6 @@ T14590.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
           with min @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Classes’))
-        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
-          with (^) @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Real’))
-        (-) :: forall a. Num a => a -> a -> a
-          with (-) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        subtract :: forall a. Num a => a -> a -> a
-          with subtract @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (*) :: forall a. Num a => a -> a -> a
-          with (*) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (+) :: forall a. Num a => a -> a -> a
-          with (+) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        asTypeOf :: forall a. a -> a -> a
-          with asTypeOf @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
-        const :: forall a b. a -> b -> a
-          with const @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
           with return @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -256,10 +260,6 @@ T14590.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
           with pure @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
-        seq :: forall a b. a -> b -> b
-          with seq @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Prim’))
 
 T14590.hs:7:11: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _a :: Int -> Int -> Int
@@ -276,6 +276,30 @@ T14590.hs:7:11: warning: [-Wtyped-holes (in -Wdefault)]
         f1 :: Int -> Int -> Int (defined at T14590.hs:4:1)
         f2 :: Int -> Int -> Int (defined at T14590.hs:5:1)
         f3 :: Int -> Int -> Int (defined at T14590.hs:6:1)
+        seq :: forall a b. a -> b -> b
+          with seq @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Prim’))
+        (-) :: forall a. Num a => a -> a -> a
+          with (-) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        asTypeOf :: forall a. a -> a -> a
+          with asTypeOf @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        const :: forall a b. a -> b -> a
+          with const @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Base’))
+        subtract :: forall a. Num a => a -> a -> a
+          with subtract @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
+          with (^) @Int @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Real’))
         gcd :: forall a. Integral a => a -> a -> a
           with gcd @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -284,6 +308,14 @@ T14590.hs:7:11: warning: [-Wtyped-holes (in -Wdefault)]
           with lcm @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Real’))
+        (*) :: forall a. Num a => a -> a -> a
+          with (*) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
+        (+) :: forall a. Num a => a -> a -> a
+          with (+) @Int
+          (imported from ‘Prelude’ at T14590.hs:1:8-13
+           (and originally defined in ‘GHC.Num’))
         div :: forall a. Integral a => a -> a -> a
           with div @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -308,34 +340,6 @@ T14590.hs:7:11: warning: [-Wtyped-holes (in -Wdefault)]
           with min @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Classes’))
-        (^) :: forall a b. (Num a, Integral b) => a -> b -> a
-          with (^) @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Real’))
-        (-) :: forall a. Num a => a -> a -> a
-          with (-) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        subtract :: forall a. Num a => a -> a -> a
-          with subtract @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (*) :: forall a. Num a => a -> a -> a
-          with (*) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        (+) :: forall a. Num a => a -> a -> a
-          with (+) @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Num’))
-        asTypeOf :: forall a. a -> a -> a
-          with asTypeOf @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
-        const :: forall a b. a -> b -> a
-          with const @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Base’))
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
           with return @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
@@ -344,7 +348,3 @@ T14590.hs:7:11: warning: [-Wtyped-holes (in -Wdefault)]
           with pure @((->) Int) @Int
           (imported from ‘Prelude’ at T14590.hs:1:8-13
            (and originally defined in ‘GHC.Base’))
-        seq :: forall a b. a -> b -> b
-          with seq @Int @Int
-          (imported from ‘Prelude’ at T14590.hs:1:8-13
-           (and originally defined in ‘GHC.Prim’))

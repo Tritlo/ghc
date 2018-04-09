@@ -11,18 +11,14 @@ refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           (bound at refinement_substitutions.hs:4:1)
         g :: [Integer] -> Integer
           (bound at refinement_substitutions.hs:7:1)
-        product :: forall (t :: * -> *).
-                   Foldable t =>
-                   forall a. Num a => t a -> a
-          with product @[] @Integer
+        head :: forall a. [a] -> a
+          with head @Integer
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
-        sum :: forall (t :: * -> *).
-               Foldable t =>
-               forall a. Num a => t a -> a
-          with sum @[] @Integer
+           (and originally defined in ‘GHC.List’))
+        last :: forall a. [a] -> a
+          with last @Integer
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
+           (and originally defined in ‘GHC.List’))
         maximum :: forall (t :: * -> *).
                    Foldable t =>
                    forall a. Ord a => t a -> a
@@ -35,36 +31,19 @@ refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           with minimum @[] @Integer
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Foldable’))
-        head :: forall a. [a] -> a
-          with head @Integer
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        last :: forall a. [a] -> a
-          with last @Integer
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-      Valid refinement substitutions include
-        (<$) (_ :: Integer) (_ :: [Integer] -> b0)
-          with (<$) @((->) [Integer]) @Integer @b0
-          where (<$) :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. a -> f b -> f a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<*) (_ :: [Integer] -> Integer) (_ :: [Integer] -> b1)
-          with (<*) @((->) [Integer]) @Integer @b1
-          where (<*) :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a b. f a -> f b -> f a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        foldr (_ :: Integer -> Integer -> Integer) (_ :: Integer)
-          with foldr @[] @Integer @Integer
-          where foldr :: forall (t :: * -> *).
-                         Foldable t =>
-                         forall a b. (a -> b -> b) -> b -> t a -> b
+        product :: forall (t :: * -> *).
+                   Foldable t =>
+                   forall a. Num a => t a -> a
+          with product @[] @Integer
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Foldable’))
+        sum :: forall (t :: * -> *).
+               Foldable t =>
+               forall a. Num a => t a -> a
+          with sum @[] @Integer
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Foldable’))
+      Valid refinement substitutions include
         foldl1 (_ :: Integer -> Integer -> Integer)
           with foldl1 @[] @Integer
           where foldl1 :: forall (t :: * -> *).
@@ -86,73 +65,28 @@ refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
                          forall b a. (b -> a -> b) -> b -> t a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Foldable’))
-        head (_ :: [[Integer] -> Integer])
-          with head @([Integer] -> Integer)
-          where head :: forall a. [a] -> a
+        foldr (_ :: Integer -> Integer -> Integer) (_ :: Integer)
+          with foldr @[] @Integer @Integer
+          where foldr :: forall (t :: * -> *).
+                         Foldable t =>
+                         forall a b. (a -> b -> b) -> b -> t a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        last (_ :: [[Integer] -> Integer])
-          with last @([Integer] -> Integer)
-          where last :: forall a. [a] -> a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        (!!) (_ :: [[Integer] -> Integer]) (_ :: Int)
-          with (!!) @([Integer] -> Integer)
-          where (!!) :: forall a. [a] -> Int -> a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        flip (_ :: [Integer] -> b2 -> Integer) (_ :: b2)
-          with flip @[Integer] @b2 @Integer
-          where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        const (_ :: [Integer] -> Integer) (_ :: b3)
-          with const @([Integer] -> Integer) @b3
-          where const :: forall a b. a -> b -> a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        asTypeOf (_ :: [Integer] -> Integer) (_ :: [Integer] -> Integer)
-          with asTypeOf @([Integer] -> Integer)
-          where asTypeOf :: forall a. a -> a -> a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
+           (and originally defined in ‘Data.Foldable’))
         const (_ :: Integer)
           with const @Integer @[Integer]
           where const :: forall a b. a -> b -> a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        (=<<) (_ :: a0 -> [Integer] -> Integer) (_ :: [Integer] -> a0)
-          with (=<<) @((->) [Integer]) @a0 @Integer
-          where (=<<) :: forall (m :: * -> *) a b.
-                         Monad m =>
-                         (a -> m b) -> m a -> m b
+        ($) (_ :: [Integer] -> Integer)
+          with ($) @'GHC.Types.LiftedRep @[Integer] @Integer
+          where ($) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        (.) (_ :: b4 -> Integer) (_ :: [Integer] -> b4)
-          with (.) @b4 @Integer @[Integer]
-          where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($!) (_ :: [Integer] -> Integer)
-          with ($!) @'GHC.Types.LiftedRep @[Integer] @Integer
-          where ($!) :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        uncurry (_ :: a1 -> b5 -> [Integer] -> Integer) (_ :: (a1, b5))
-          with uncurry @a1 @b5 @([Integer] -> Integer)
-          where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        curry (_ :: (a2, [Integer]) -> Integer) (_ :: a2)
-          with curry @a2 @[Integer] @Integer
-          where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        (<*>) (_ :: [Integer] -> a3 -> Integer) (_ :: [Integer] -> a3)
-          with (<*>) @((->) [Integer]) @a3 @Integer
-          where (<*>) :: forall (f :: * -> *).
-                         Applicative f =>
-                         forall a b. f (a -> b) -> f a -> f b
+        fail (_ :: String)
+          with fail @((->) [Integer]) @Integer
+          where fail :: forall (m :: * -> *).
+                        Monad m =>
+                        forall a. String -> m a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
         return (_ :: Integer)
@@ -167,60 +101,8 @@ refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
                         forall a. a -> f a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        fmap (_ :: a4 -> Integer) (_ :: [Integer] -> a4)
-          with fmap @((->) [Integer]) @a4 @Integer
-          where fmap :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<$>) (_ :: a5 -> Integer) (_ :: [Integer] -> a5)
-          with (<$>) @((->) [Integer]) @a5 @Integer
-          where (<$>) :: forall (f :: * -> *) a b.
-                         Functor f =>
-                         (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Functor’))
-        (>>) (_ :: [Integer] -> a6) (_ :: [Integer] -> Integer)
-          with (>>) @((->) [Integer]) @a6 @Integer
-          where (>>) :: forall (m :: * -> *).
-                        Monad m =>
-                        forall a b. m a -> m b -> m b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (*>) (_ :: [Integer] -> a7) (_ :: [Integer] -> Integer)
-          with (*>) @((->) [Integer]) @a7 @Integer
-          where (*>) :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a b. f a -> f b -> f b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (>>=) (_ :: [Integer] -> a8) (_ :: a8 -> [Integer] -> Integer)
-          with (>>=) @((->) [Integer]) @a8 @Integer
-          where (>>=) :: forall (m :: * -> *).
-                         Monad m =>
-                         forall a b. m a -> (a -> m b) -> m b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        fail (_ :: String)
-          with fail @((->) [Integer]) @Integer
-          where fail :: forall (m :: * -> *).
-                        Monad m =>
-                        forall a. String -> m a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($) (_ :: [Integer] -> Integer)
-          with ($) @'GHC.Types.LiftedRep @[Integer] @Integer
-          where ($) :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($) (_ :: a9 -> [Integer] -> Integer) (_ :: a9)
-          with ($) @'GHC.Types.LiftedRep @a9 @([Integer] -> Integer)
-          where ($) :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($!) (_ :: a10 -> [Integer] -> Integer) (_ :: a10)
-          with ($!) @'GHC.Types.LiftedRep @a10 @([Integer] -> Integer)
+        ($!) (_ :: [Integer] -> Integer)
+          with ($!) @'GHC.Types.LiftedRep @[Integer] @Integer
           where ($!) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
@@ -229,14 +111,49 @@ refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where id :: forall a. a -> a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        snd (_ :: (a11, [Integer] -> Integer))
-          with snd @a11 @([Integer] -> Integer)
-          where snd :: forall a b. (a, b) -> b
+        head (_ :: [[Integer] -> Integer])
+          with head @([Integer] -> Integer)
+          where head :: forall a. [a] -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.List’))
+        last (_ :: [[Integer] -> Integer])
+          with last @([Integer] -> Integer)
+          where last :: forall a. [a] -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.List’))
+        curry (_ :: (a2, [Integer]) -> Integer) (_ :: a2)
+          with curry @a2 @[Integer] @Integer
+          where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Tuple’))
-        fst (_ :: ([Integer] -> Integer, b6))
-          with fst @([Integer] -> Integer) @b6
+        (.) (_ :: b1 -> Integer) (_ :: [Integer] -> b1)
+          with (.) @b1 @Integer @[Integer]
+          where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        asTypeOf (_ :: [Integer] -> Integer) (_ :: [Integer] -> Integer)
+          with asTypeOf @([Integer] -> Integer)
+          where asTypeOf :: forall a. a -> a -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        flip (_ :: [Integer] -> b6 -> Integer) (_ :: b6)
+          with flip @[Integer] @b6 @Integer
+          where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (!!) (_ :: [[Integer] -> Integer]) (_ :: Int)
+          with (!!) @([Integer] -> Integer)
+          where (!!) :: forall a. [a] -> Int -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.List’))
+        fst (_ :: ([Integer] -> Integer, b0))
+          with fst @([Integer] -> Integer) @b0
           where fst :: forall a b. (a, b) -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Tuple’))
+        snd (_ :: (a0, [Integer] -> Integer))
+          with snd @a0 @([Integer] -> Integer)
+          where snd :: forall a b. (a, b) -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Tuple’))
         seq (_ :: a12) (_ :: [Integer] -> Integer)
@@ -244,6 +161,89 @@ refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where seq :: forall a b. a -> b -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Prim’))
+        (>>=) (_ :: [Integer] -> a10) (_ :: a10 -> [Integer] -> Integer)
+          with (>>=) @((->) [Integer]) @a10 @Integer
+          where (>>=) :: forall (m :: * -> *).
+                         Monad m =>
+                         forall a b. m a -> (a -> m b) -> m b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (>>) (_ :: [Integer] -> a9) (_ :: [Integer] -> Integer)
+          with (>>) @((->) [Integer]) @a9 @Integer
+          where (>>) :: forall (m :: * -> *).
+                        Monad m =>
+                        forall a b. m a -> m b -> m b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        fmap (_ :: a11 -> Integer) (_ :: [Integer] -> a11)
+          with fmap @((->) [Integer]) @a11 @Integer
+          where fmap :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<*>) (_ :: [Integer] -> a7 -> Integer) (_ :: [Integer] -> a7)
+          with (<*>) @((->) [Integer]) @a7 @Integer
+          where (<*>) :: forall (f :: * -> *).
+                         Applicative f =>
+                         forall a b. f (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (*>) (_ :: [Integer] -> a6) (_ :: [Integer] -> Integer)
+          with (*>) @((->) [Integer]) @a6 @Integer
+          where (*>) :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a b. f a -> f b -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<$>) (_ :: a1 -> Integer) (_ :: [Integer] -> a1)
+          with (<$>) @((->) [Integer]) @a1 @Integer
+          where (<$>) :: forall (f :: * -> *) a b.
+                         Functor f =>
+                         (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Functor’))
+        (=<<) (_ :: a8 -> [Integer] -> Integer) (_ :: [Integer] -> a8)
+          with (=<<) @((->) [Integer]) @a8 @Integer
+          where (=<<) :: forall (m :: * -> *) a b.
+                         Monad m =>
+                         (a -> m b) -> m a -> m b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        const (_ :: [Integer] -> Integer) (_ :: b5)
+          with const @([Integer] -> Integer) @b5
+          where const :: forall a b. a -> b -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<*) (_ :: [Integer] -> Integer) (_ :: [Integer] -> b4)
+          with (<*) @((->) [Integer]) @Integer @b4
+          where (<*) :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a b. f a -> f b -> f a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<$) (_ :: Integer) (_ :: [Integer] -> b3)
+          with (<$) @((->) [Integer]) @Integer @b3
+          where (<$) :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. a -> f b -> f a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        ($) (_ :: a4 -> [Integer] -> Integer) (_ :: a4)
+          with ($) @'GHC.Types.LiftedRep @a4 @([Integer] -> Integer)
+          where ($) :: forall a b. (a -> b) -> a -> b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        uncurry (_ :: a3 -> b2 -> [Integer] -> Integer) (_ :: (a3, b2))
+          with uncurry @a3 @b2 @([Integer] -> Integer)
+          where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Tuple’))
+        ($!) (_ :: a5 -> [Integer] -> Integer) (_ :: a5)
+          with ($!) @'GHC.Types.LiftedRep @a5 @([Integer] -> Integer)
+          where ($!) :: forall a b. (a -> b) -> a -> b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
 
 refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Integer -> [Integer] -> Integer
@@ -267,27 +267,6 @@ refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
       Valid refinement substitutions include
-        (<$) (_ :: [Integer] -> Integer) (_ :: Integer -> b0)
-          with (<$) @((->) Integer) @([Integer] -> Integer) @b0
-          where (<$) :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. a -> f b -> f a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<*) (_ :: Integer -> [Integer] -> Integer) (_ :: Integer -> b1)
-          with (<*) @((->) Integer) @([Integer] -> Integer) @b1
-          where (<*) :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a b. f a -> f b -> f a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        foldr (_ :: Integer -> Integer -> Integer)
-          with foldr @[] @Integer @Integer
-          where foldr :: forall (t :: * -> *).
-                         Foldable t =>
-                         forall a b. (a -> b -> b) -> b -> t a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Foldable’))
         foldl (_ :: Integer -> Integer -> Integer)
           with foldl @[] @Integer @Integer
           where foldl :: forall (t :: * -> *).
@@ -295,26 +274,18 @@ refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
                          forall b a. (b -> a -> b) -> b -> t a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Foldable’))
-        head (_ :: [Integer -> [Integer] -> Integer])
-          with head @(Integer -> [Integer] -> Integer)
-          where head :: forall a. [a] -> a
+        foldr (_ :: Integer -> Integer -> Integer)
+          with foldr @[] @Integer @Integer
+          where foldr :: forall (t :: * -> *).
+                         Foldable t =>
+                         forall a b. (a -> b -> b) -> b -> t a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        last (_ :: [Integer -> [Integer] -> Integer])
-          with last @(Integer -> [Integer] -> Integer)
-          where last :: forall a. [a] -> a
+           (and originally defined in ‘Data.Foldable’))
+        curry (_ :: (Integer, [Integer]) -> Integer)
+          with curry @Integer @[Integer] @Integer
+          where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        (!!) (_ :: [Integer -> [Integer] -> Integer]) (_ :: Int)
-          with (!!) @(Integer -> [Integer] -> Integer)
-          where (!!) :: forall a. [a] -> Int -> a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.List’))
-        flip (_ :: Integer -> b2 -> [Integer] -> Integer) (_ :: b2)
-          with flip @Integer @b2 @([Integer] -> Integer)
-          where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
+           (and originally defined in ‘Data.Tuple’))
         flip (_ :: [Integer] -> Integer -> Integer)
           with flip @[Integer] @Integer @Integer
           where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
@@ -325,59 +296,16 @@ refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
           where const :: forall a b. a -> b -> a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        asTypeOf (_ :: Integer -> [Integer] -> Integer)
-                 (_ :: Integer -> [Integer] -> Integer)
-          with asTypeOf @(Integer -> [Integer] -> Integer)
-          where asTypeOf :: forall a. a -> a -> a
+        ($) (_ :: Integer -> [Integer] -> Integer)
+          with ($) @'GHC.Types.LiftedRep @Integer @([Integer] -> Integer)
+          where ($) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        const (_ :: Integer -> [Integer] -> Integer) (_ :: b3)
-          with const @(Integer -> [Integer] -> Integer) @b3
-          where const :: forall a b. a -> b -> a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (=<<) (_ :: a0 -> Integer -> [Integer] -> Integer)
-              (_ :: Integer -> a0)
-          with (=<<) @((->) Integer) @a0 @([Integer] -> Integer)
-          where (=<<) :: forall (m :: * -> *) a b.
-                         Monad m =>
-                         (a -> m b) -> m a -> m b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (.) (_ :: b4 -> [Integer] -> Integer) (_ :: Integer -> b4)
-          with (.) @b4 @([Integer] -> Integer) @Integer
-          where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($!) (_ :: a1 -> Integer -> [Integer] -> Integer) (_ :: a1)
-          with ($!) @'GHC.Types.LiftedRep
-                    @a1
-                    @(Integer -> [Integer] -> Integer)
-          where ($!) :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        uncurry (_ :: a2 -> b5 -> Integer -> [Integer] -> Integer)
-                (_ :: (a2, b5))
-          with uncurry @a2 @b5 @(Integer -> [Integer] -> Integer)
-          where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        curry (_ :: (Integer, [Integer]) -> Integer)
-          with curry @Integer @[Integer] @Integer
-          where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        curry (_ :: (a3, Integer) -> [Integer] -> Integer) (_ :: a3)
-          with curry @a3 @Integer @([Integer] -> Integer)
-          where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Tuple’))
-        (<*>) (_ :: Integer -> a4 -> [Integer] -> Integer)
-              (_ :: Integer -> a4)
-          with (<*>) @((->) Integer) @a4 @([Integer] -> Integer)
-          where (<*>) :: forall (f :: * -> *).
-                         Applicative f =>
-                         forall a b. f (a -> b) -> f a -> f b
+        fail (_ :: String)
+          with fail @((->) Integer) @([Integer] -> Integer)
+          where fail :: forall (m :: * -> *).
+                        Monad m =>
+                        forall a. String -> m a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
         return (_ :: [Integer] -> Integer)
@@ -392,61 +320,6 @@ refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
                         forall a. a -> f a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        fmap (_ :: a5 -> [Integer] -> Integer) (_ :: Integer -> a5)
-          with fmap @((->) Integer) @a5 @([Integer] -> Integer)
-          where fmap :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (<$>) (_ :: a6 -> [Integer] -> Integer) (_ :: Integer -> a6)
-          with (<$>) @((->) Integer) @a6 @([Integer] -> Integer)
-          where (<$>) :: forall (f :: * -> *) a b.
-                         Functor f =>
-                         (a -> b) -> f a -> f b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘Data.Functor’))
-        (>>) (_ :: Integer -> a7) (_ :: Integer -> [Integer] -> Integer)
-          with (>>) @((->) Integer) @a7 @([Integer] -> Integer)
-          where (>>) :: forall (m :: * -> *).
-                        Monad m =>
-                        forall a b. m a -> m b -> m b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (*>) (_ :: Integer -> a8) (_ :: Integer -> [Integer] -> Integer)
-          with (*>) @((->) Integer) @a8 @([Integer] -> Integer)
-          where (*>) :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a b. f a -> f b -> f b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        (>>=) (_ :: Integer -> a9)
-              (_ :: a9 -> Integer -> [Integer] -> Integer)
-          with (>>=) @((->) Integer) @a9 @([Integer] -> Integer)
-          where (>>=) :: forall (m :: * -> *).
-                         Monad m =>
-                         forall a b. m a -> (a -> m b) -> m b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        fail (_ :: String)
-          with fail @((->) Integer) @([Integer] -> Integer)
-          where fail :: forall (m :: * -> *).
-                        Monad m =>
-                        forall a. String -> m a
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($) (_ :: Integer -> [Integer] -> Integer)
-          with ($) @'GHC.Types.LiftedRep @Integer @([Integer] -> Integer)
-          where ($) :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
-        ($) (_ :: a10 -> Integer -> [Integer] -> Integer) (_ :: a10)
-          with ($) @'GHC.Types.LiftedRep
-                   @a10
-                   @(Integer -> [Integer] -> Integer)
-          where ($) :: forall a b. (a -> b) -> a -> b
-          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
-           (and originally defined in ‘GHC.Base’))
         ($!) (_ :: Integer -> [Integer] -> Integer)
           with ($!) @'GHC.Types.LiftedRep @Integer @([Integer] -> Integer)
           where ($!) :: forall a b. (a -> b) -> a -> b
@@ -457,14 +330,50 @@ refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
           where id :: forall a. a -> a
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        snd (_ :: (a11, Integer -> [Integer] -> Integer))
-          with snd @a11 @(Integer -> [Integer] -> Integer)
-          where snd :: forall a b. (a, b) -> b
+        head (_ :: [Integer -> [Integer] -> Integer])
+          with head @(Integer -> [Integer] -> Integer)
+          where head :: forall a. [a] -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.List’))
+        last (_ :: [Integer -> [Integer] -> Integer])
+          with last @(Integer -> [Integer] -> Integer)
+          where last :: forall a. [a] -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.List’))
+        curry (_ :: (a2, Integer) -> [Integer] -> Integer) (_ :: a2)
+          with curry @a2 @Integer @([Integer] -> Integer)
+          where curry :: forall a b c. ((a, b) -> c) -> a -> b -> c
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Tuple’))
-        fst (_ :: (Integer -> [Integer] -> Integer, b6))
-          with fst @(Integer -> [Integer] -> Integer) @b6
+        (.) (_ :: b1 -> [Integer] -> Integer) (_ :: Integer -> b1)
+          with (.) @b1 @([Integer] -> Integer) @Integer
+          where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        asTypeOf (_ :: Integer -> [Integer] -> Integer)
+                 (_ :: Integer -> [Integer] -> Integer)
+          with asTypeOf @(Integer -> [Integer] -> Integer)
+          where asTypeOf :: forall a. a -> a -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        flip (_ :: Integer -> b6 -> [Integer] -> Integer) (_ :: b6)
+          with flip @Integer @b6 @([Integer] -> Integer)
+          where flip :: forall a b c. (a -> b -> c) -> b -> a -> c
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (!!) (_ :: [Integer -> [Integer] -> Integer]) (_ :: Int)
+          with (!!) @(Integer -> [Integer] -> Integer)
+          where (!!) :: forall a. [a] -> Int -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.List’))
+        fst (_ :: (Integer -> [Integer] -> Integer, b0))
+          with fst @(Integer -> [Integer] -> Integer) @b0
           where fst :: forall a b. (a, b) -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Tuple’))
+        snd (_ :: (a0, Integer -> [Integer] -> Integer))
+          with snd @a0 @(Integer -> [Integer] -> Integer)
+          where snd :: forall a b. (a, b) -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘Data.Tuple’))
         seq (_ :: a12) (_ :: Integer -> [Integer] -> Integer)
@@ -472,3 +381,94 @@ refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
           where seq :: forall a b. a -> b -> b
           (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
            (and originally defined in ‘GHC.Prim’))
+        (>>=) (_ :: Integer -> a10)
+              (_ :: a10 -> Integer -> [Integer] -> Integer)
+          with (>>=) @((->) Integer) @a10 @([Integer] -> Integer)
+          where (>>=) :: forall (m :: * -> *).
+                         Monad m =>
+                         forall a b. m a -> (a -> m b) -> m b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (>>) (_ :: Integer -> a9) (_ :: Integer -> [Integer] -> Integer)
+          with (>>) @((->) Integer) @a9 @([Integer] -> Integer)
+          where (>>) :: forall (m :: * -> *).
+                        Monad m =>
+                        forall a b. m a -> m b -> m b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        fmap (_ :: a11 -> [Integer] -> Integer) (_ :: Integer -> a11)
+          with fmap @((->) Integer) @a11 @([Integer] -> Integer)
+          where fmap :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<*>) (_ :: Integer -> a7 -> [Integer] -> Integer)
+              (_ :: Integer -> a7)
+          with (<*>) @((->) Integer) @a7 @([Integer] -> Integer)
+          where (<*>) :: forall (f :: * -> *).
+                         Applicative f =>
+                         forall a b. f (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (*>) (_ :: Integer -> a6) (_ :: Integer -> [Integer] -> Integer)
+          with (*>) @((->) Integer) @a6 @([Integer] -> Integer)
+          where (*>) :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a b. f a -> f b -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<$>) (_ :: a1 -> [Integer] -> Integer) (_ :: Integer -> a1)
+          with (<$>) @((->) Integer) @a1 @([Integer] -> Integer)
+          where (<$>) :: forall (f :: * -> *) a b.
+                         Functor f =>
+                         (a -> b) -> f a -> f b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Functor’))
+        (=<<) (_ :: a8 -> Integer -> [Integer] -> Integer)
+              (_ :: Integer -> a8)
+          with (=<<) @((->) Integer) @a8 @([Integer] -> Integer)
+          where (=<<) :: forall (m :: * -> *) a b.
+                         Monad m =>
+                         (a -> m b) -> m a -> m b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        const (_ :: Integer -> [Integer] -> Integer) (_ :: b5)
+          with const @(Integer -> [Integer] -> Integer) @b5
+          where const :: forall a b. a -> b -> a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<*) (_ :: Integer -> [Integer] -> Integer) (_ :: Integer -> b4)
+          with (<*) @((->) Integer) @([Integer] -> Integer) @b4
+          where (<*) :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a b. f a -> f b -> f a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        (<$) (_ :: [Integer] -> Integer) (_ :: Integer -> b3)
+          with (<$) @((->) Integer) @([Integer] -> Integer) @b3
+          where (<$) :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. a -> f b -> f a
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        ($) (_ :: a4 -> Integer -> [Integer] -> Integer) (_ :: a4)
+          with ($) @'GHC.Types.LiftedRep
+                   @a4
+                   @(Integer -> [Integer] -> Integer)
+          where ($) :: forall a b. (a -> b) -> a -> b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))
+        uncurry (_ :: a3 -> b2 -> Integer -> [Integer] -> Integer)
+                (_ :: (a3, b2))
+          with uncurry @a3 @b2 @(Integer -> [Integer] -> Integer)
+          where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘Data.Tuple’))
+        ($!) (_ :: a5 -> Integer -> [Integer] -> Integer) (_ :: a5)
+          with ($!) @'GHC.Types.LiftedRep
+                    @a5
+                    @(Integer -> [Integer] -> Integer)
+          where ($!) :: forall a b. (a -> b) -> a -> b
+          (imported from ‘Prelude’ at refinement_substitutions.hs:1:8-30
+           (and originally defined in ‘GHC.Base’))

@@ -391,6 +391,7 @@ test('hole_constraints_nested', normal, compile, ['-fdefer-type-errors -fno-max-
 test('valid_substitutions', [extra_files(['ValidSubs.hs'])],
     multimod_compile, ['valid_substitutions','-fdefer-type-errors -fno-max-valid-substitutions'])
 test('local_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions'])
+test('subsumption_sort_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions -fsort-by-subsumption-substitutions'])
 test('valid_substitutions_interactions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions'])
 test('refinement_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions -fno-max-refinement-substitutions -frefinement-level-substitutions=2'])
 test('abstract_refinement_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions -fno-max-refinement-substitutions -frefinement-level-substitutions=2 -fabstract-refinement-substitutions -funclutter-valid-substitutions'])

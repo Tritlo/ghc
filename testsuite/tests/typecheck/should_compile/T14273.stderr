@@ -31,6 +31,15 @@ T14273.hs:7:32: warning: [-Wtyped-holes (in -Wdefault)]
       Constraints include Show a (from T14273.hs:5:1-49)
       Valid substitutions include
         k :: String (bound at T14273.hs:10:1)
+        otherwise :: Bool
+          (imported from ‘Prelude’ at T14273.hs:1:8-40
+           (and originally defined in ‘GHC.Base’))
+        False :: Bool
+          (imported from ‘Prelude’ at T14273.hs:1:8-40
+           (and originally defined in ‘GHC.Types’))
+        True :: Bool
+          (imported from ‘Prelude’ at T14273.hs:1:8-40
+           (and originally defined in ‘GHC.Types’))
         EQ :: Ordering
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Types’))
@@ -44,15 +53,6 @@ T14273.hs:7:32: warning: [-Wtyped-holes (in -Wdefault)]
           with pi @Double
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Float’))
-        otherwise :: Bool
-          (imported from ‘Prelude’ at T14273.hs:1:8-40
-           (and originally defined in ‘GHC.Base’))
-        False :: Bool
-          (imported from ‘Prelude’ at T14273.hs:1:8-40
-           (and originally defined in ‘GHC.Types’))
-        True :: Bool
-          (imported from ‘Prelude’ at T14273.hs:1:8-40
-           (and originally defined in ‘GHC.Types’))
 
 T14273.hs:13:10: warning: [-Wdeferred-type-errors (in -Wdefault)]
     • Ambiguous type variable ‘a0’ arising from a use of ‘show’

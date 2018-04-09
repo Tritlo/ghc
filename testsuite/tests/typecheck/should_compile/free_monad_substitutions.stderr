@@ -24,36 +24,36 @@ free_monad_substitutions.hs:12:28: warning: [-Wtyped-holes (in -Wdefault)]
         Functor f (from free_monad_substitutions.hs:9:10-38)
       Valid substitutions include go :: Free f1 a -> Free f2 b
       Valid refinement substitutions include
-        (=<<) (_ :: a0
-                    -> (Free f1 a -> Free f2 b) -> f1 (Free f1 a) -> f2 (Free f2 b))
-              (_ :: (Free f1 a -> Free f2 b) -> a0)
-          where (=<<) :: forall (m :: * -> *) a b.
-                         Monad m =>
-                         (a -> m b) -> m a -> m b
-        (<$>) (_ :: a1 -> f1 (Free f1 a) -> f2 (Free f2 b))
-              (_ :: (Free f1 a -> Free f2 b) -> a1)
-          where (<$>) :: forall (f :: * -> *) a b.
-                         Functor f =>
-                         (a -> b) -> f a -> f b
+        ($) (_ :: (Free f1 a -> Free f2 b)
+                  -> f1 (Free f1 a) -> f2 (Free f2 b))
+          where ($) :: forall a b. (a -> b) -> a -> b
         pure (_ :: f1 (Free f1 a) -> f2 (Free f2 b))
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
-        (<*>) (_ :: (Free f1 a -> Free f2 b)
-                    -> a2 -> f1 (Free f1 a) -> f2 (Free f2 b))
-              (_ :: (Free f1 a -> Free f2 b) -> a2)
-          where (<*>) :: forall (f :: * -> *).
-                         Applicative f =>
-                         forall a b. f (a -> b) -> f a -> f b
-        (>>=) (_ :: (Free f1 a -> Free f2 b) -> a3)
-              (_ :: a3
+        (>>=) (_ :: (Free f1 a -> Free f2 b) -> a1)
+              (_ :: a1
                     -> (Free f1 a -> Free f2 b) -> f1 (Free f1 a) -> f2 (Free f2 b))
           where (>>=) :: forall (m :: * -> *).
                          Monad m =>
                          forall a b. m a -> (a -> m b) -> m b
-        ($) (_ :: (Free f1 a -> Free f2 b)
-                  -> f1 (Free f1 a) -> f2 (Free f2 b))
-          where ($) :: forall a b. (a -> b) -> a -> b
+        (<*>) (_ :: (Free f1 a -> Free f2 b)
+                    -> a0 -> f1 (Free f1 a) -> f2 (Free f2 b))
+              (_ :: (Free f1 a -> Free f2 b) -> a0)
+          where (<*>) :: forall (f :: * -> *).
+                         Applicative f =>
+                         forall a b. f (a -> b) -> f a -> f b
+        (<$>) (_ :: a3 -> f1 (Free f1 a) -> f2 (Free f2 b))
+              (_ :: (Free f1 a -> Free f2 b) -> a3)
+          where (<$>) :: forall (f :: * -> *) a b.
+                         Functor f =>
+                         (a -> b) -> f a -> f b
+        (=<<) (_ :: a2
+                    -> (Free f1 a -> Free f2 b) -> f1 (Free f1 a) -> f2 (Free f2 b))
+              (_ :: (Free f1 a -> Free f2 b) -> a2)
+          where (=<<) :: forall (m :: * -> *) a b.
+                         Monad m =>
+                         (a -> m b) -> m a -> m b
 
 free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _a :: Free f a -> Free f b
@@ -76,41 +76,41 @@ free_monad_substitutions.hs:22:31: warning: [-Wtyped-holes (in -Wdefault)]
       Constraints include
         Applicative f (from free_monad_substitutions.hs:20:10-40)
       Valid refinement substitutions include
-        (=<<) (_ :: a -> Free f b)
-          where (=<<) :: forall (m :: * -> *) a b.
-                         Monad m =>
-                         (a -> m b) -> m a -> m b
-        (=<<) (_ :: a0 -> Free f a -> Free f b) (_ :: Free f a -> a0)
-          where (=<<) :: forall (m :: * -> *) a b.
-                         Monad m =>
-                         (a -> m b) -> m a -> m b
-        (<$>) (_ :: a1 -> Free f b) (_ :: Free f a -> a1)
-          where (<$>) :: forall (f :: * -> *) a b.
-                         Functor f =>
-                         (a -> b) -> f a -> f b
-        pure (_ :: Free f b)
-          where pure :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a. a -> f a
-        (<*>) (_ :: Free f a -> a2 -> Free f b) (_ :: Free f a -> a2)
-          where (<*>) :: forall (f :: * -> *).
-                         Applicative f =>
-                         forall a b. f (a -> b) -> f a -> f b
-        (<*>) (_ :: Free f (a -> b))
-          where (<*>) :: forall (f :: * -> *).
-                         Applicative f =>
-                         forall a b. f (a -> b) -> f a -> f b
         fmap (_ :: a -> b)
           where fmap :: forall (f :: * -> *).
                         Functor f =>
                         forall a b. (a -> b) -> f a -> f b
-        fmap (_ :: a3 -> Free f b) (_ :: Free f a -> a3)
-          where fmap :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. (a -> b) -> f a -> f b
+        (<*>) (_ :: Free f (a -> b))
+          where (<*>) :: forall (f :: * -> *).
+                         Applicative f =>
+                         forall a b. f (a -> b) -> f a -> f b
         (<$>) (_ :: a -> b)
           where (<$>) :: forall (f :: * -> *) a b.
                          Functor f =>
                          (a -> b) -> f a -> f b
+        (=<<) (_ :: a -> Free f b)
+          where (=<<) :: forall (m :: * -> *) a b.
+                         Monad m =>
+                         (a -> m b) -> m a -> m b
         ($) (_ :: Free f a -> Free f b)
           where ($) :: forall a b. (a -> b) -> a -> b
+        pure (_ :: Free f b)
+          where pure :: forall (f :: * -> *).
+                        Applicative f =>
+                        forall a. a -> f a
+        fmap (_ :: a0 -> Free f b) (_ :: Free f a -> a0)
+          where fmap :: forall (f :: * -> *).
+                        Functor f =>
+                        forall a b. (a -> b) -> f a -> f b
+        (<*>) (_ :: Free f a -> a1 -> Free f b) (_ :: Free f a -> a1)
+          where (<*>) :: forall (f :: * -> *).
+                         Applicative f =>
+                         forall a b. f (a -> b) -> f a -> f b
+        (<$>) (_ :: a3 -> Free f b) (_ :: Free f a -> a3)
+          where (<$>) :: forall (f :: * -> *) a b.
+                         Functor f =>
+                         (a -> b) -> f a -> f b
+        (=<<) (_ :: a2 -> Free f a -> Free f b) (_ :: Free f a -> a2)
+          where (=<<) :: forall (m :: * -> *) a b.
+                         Monad m =>
+                         (a -> m b) -> m a -> m b

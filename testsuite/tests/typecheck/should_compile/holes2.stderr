@@ -23,10 +23,10 @@ holes2.hs:3:10: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include f :: String (bound at holes2.hs:3:1)
       Valid substitutions include
         f :: String
+        otherwise :: Bool
+        False :: Bool
+        True :: Bool
         EQ :: Ordering
         LT :: Ordering
         GT :: Ordering
         pi :: forall a. Floating a => a
-        otherwise :: Bool
-        False :: Bool
-        True :: Bool
