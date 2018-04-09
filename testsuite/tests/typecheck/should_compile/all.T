@@ -397,6 +397,7 @@ test('refinement_substitutions', normal, compile, ['-fdefer-type-errors -fno-max
 test('abstract_refinement_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions -fno-max-refinement-substitutions -frefinement-level-substitutions=2 -fabstract-refinement-substitutions -funclutter-valid-substitutions'])
 test('free_monad_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions -fno-max-refinement-substitutions -frefinement-level-substitutions=2 -funclutter-valid-substitutions'])
 test('constraint_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions -fno-max-refinement-substitutions -frefinement-level-substitutions=2 -funclutter-valid-substitutions'])
+test('type_in_type_substitutions', normal, compile, ['-fdefer-type-errors -fno-max-valid-substitutions'])
 test('T7408', normal, compile, [''])
 test('UnboxStrictPrimitiveFields', normal, compile, [''])
 test('T7541', normal, compile, [''])
