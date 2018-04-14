@@ -16,6 +16,7 @@ import Type
 import DataCon
 import Name
 import RdrName ( pprNameProvenance , GlobalRdrElt (..), globalRdrEnvElts )
+import TcSMonad ( getTcEvBindsVar, runTcS )
 
 
 import PrelNames ( gHC_ERR )
@@ -33,7 +34,7 @@ import Maybes
 import FV ( fvVarList, fvVarSet )
 
 import Control.Monad    ( filterM, replicateM )
-import Data.List        ( partition, sort, foldl', sortOn, nubBy )
+import Data.List        ( partition, sort, sortOn, nubBy )
 import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
 
@@ -45,6 +46,7 @@ data HoleFitDispConfig = HFDC { showWrap :: Bool
 
 debugHoleFitDispConfig :: HoleFitDispConfig
 debugHoleFitDispConfig = HFDC True True False False
+
 
 -- We read the various -no-show-*-of-substitutions flags
 -- and set the display config accordingly.
@@ -68,6 +70,8 @@ getSortingAlg =
     do { shouldSort <- goptM Opt_SortValidSubstitutions
        ; subsumSort <- goptM Opt_SortBySubsumSubstitutions
        ; sizeSort <- goptM Opt_SortBySizeSubstitutions
+       -- We default to sizeSort unless it has been explicitly turned off
+       -- or subsumption sorting has been turned on.
        ; return $ if not shouldSort
                     then NoSorting
                     else if subsumSort
@@ -190,7 +194,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
      ; traceTc "locals are: " $ ppr lclBinds
      ; let to_check = map Left lclBinds ++ map Right (globalRdrEnvElts rdr_env)
      ; (searchDiscards, subs) <-
-        findSubs sortingAlg maxVSubs to_check 0 (wrapped_hole_ty, [])
+        findSubs sortingAlg maxVSubs to_check 0 (hole_ty, [])
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
      ; (vDiscards, tidy_sorted_subs) <-
         sortSubs sortingAlg maxVSubs searchDiscards tidy_subs
@@ -237,11 +241,12 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- of only concrete substitutions like `sum`.
     mkRefTy :: Int -> TcM (TcType, [TcType])
     mkRefTy refLvl = (\v -> (wrapHoleWithArgs v, v)) <$> newTyVarTys
-     where newTyVarTys =
+     where newTyVarTys
+             =
              replicateM refLvl $ mkTyVarTy . setLvl <$>
                 (newOpenTypeKind >>= newFlexiTyVar)
            setLvl = flip setTcTyVarLevel hole_lvl
-           wrapHoleWithArgs args = (wrap_ty . mkFunTys args) hole_ty
+           wrapHoleWithArgs args = mkFunTys args hole_ty
 
 
     sortSubs :: SortingAlg    -- How we should sort the substitutions
@@ -287,15 +292,6 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
          ; traceTc "}" empty
          ; return (discards, subs) }
 
-    -- For checking, we wrap the type of the hole with all the givens
-    -- from all the implications in the context.
-    wrap_ty :: TcType -> TcSigmaType
-    wrap_ty ty = foldl' w_ty ty implics
-        where w_ty ty impl = mkFunTys (map idType (ic_given impl)) ty
-
-    wrapped_hole_ty :: TcSigmaType
-    wrapped_hole_ty = wrap_ty hole_ty
-
     isLocalHoleFit :: HoleFit -> Bool
     isLocalHoleFit hf = case hfEl hf of
                           Just gre -> gre_lcl gre
@@ -306,6 +302,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     localsFirst :: [HoleFit] -> [HoleFit]
     localsFirst elts = lcl ++ gbl
       where (lcl, gbl) = partition isLocalHoleFit elts
+
 
 
     -- These are the constraints whose every free unification variable is
@@ -334,50 +331,69 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- free variables are mentioned by the hole, the free variables of the hole
     -- are all the free variables of the constraints as well.
     getHoleCloningSubst :: [TcType] -> TcM (TCvSubst, TCvSubst)
-    getHoleCloningSubst tys = do { cVars <- getClonedVars
-                                 ; let sub = mkSub cVars
-                                       invSub = mkSub $ map flipPair cVars
-                                 ; return (sub, invSub) }
+    getHoleCloningSubst tys
+      = do { cVars <- getClonedVars
+           ; let sub = mkSub cVars
+                 invSub = mkSub $ map flipPair cVars
+           ; return (sub, invSub) }
       where cloneFV :: TcTyVar -> TcM (TcTyVar, TcTyVar)
             -- The subsumption check pushes the level, so as to be sure that
             -- its invocation of the solver doesn't unify type variables
             -- floating about that are unrelated to the subsumption check.
             -- However, these -- cloned variables in the hole type *should* be
             -- unified, so we make sure to bump the level before creating them.
-            cloneFV fv = (,) fv . setLvl <$> cloneTyVar fv
-              where setLvl = flip setTcTyVarLevel (pushTcLevel hole_lvl)
-                    cloneTyVar :: TcTyVar -> TcM TcTyVar
-                    cloneTyVar fv | isMetaTyVar fv = cloneMetaTyVar fv
-                    cloneTyVar fv
-                      = do { traceTc "non-meta tv being cloned:" $ ppr fv
-                           ; let details = tcTyVarDetails fv
-                           ; ntv <- newFlexiTyVar (varType fv)
-                           ; return $ setTcTyVarDetails ntv details }
+            cloneFV fv = (,) fv . setLvl <$> cloneMetaTyVar fv
+              where setLvl tv = setTcTyVarLevel tv hole_lvl
+            -- We only need to clone meta type variables
+            -- since we don't have any side effects on the others.
             getClonedVars :: TcM [(TyVar, TyVar)]
-            getClonedVars = mapM cloneFV (fvVarList $ tyCoFVsOfTypes tys)
+            getClonedVars = mapM cloneFV $
+                              filter isMetaTyVar $
+                                fvVarList $ tyCoFVsOfTypes tys
             flipPair (a,b) = (b,a)
             mkSub = mkTvSubstPrs . map (fmap mkTyVarTy)
 
+    -- To pass along the givens in a way that works with local bindings,
+    -- we have to clone the implications, and then nest our solve withing
+    -- these implications.
+    cloneImplic :: TCvSubst -> Implication -> TcM Implication
+    cloneImplic subst Implic { ic_skols = tvs
+                             , ic_given = given
+                             , ic_wanted = wanted
+                             , ic_tclvl = tlvl
+                             , ic_info = info
+                             , ic_env = env }
+      = do { (nbinds, _) <- runTcS getTcEvBindsVar
+           ; cWc <- substWC subst wanted
+           ; return $ newImplication { ic_skols = tvs
+                                     , ic_tclvl = tlvl
+                                     , ic_given = map (substEvVar subst) given
+                                     , ic_wanted = cWc
+                                     , ic_info = substSkolemInfo subst info
+                                     , ic_env = env
+                                     , ic_binds = nbinds } }
+        where -- Taken from Inst.hs in 7.6.3
+              substSkolemInfo :: TCvSubst -> SkolemInfo -> SkolemInfo
+              substSkolemInfo subst (SigSkol cx ty nm)
+                = SigSkol cx (substTyAddInScope subst ty) nm
+              substSkolemInfo subst (InferSkol ids)
+                = InferSkol (mapSnd (substTyAddInScope subst) ids)
+              substSkolemInfo _     info            = info
+
+              substWC subst (WC simp impl) =
+                   WC (mapBag (substCt subst) simp) <$>
+                   mapBagM (cloneImplic subst) impl
+
+
+              substEvVar sub var = setVarType var
+                (substTyAddInScope sub $ varType var)
 
 
     -- This applies the given substitution to the given constraint.
-    applySubToCt :: TCvSubst -> Ct -> Ct
-    applySubToCt sub ct = ct {cc_ev = ev {ctev_pred = subbedPredType} }
-      where subbedPredType = substTy sub $ ctPred ct
+    substCt :: TCvSubst -> Ct -> Ct
+    substCt sub ct = ct {cc_ev = ev {ctev_pred = subbedPredType} }
+      where subbedPredType = substTyAddInScope sub $ ctPred ct
             ev = ctEvidence ct
-
-    applyCloning :: (TcType, [TcType])
-                 -> Type
-                 -> [Ct]
-                 -> TcM (TcType, [TcType], Type, [Ct], TCvSubst)
-    applyCloning (hole_ty, vars) typ cts
-     = do { (cloneSub, invSub) <- getHoleCloningSubst [hole_ty, typ]
-          ; let cHoleTy = substTy cloneSub hole_ty
-                cCts = map (applySubToCt cloneSub) cts
-                cVars = map (substTy cloneSub) vars
-                cTy = substTy cloneSub typ
-          ; return (cHoleTy, cVars, cTy, cCts, invSub)
-          }
 
     unfoldWrapper :: HsWrapper -> [Type]
     unfoldWrapper = reverse . unfWrp'
@@ -391,23 +407,37 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     -- then solve the subsumption check AND check that all other
     -- the other constraints were solved.
     fitsHole :: (TcType, [TcType]) -> Type -> TcM (Maybe ([TcType], [TcType]))
-    fitsHole hole_ty typ =
-      do { traceTc "checkingFitOf {" $ ppr typ
-         ; traceTc "tys before are: " $ ppr (hole_ty, typ)
+    fitsHole (h_ty,h_vars) ty =
+      do { traceTc "checkingFitOf {" $ ppr ty
+         ; traceTc "tys before are: " $ ppr (h_ty, ty)
+         ; traceTc "cvars are: " $ ppr h_vars
          ; traceTc "fvs are" $ ppr $
-             fvVarList $ tyCoFVsOfTypes [fst hole_ty, typ]
-         ; (cHoleTy, cVars, cTy, cCts, invSub)
-            <- applyCloning hole_ty typ relevantCts
+             fvVarList $ tyCoFVsOfTypes [h_ty , ty]
+         ; traceTc "holeLvl" $ ppr hole_lvl
+         -- We zonk in case the types refer to a filled type variable
+         ; z_ty <- zonkTcType ty
+         ; z_h_ty <- zonkTcType h_ty
+         -- We need to clone the type variables to avoid side effects
+         -- On the type variables in the hole during simplification
+         ; (cloneSub, invSub) <- getHoleCloningSubst [z_h_ty, z_ty]
+         ; z_cts <- mapM zonkCt relevantCts
+         ; let cHoleTy = substTyAddInScope cloneSub z_h_ty
+               cCts = map (substCt cloneSub) z_cts
+               cVars = map (substTyAddInScope cloneSub) h_vars
+               cTy = substTyAddInScope cloneSub z_ty
+         ; cImp <- mapM (cloneImplic cloneSub) implics
+         ; traceTc "sub is:" $ ppr cloneSub
          ; (absFits, (wrp, binds))
-            <- tcCheckHoleFit (listToBag cCts) cHoleTy cTy
+            <- tcCheckHoleFit (listToBag cCts) cImp cHoleTy cTy
          ; traceTc "Did it fit?" $ ppr absFits
          ; traceTc "tys after are:" $ ppr (cHoleTy, cTy)
          ; traceTc "binds are:" $ ppr binds
          ; traceTc "wrap is: " $ ppr wrp
+         ; traceTc "}" empty
         -- We apply the inverse substitution to match the cloned variables back
         -- to the originals
-         ; invSubbedWrp <- map (substTyAddInScope invSub)
-                             <$> zonkTcTypes (unfoldWrapper wrp)
+         ; zonkedWrpTys <- zonkTcTypes (unfoldWrapper wrp)
+         ; let invSubbedWrp = map (substTyAddInScope invSub) zonkedWrpTys
          -- We'd like to avoid refinement suggestions like `id _ _` or
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
@@ -419,17 +449,27 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
                      getMTy :: MetaDetails -> Maybe TcType
                      getMTy Flexi = Nothing
                      getMTy (Indirect t) = Just t
+
+                     fvsOfChecked = fvVarSet $ tyCoFVsOfType cHoleTy
+                     -- To be concrete matches, matches have to
+                     -- be more than just an invented type variable.
+                     notAbstract :: TcType -> Bool
+                     notAbstract t = case getTyVar_maybe t of
+                                       Just tv -> tv `elemVarSet` fvsOfChecked
+                                       _ -> True
                 ; matches <- mapM (fmap getMTy . readMetaTyVar) mtvs
-                ; allFilled <- goptM Opt_AbstractRefSubstitutions `orM`
-                               return (all isJust matches)
-                ; if allFilled
-                  then do { let ms = catMaybes matches
-                          ; invSubbedMs <- map (substTyAddInScope invSub)
-                                             <$> zonkTcTypes ms
-                          ; return $ Just (invSubbedWrp, invSubbedMs) }
-                  else return Nothing }
+                ; allowAbstract <- goptM Opt_AbstractRefSubstitutions
+                ; zonkedMatches <- zonkTcTypes $ catMaybes matches
+                ; let allFilled = all isJust matches
+                      allConcrete = all notAbstract zonkedWrpTys
+                      invSubbedMs = map (substTyAddInScope invSub) zonkedMatches
+                ; return $ if allowAbstract || (allFilled && allConcrete )
+                           then Just (invSubbedWrp, invSubbedMs)
+                           else Nothing }
             else return Nothing }
 
+    -- We zonk the substitutions so that the output aligns with the rest
+    -- of the typed hole error message output.
     zonkSubs :: TidyEnv -> [HoleFit] -> TcM (TidyEnv, [HoleFit])
     zonkSubs = zonkSubs' []
       where zonkSubs' zs env [] = return (env, reverse zs)
@@ -447,6 +487,7 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
     possiblyDiscard :: Maybe Int -> [HoleFit] -> (Bool, [HoleFit])
     possiblyDiscard (Just max) fits = (fits `lengthExceeds` max, take max fits)
     possiblyDiscard Nothing fits = (False, fits)
+
 
     -- Sort by size uses as a measure for relevance the sizes of the
     -- different types needed to instantiate the fit to the type of the hole.
@@ -470,7 +511,11 @@ findValidSubstitutions tidy_env implics simples ct | isExprHoleCt ct =
 
             tcSubsumesWCloning :: TcType -> TcType -> TcM Bool
             tcSubsumesWCloning ht ty =
-              do { (cht, _, cty, _, _) <- applyCloning (ht, []) ty []
+              do { z_ht <- zonkTcType ht
+                 ; z_ty <- zonkTcType ty
+                 ; (cloneSub, _) <- getHoleCloningSubst [z_ht, z_ty]
+                 ; let cht = substTyAddInScope cloneSub z_ht
+                       cty = substTyAddInScope cloneSub z_ty
                  ; setTcLevel hole_lvl $ tcSubsumes cht cty }
             go :: [(HoleFit, [HoleFit])] -> [HoleFit] -> TcM [HoleFit]
             go sofar [] = do { traceTc "subsumptionGraph was" $ ppr sofar
@@ -564,42 +609,39 @@ The hole in `f` would generate the message:
   • Relevant bindings include f :: [String] (bound at test.hs:6:1)
     Valid substitutions include
       lines :: String -> [String]
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘base-4.11.0.0:Data.OldList’))
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘base-4.11.0.0:Data.OldList’))
       words :: String -> [String]
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘base-4.11.0.0:Data.OldList’))
-      read :: forall a. Read a => String -> a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘Text.Read’))
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘base-4.11.0.0:Data.OldList’))
       inits :: forall a. [a] -> [[a]]
-        (imported from ‘Data.List’ at test.hs:3:19-23
-         (and originally defined in ‘base-4.11.0.0:Data.OldList’))
+        with inits @Char
+        (imported from ‘Data.List’ at mpt.hs:4:19-23
+          (and originally defined in ‘base-4.11.0.0:Data.OldList’))
       repeat :: forall a. a -> [a]
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.List’))
-      mempty :: forall a. Monoid a => a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
+        with repeat @String
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘GHC.List’))
       fail :: forall (m :: * -> *). Monad m => forall a. String -> m a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Base’))
-      error :: forall (a :: TYPE r). GHC.Stack.Types.HasCallStack => [Char] -> a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Err’))
-      errorWithoutStackTrace :: forall (a :: TYPE r). [Char] -> a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Err’))
-      undefined :: forall (a :: TYPE r). GHC.Stack.Types.HasCallStack => a
-        (imported from ‘Prelude’ at test.hs:1:8-11
-         (and originally defined in ‘GHC.Err’))
-
+        with fail @[] @String
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘GHC.Base’))
+      return :: forall (m :: * -> *). Monad m => forall a. a -> m a
+        with return @[] @String
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘GHC.Base’))
+      pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
+        with pure @[] @String
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘GHC.Base’))
+      read :: forall a. Read a => String -> a
+        with read @[String]
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘Text.Read’))
+      mempty :: forall a. Monoid a => a
+        with mempty @([Char] -> [String])
+        (imported from ‘Prelude’ at mpt.hs:3:8-9
+          (and originally defined in ‘GHC.Base’))
 
 Valid substitutions are found by checking top level identifiers in scope for
 whether their type is subsumed by the type of the hole. Additionally, as
@@ -612,13 +654,9 @@ variables are all mentioned by the type of the hole. Since checking for
 subsumption results in the side effect of type variables being unified by the
 simplifier, we need to take care to clone the variables in the hole and relevant
 constraints before checking whether an identifier fits into the hole, to avoid
-affecting the hole and later checks. When outputting, take the fits found for
-the hole and build a subsumption graph, where fit a and fit b are connected if
-a subsumes b. We then sort the graph topologically, and output the suggestions
-in that order. This is done in order to display "more relevant" suggestions
-first where the most specific suggestions (i.e. the ones that are subsumed by
-the other suggestions) appear first. This puts suggestions such as `error` and
-`undefined` last, as seen in the example above.
+affecting the hole and later checks. When outputting, we sort them by the
+size of the types we'd need to apply to the type to make it fit. This is done in
+order to display "more relevant" suggestions first.
 
 When the flag `-frefinement-level-substitutions=n` where `n > 0` is passed, we
 also look for valid refinement substitutions, i.e. substitutions that are valid,
@@ -631,32 +669,53 @@ Here the valid substitutions suggested will be (with the
 `-funclutter-valid-substitutions` flag set):
 
   Valid substitutions include
+
+  Valid substitutions include
     f :: [Integer] -> Integer
-    product :: forall (t :: * -> *).
-              Foldable t => forall a. Num a => t a -> a
-    sum :: forall (t :: * -> *).
-          Foldable t => forall a. Num a => t a -> a
-    maximum :: forall (t :: * -> *).
-              Foldable t => forall a. Ord a => t a -> a
-    minimum :: forall (t :: * -> *).
-              Foldable t => forall a. Ord a => t a -> a
     head :: forall a. [a] -> a
-    (Some substitutions suppressed;
-        use -fmax-valid-substitutions=N or -fno-max-valid-substitutions)
+    last :: forall a. [a] -> a
+    maximum :: forall (t :: * -> *).
+                Foldable t =>
+                forall a. Ord a => t a -> a
+    minimum :: forall (t :: * -> *).
+                Foldable t =>
+                forall a. Ord a => t a -> a
+    product :: forall (t :: * -> *).
+                Foldable t =>
+                forall a. Num a => t a -> a
+    sum :: forall (t :: * -> *).
+            Foldable t =>
+            forall a. Num a => t a -> a
 
 When the `-frefinement-level-substitutions=1` flag is given, we additionally
 compute and report valid refinement substitutions:
 
   Valid refinement substitutions include
-    foldl1 _ :: forall (t :: * -> *).
-                Foldable t => forall a. (a -> a -> a) -> t a -> a
-    foldr1 _ :: forall (t :: * -> *).
-                Foldable t => forall a. (a -> a -> a) -> t a -> a
-    head _ :: forall a. [a] -> a
-    last _ :: forall a. [a] -> a
-    error _ :: forall (a :: TYPE r).
-                GHC.Stack.Types.HasCallStack => [Char] -> a
-    errorWithoutStackTrace _ :: forall (a :: TYPE r). [Char] -> a
+
+    foldl1 (_ :: Integer -> Integer -> Integer)
+      with foldl1 @[] @Integer
+      where foldl1 :: forall (t :: * -> *).
+                      Foldable t =>
+                      forall a. (a -> a -> a) -> t a -> a
+    foldr1 (_ :: Integer -> Integer -> Integer)
+      with foldr1 @[] @Integer
+      where foldr1 :: forall (t :: * -> *).
+                      Foldable t =>
+                      forall a. (a -> a -> a) -> t a -> a
+    const (_ :: Integer)
+      with const @Integer @[Integer]
+      where const :: forall a b. a -> b -> a
+    ($) (_ :: [Integer] -> Integer)
+      with ($) @'GHC.Types.LiftedRep @[Integer] @Integer
+      where ($) :: forall a b. (a -> b) -> a -> b
+    fail (_ :: String)
+      with fail @((->) [Integer]) @Integer
+      where fail :: forall (m :: * -> *).
+                    Monad m =>
+                    forall a. String -> m a
+    return (_ :: Integer)
+      with return @((->) [Integer]) @Integer
+      where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
     (Some refinement substitutions suppressed;
       use -fmax-refinement-substitutions=N or -fno-max-refinement-substitutions)
 

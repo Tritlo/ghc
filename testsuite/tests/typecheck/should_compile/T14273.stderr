@@ -30,6 +30,7 @@ T14273.hs:7:32: warning: [-Wtyped-holes (in -Wdefault)]
         pleaseShow :: Bool -> a -> Maybe String (bound at T14273.hs:6:1)
       Constraints include Show a (from T14273.hs:5:1-49)
       Valid substitutions include
+        a :: a (bound at T14273.hs:7:17)
         k :: String (bound at T14273.hs:10:1)
         otherwise :: Bool
           (imported from ‘Prelude’ at T14273.hs:1:8-40

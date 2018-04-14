@@ -9,6 +9,7 @@ data Free f a = Pure a | Free (f (Free f a))
 instance Functor f => Functor (Free f) where
     fmap f = go where
       go (Pure a) =  Pure (f a)
+      -- Should suggest (fmap)
       go (Free fa) = Free (_a go fa)
 
 instance Functor f => Applicative (Free f) where
@@ -19,4 +20,5 @@ instance Functor f => Applicative (Free f) where
 
 instance Applicative f => Monad (Free f) where
     Pure a >>= f = f a
+      -- Should suggest ((=<< (_ :: a -> Free f b))
     Free f >>= g = Free (fmap _a f)

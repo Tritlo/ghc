@@ -10,7 +10,6 @@ T12177.hs:3:19: error:
     • Relevant bindings include
         x :: p1 (bound at T12177.hs:3:14)
         bar :: p -> p1 -> t (bound at T12177.hs:3:1)
-      Valid substitutions include x :: p1 (bound at T12177.hs:3:14)
 
 T12177.hs:5:37: error:
     • Found hole: _ :: t
@@ -25,7 +24,3 @@ T12177.hs:5:37: error:
         x :: p3 (bound at T12177.hs:5:26)
         y :: p1 (bound at T12177.hs:5:14)
         baz :: p -> p1 -> p2 -> p3 -> p4 -> t (bound at T12177.hs:5:1)
-      Valid substitutions include
-        y :: p1 (bound at T12177.hs:5:14)
-        x :: p3 (bound at T12177.hs:5:26)
-        z :: p4 (bound at T12177.hs:5:32)

@@ -21,7 +21,6 @@ valid_substitutions.hs:17:17: warning: [-Wtyped-holes (in -Wdefault)]
         x :: Int (bound at valid_substitutions.hs:16:12)
         c :: Int -> IO Int (bound at valid_substitutions.hs:16:1)
       Valid substitutions include
-        x :: Int (bound at valid_substitutions.hs:16:12)
         c :: Int -> IO Int (bound at valid_substitutions.hs:16:1)
         a :: Int -> IO Int (bound at valid_substitutions.hs:12:1)
         b :: Int -> IO Int (bound at valid_substitutions.hs:14:1)

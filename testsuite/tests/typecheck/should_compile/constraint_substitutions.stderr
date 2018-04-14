@@ -59,51 +59,7 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where head :: forall a. [a] -> a
         last (_ :: [[a] -> a])
           where last :: forall a. [a] -> a
-        (.) (_ :: b1 -> a) (_ :: [a] -> b1)
-          where (.) :: forall b c a. (b -> c) -> (a -> b) -> a -> c
         asTypeOf (_ :: [a] -> a) (_ :: [a] -> a)
           where asTypeOf :: forall a. a -> a -> a
         (!!) (_ :: [[a] -> a]) (_ :: Int)
           where (!!) :: forall a. [a] -> Int -> a
-        fst (_ :: ([a] -> a, b0))
-          where fst :: forall a b. (a, b) -> a
-        snd (_ :: (a0, [a] -> a))
-          where snd :: forall a b. (a, b) -> b
-        (>>=) (_ :: [a] -> a7) (_ :: a7 -> [a] -> a)
-          where (>>=) :: forall (m :: * -> *).
-                         Monad m =>
-                         forall a b. m a -> (a -> m b) -> m b
-        (>>) (_ :: [a] -> a6) (_ :: [a] -> a)
-          where (>>) :: forall (m :: * -> *).
-                        Monad m =>
-                        forall a b. m a -> m b -> m b
-        fmap (_ :: a8 -> a) (_ :: [a] -> a8)
-          where fmap :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. (a -> b) -> f a -> f b
-        (<*>) (_ :: [a] -> a4 -> a) (_ :: [a] -> a4)
-          where (<*>) :: forall (f :: * -> *).
-                         Applicative f =>
-                         forall a b. f (a -> b) -> f a -> f b
-        (*>) (_ :: [a] -> a3) (_ :: [a] -> a)
-          where (*>) :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a b. f a -> f b -> f b
-        (<$>) (_ :: a1 -> a) (_ :: [a] -> a1)
-          where (<$>) :: forall (f :: * -> *) a b.
-                         Functor f =>
-                         (a -> b) -> f a -> f b
-        (=<<) (_ :: a5 -> [a] -> a) (_ :: [a] -> a5)
-          where (=<<) :: forall (m :: * -> *) a b.
-                         Monad m =>
-                         (a -> m b) -> m a -> m b
-        (<*) (_ :: [a] -> a) (_ :: [a] -> b4)
-          where (<*) :: forall (f :: * -> *).
-                        Applicative f =>
-                        forall a b. f a -> f b -> f a
-        (<$) (_ :: a) (_ :: [a] -> b3)
-          where (<$) :: forall (f :: * -> *).
-                        Functor f =>
-                        forall a b. a -> f b -> f a
-        uncurry (_ :: a2 -> b2 -> [a] -> a) (_ :: (a2, b2))
-          where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c

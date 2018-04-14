@@ -59,7 +59,7 @@ import ErrUtils      ( emptyMessages )
 import qualified GHC.LanguageExtensions as LangExt
 
 import Control.Monad
-import Data.Foldable      ( toList )
+import Data.Foldable      ( toList, foldl' )
 import Data.List          ( partition )
 import Data.List.NonEmpty ( NonEmpty(..) )
 import Maybes             ( isJust )
@@ -515,32 +515,39 @@ simplifyDefault theta
 -- N.B.: Make sure that the types contain all the constraints
 -- contained in any associated implications.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag ty_a ty_b
+tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag [] ty_a ty_b
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
 -- perform unification.
 tcCheckHoleFit :: Cts         -- Any relevant Cts to the hole.
+               -> [Implication] -- The nested implications of the hole
                -> TcSigmaType -- The type of the hole.
                -> TcSigmaType -- The type to check whether fits.
                -> TcM (Bool, (HsWrapper, EvBindMap))
-tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty
+tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty
     = return (True, (idHsWrapper, emptyEvBindMap))
-tcCheckHoleFit relevantCts hole_ty ty = discardErrs $
- do {  (_, wanted, wrp) <- pushLevelAndCaptureConstraints $
-                           tcSubType_NC ExprSigCtxt ty hole_ty
+tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
+ do { (wrp, wanted) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
     ; traceTc "Checking hole fit {" empty
     ; traceTc "wanteds are: " $ ppr wanted
-    ; (rem, binds) <- pushTcLevelM_ $
-                        runTcS $ simpl_top $ addSimples wanted relevantCts
-    -- We don't want any insoluble or simple constraints left,
-    -- but solved implications are ok (and neccessary for e.g. undefined)
-    ; traceTc "rems was:" $ ppr rem
-    ; traceTc "}" empty
-    ; return (checkIfOK rem, (wrp, binds) ) }
+    ; let w_rel_cts = addSimples wanted relevantCts
+          w_givens = foldl' setWC w_rel_cts implics
+    ; traceTc "w_givens are: " $ ppr w_givens
+    ; if isEmptyWC w_rel_cts
+      then traceTc "}" empty >> return (True, (wrp, emptyEvBindMap))
+      else do { (rem, binds) <- runTcS $ simpl_top w_givens
+              -- We don't want any insoluble or simple constraints left,
+              -- but solved implications are ok (and neccessary for e.g.
+              -- undefined)
+              ; traceTc "rems was:" $ ppr rem
+              ; traceTc "}" empty
+              ; return (checkIfOK rem, (wrp, binds) ) } }
     where
       checkIfOK (WC simpl impl) =
         (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)
+      setWC :: WantedConstraints -> Implication -> WantedConstraints
+      setWC wc imp = WC emptyBag (unitBag $ imp {ic_wanted = wc})
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool
