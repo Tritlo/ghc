@@ -11333,24 +11333,28 @@ Sorting can be toggled with :ghc-flag:`-fsort-valid-substitutions`
     toggled off with this flag.
 
 .. ghc-flag:: -fsort-by-size-substitutions
-    :shortdesc: The default sort. Sorts by how big the types the quantified type variables
-       in the type of the function would have to be in order to match the type of the hole.
+    :shortdesc: Sort valid substitutions by size.
     :type: dynamic
     :reverse: -fno-sort-by-size-substitutions
 
     :default: on
 
+    Sorts by how big the types the quantified type variables in the type of the
+    function would have to be in order to match the type of the hole.
+
 
 .. ghc-flag:: -fsort-by-subsumption-substitutions
-    :shortdesc: An alternative sort. Sorts by checking which substitutions subsume other
-       substitutions, such that if substitution a could be used as substitutions for
-       substitution b, then b appears before a in the output. It is more precise than
-       the default sort, but also a lot slower, since a subsumption check has to be
-       run for each pair of valid substitutions.
+    :shortdesc: Sort valid substitutions by subsumption.
     :type: dynamic
     :reverse: -fno-sort-by-subsumption-substitutions
 
     :default: off
+
+    An alternative sort. Sorts by checking which substitutions subsume other
+    substitutions, such that if substitution a could be used as substitutions for
+    substitution b, then b appears before a in the output. It is more precise than
+    the default sort, but also a lot slower, since a subsumption check has to be
+    run for each pair of valid substitutions.
 
 .. _partial-type-signatures:
 
