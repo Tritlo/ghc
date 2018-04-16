@@ -1633,7 +1633,7 @@ setImplicationStatus implic@(Implic { ic_status    = status
                                     , ic_given     = givens })
  | ASSERT2( not (isSolvedStatus status ), ppr info )
    -- Precondition: we only set the status if it is not already solved
-   isSolvedWC pruned_wc
+   not (isSolvedWC pruned_wc)
  = do { traceTcS "setImplicationStatus(not-all-solved) {" (ppr implic)
 
       ; implic <- neededEvVars implic
