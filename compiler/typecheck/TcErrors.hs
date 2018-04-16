@@ -63,7 +63,7 @@ import Data.Foldable    ( toList )
 import Data.List        ( partition, mapAccumL, nub, sortBy, unfoldr )
 import qualified Data.Set as Set
 
-import {-# SOURCE #-} TcValidSubstitutions ( findValidSubstitutions )
+import {-# SOURCE #-} TcHoleErrors ( findValidHoleSubstitutions )
 
 import Data.Semigroup   ( Semigroup )
 import qualified Data.Semigroup as Semigroup
@@ -1121,7 +1121,7 @@ mkHoleError tidy_simples ctxt ct@(CHoleCan { cc_hole = hole })
 
        ; show_valid_substitutions <- goptM Opt_ShowValidSubstitutions
        ; (ctxt, sub_msg) <- if show_valid_substitutions
-                            then validSubstitutions ctxt tidy_simples ct
+                            then validHoleSubstitutions ctxt tidy_simples ct
                             else return (ctxt, empty)
        ; mkErrorMsgFromCt ctxt ct $
             important hole_msg `mappend`
@@ -1185,9 +1185,17 @@ mkHoleError _ _ ct = pprPanic "mkHoleError" (ppr ct)
 
 -- We unwrap the ReportErrCtxt here, to avoid introducing a loop in module
 -- imports
-validSubstitutions :: ReportErrCtxt -> [Ct] -> Ct -> TcM (ReportErrCtxt, SDoc)
-validSubstitutions ctxt@(CEC {cec_encl = implics, cec_tidy = lcl_env}) simps ct
-  = do { (tidy_env, msg) <- findValidSubstitutions lcl_env implics simps ct
+validHoleSubstitutions :: ReportErrCtxt -- The context we're in, i.e. the
+                                        -- implications and the tidy environment
+                       -> [Ct]          -- Unsolved simple constraints
+                       -> Ct            -- The hole constraint.
+                       -> TcM (ReportErrCtxt, SDoc) -- We return the new context
+                                                    -- with a possibly updated
+                                                    -- tidy environment, and
+                                                    -- the message.
+validHoleSubstitutions ctxt@(CEC {cec_encl = implics
+                             , cec_tidy = lcl_env}) simps ct
+  = do { (tidy_env, msg) <- findValidHoleSubstitutions lcl_env implics simps ct
        ; return (ctxt {cec_tidy = tidy_env}, msg) }
 
 -- See Note [Constraints include ...]

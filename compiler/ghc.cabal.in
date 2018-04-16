@@ -465,7 +465,7 @@ Library
         TcRnTypes
         TcRules
         TcSimplify
-        TcValidSubstitutions
+        TcHoleErrors
         TcErrors
         TcTyClsDecls
         TcTyDecls

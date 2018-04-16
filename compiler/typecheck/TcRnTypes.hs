@@ -933,8 +933,15 @@ instance HasOccName TcBinder where
     occName (TcIdBndr_ExpType name _ _) = occName name
     occName (TcTvBndr name _)           = occName name
 
----- fixes #12177
----- builds up a list of bindings whose OccName has not been seen before
+-- fixes #12177
+-- Builds up a list of bindings whose OccName has not been seen before
+-- i.e., If    ys  = removeBindingShadowing xs
+-- then
+--  - ys is obtained from xs by deleting some elements
+--  - ys has no duplicate OccNames
+--  - The first duplicated OccName in xs is retained in ys
+-- Overloaded so that it can be used for both GlobalRdrElt in typed-hole
+-- substitutions and TcBinder when looking for relevant bindings.
 removeBindingShadowing :: HasOccName a => [a] -> [a]
 removeBindingShadowing bindings = reverse $ fst $ foldl
     (\(bindingAcc, seenNames) binding ->

@@ -517,6 +517,10 @@ simplifyDefault theta
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
 tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag [] ty_a ty_b
 
+-- SPJ:                                                                          arc lint
+-- This function is so specific to typed holes I'd put it in TcVaildSubstitutions.
+-- What is this "relevant Cts" business? Example?
+
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. Make sure that the constraints are cloned, since the simplifier may
 -- perform unification.
@@ -524,9 +528,9 @@ tcCheckHoleFit :: Cts         -- Any relevant Cts to the hole.
                -> [Implication] -- The nested implications of the hole
                -> TcSigmaType -- The type of the hole.
                -> TcSigmaType -- The type to check whether fits.
-               -> TcM (Bool, (HsWrapper, EvBindMap))
+               -> TcM (Bool, HsWrapper)
 tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty
-    = return (True, (idHsWrapper, emptyEvBindMap))
+    = return (True, idHsWrapper)
 tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
  do { (wrp, wanted) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
     ; traceTc "Checking hole fit {" empty
@@ -535,19 +539,25 @@ tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
           w_givens = foldl' setWC w_rel_cts implics
     ; traceTc "w_givens are: " $ ppr w_givens
     ; if isEmptyWC w_rel_cts
-      then traceTc "}" empty >> return (True, (wrp, emptyEvBindMap))
-      else do { (rem, binds) <- runTcS $ simpl_top w_givens
+      then traceTc "}" empty >> return (True, wrp)
+      else do { rem <- runTcSDeriveds $ simpl_top w_givens
               -- We don't want any insoluble or simple constraints left,
               -- but solved implications are ok (and neccessary for e.g.
               -- undefined)
               ; traceTc "rems was:" $ ppr rem
               ; traceTc "}" empty
-              ; return (checkIfOK rem, (wrp, binds) ) } }
+              ; return (isSolvedWC rem, wrp) } }
     where
-      checkIfOK (WC simpl impl) =
-        (isEmptyBag simpl && allBag (isSolvedStatus . ic_status) impl)
       setWC :: WantedConstraints -> Implication -> WantedConstraints
-      setWC wc imp = WC emptyBag (unitBag $ imp {ic_wanted = wc})
+      setWC wc imp = WC { wc_simple = emptyBag
+                        , wc_impl = unitBag $ imp {ic_wanted = wc} }
+
+-- | Checks whether a the given wanted constraints are solved, i.e.
+-- that there are no simple constraints left and all the implications
+-- are solved.
+isSolvedWC :: WantedConstraints -> Bool
+isSolvedWC WC {wc_simple = wc_simple, wc_impl = wc_impl} =
+  isEmptyBag wc_simple && allBag (isSolvedStatus . ic_status) wc_impl
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool
@@ -1623,7 +1633,7 @@ setImplicationStatus implic@(Implic { ic_status    = status
                                     , ic_given     = givens })
  | ASSERT2( not (isSolvedStatus status ), ppr info )
    -- Precondition: we only set the status if it is not already solved
-   not all_solved
+   isSolvedWC pruned_wc
  = do { traceTcS "setImplicationStatus(not-all-solved) {" (ppr implic)
 
       ; implic <- neededEvVars implic
@@ -1678,9 +1688,6 @@ setImplicationStatus implic@(Implic { ic_status    = status
    pruned_implics = filterBag keep_me implics
    pruned_wc = WC { wc_simple = pruned_simples
                   , wc_impl   = pruned_implics }
-
-   all_solved = isEmptyBag pruned_simples
-             && allBag (isSolvedStatus . ic_status) pruned_implics
 
    keep_me :: Implication -> Bool
    keep_me ic
