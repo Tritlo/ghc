@@ -31,9 +31,10 @@ EOF
         ;;
 
     "test")
-        make test THREADS=$THREADS
         make binary-dist
-        7z a ghc-windows.zip *.tar.xz
+        curl https://ghc-artifacts.s3.amazonaws.com/tools/ghc-artifact-collector-x86_64-windows --output ghc-artifact-collector
+        ./ghc-artifact-collector *.tar.xz
+        make test THREADS=$THREADS
         ;;
 
     *)

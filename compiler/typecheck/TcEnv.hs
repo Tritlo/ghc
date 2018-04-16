@@ -663,8 +663,8 @@ getTypeSigNames sigs
     get_type_sig :: LSig GhcRn -> NameSet -> NameSet
     get_type_sig sig ns =
       case sig of
-        L _ (TypeSig names _) -> extendNameSetList ns (map unLoc names)
-        L _ (PatSynSig names _) -> extendNameSetList ns (map unLoc names)
+        L _ (TypeSig _ names _) -> extendNameSetList ns (map unLoc names)
+        L _ (PatSynSig _ names _) -> extendNameSetList ns (map unLoc names)
         _ -> ns
 
 
@@ -898,10 +898,12 @@ data InstBindings a
            --          Used only to improve error messages
       }
 
-instance (SourceTextX a, OutputableBndrId a) => Outputable (InstInfo a) where
+instance (OutputableBndrId (GhcPass a))
+       => Outputable (InstInfo (GhcPass a)) where
     ppr = pprInstInfoDetails
 
-pprInstInfoDetails :: (SourceTextX a, OutputableBndrId a) => InstInfo a -> SDoc
+pprInstInfoDetails :: (OutputableBndrId (GhcPass a))
+                   => InstInfo (GhcPass a) -> SDoc
 pprInstInfoDetails info
    = hang (pprInstanceHdr (iSpec info) <+> text "where")
         2 (details (iBinds info))
