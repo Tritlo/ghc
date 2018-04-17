@@ -564,7 +564,7 @@ data GeneralFlag
    | Opt_PprCaseAsLet
    | Opt_PprShowTicks
    | Opt_ShowHoleConstraints
-    -- Options relating to the display of valid substitutions
+    -- Options relating to the display of valid hole fits
     -- when generating an error message for a typed hole
     -- See Note [Valid hole fits include] in TcHoleErrors.hs
    | Opt_ShowValidHoleFits
