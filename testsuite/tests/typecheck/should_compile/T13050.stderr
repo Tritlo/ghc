@@ -8,7 +8,7 @@ T13050.hs:4:9: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T13050.hs:4:5)
         x :: Int (bound at T13050.hs:4:3)
         f :: Int -> Int -> Int (bound at T13050.hs:4:1)
-      Valid substitutions include
+      Valid hole fits include
         f :: Int -> Int -> Int (bound at T13050.hs:4:1)
         g :: Int -> Int -> Int (bound at T13050.hs:5:1)
         q :: Int -> Int -> Int (bound at T13050.hs:6:1)
@@ -94,7 +94,7 @@ T13050.hs:5:11: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T13050.hs:5:5)
         x :: Int (bound at T13050.hs:5:3)
         g :: Int -> Int -> Int (bound at T13050.hs:5:1)
-      Valid substitutions include
+      Valid hole fits include
         g :: Int -> Int -> Int (bound at T13050.hs:5:1)
         f :: Int -> Int -> Int (defined at T13050.hs:4:1)
         q :: Int -> Int -> Int (bound at T13050.hs:6:1)
@@ -181,7 +181,7 @@ T13050.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T13050.hs:6:5)
         x :: Int (bound at T13050.hs:6:3)
         q :: Int -> Int -> Int (bound at T13050.hs:6:1)
-      Valid substitutions include
+      Valid hole fits include
         q :: Int -> Int -> Int (bound at T13050.hs:6:1)
         f :: Int -> Int -> Int (defined at T13050.hs:4:1)
         g :: Int -> Int -> Int (defined at T13050.hs:5:1)

@@ -8,7 +8,7 @@ T14590.hs:4:13: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T14590.hs:4:6)
         x :: Int (bound at T14590.hs:4:4)
         f1 :: Int -> Int -> Int (bound at T14590.hs:4:1)
-      Valid substitutions include
+      Valid hole fits include
         f1 :: Int -> Int -> Int (bound at T14590.hs:4:1)
         f2 :: Int -> Int -> Int (bound at T14590.hs:5:1)
         f3 :: Int -> Int -> Int (bound at T14590.hs:6:1)
@@ -96,7 +96,7 @@ T14590.hs:5:13: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T14590.hs:5:6)
         x :: Int (bound at T14590.hs:5:4)
         f2 :: Int -> Int -> Int (bound at T14590.hs:5:1)
-      Valid substitutions include
+      Valid hole fits include
         f2 :: Int -> Int -> Int (bound at T14590.hs:5:1)
         f1 :: Int -> Int -> Int (defined at T14590.hs:4:1)
         f3 :: Int -> Int -> Int (bound at T14590.hs:6:1)
@@ -183,7 +183,7 @@ T14590.hs:6:11: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T14590.hs:6:6)
         x :: Int (bound at T14590.hs:6:4)
         f3 :: Int -> Int -> Int (bound at T14590.hs:6:1)
-      Valid substitutions include
+      Valid hole fits include
         f3 :: Int -> Int -> Int (bound at T14590.hs:6:1)
         f1 :: Int -> Int -> Int (defined at T14590.hs:4:1)
         f2 :: Int -> Int -> Int (defined at T14590.hs:5:1)
@@ -271,7 +271,7 @@ T14590.hs:7:11: warning: [-Wtyped-holes (in -Wdefault)]
         y :: Int (bound at T14590.hs:7:6)
         x :: Int (bound at T14590.hs:7:4)
         f4 :: Int -> Int -> Int (bound at T14590.hs:7:1)
-      Valid substitutions include
+      Valid hole fits include
         f4 :: Int -> Int -> Int (bound at T14590.hs:7:1)
         f1 :: Int -> Int -> Int (defined at T14590.hs:4:1)
         f2 :: Int -> Int -> Int (defined at T14590.hs:5:1)

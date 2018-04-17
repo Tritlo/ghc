@@ -564,17 +564,17 @@ data GeneralFlag
    | Opt_PprCaseAsLet
    | Opt_PprShowTicks
    | Opt_ShowHoleConstraints
-   -- Options relating to the display of valid substitutions
-   | Opt_ShowValidSubstitutions
-   | Opt_SortValidSubstitutions
-   | Opt_SortBySizeSubstitutions
-   | Opt_SortBySubsumSubstitutions
-   | Opt_AbstractRefSubstitutions
-   | Opt_UnclutterValidSubstitutions
-   | Opt_ShowTypeAppOfSubstitutions
-   | Opt_ShowTypeOfSubstitutions
-   | Opt_ShowProvOfSubstitutions
-   | Opt_ShowMatchesOfSubstitutions
+   -- Options relating to the display of valid hole fits
+   | Opt_ShowValidHoleFits
+   | Opt_SortValidHoleFits
+   | Opt_SortBySizeHoleFits
+   | Opt_SortBySubsumHoleFits
+   | Opt_AbstractRefHoleFits
+   | Opt_UnclutterValidHoleFits
+   | Opt_ShowTypeAppOfHoleFits
+   | Opt_ShowTypeOfHoleFits
+   | Opt_ShowProvOfHoleFits
+   | Opt_ShowMatchesOfHoleFits
 
    | Opt_ShowLoadedModules
    | Opt_HexWordLiterals -- See Note [Print Hexadecimal Literals]
@@ -855,14 +855,14 @@ data DynFlags = DynFlags {
 
   maxRelevantBinds      :: Maybe Int,   -- ^ Maximum number of bindings from the type envt
                                         --   to show in type error messages
-  maxValidSubstitutions :: Maybe Int,   -- ^ Maximum number of substitutions to
-                                        --   show in typed hole error messages
-  maxRefSubstitutions   :: Maybe Int,   -- ^ Maximum number of refinement
-                                        --   substitutions to show in typed hole
+  maxValidHoleFits      :: Maybe Int,   -- ^ Maximum number of hole fits to show
+                                        --   in typed hole error messages
+  maxRefHoleFits        :: Maybe Int,   -- ^ Maximum number of refinement hole
+                                        --   fits to show in typed hole error
+                                        --   messages
+  refLevelHoleFits      :: Maybe Int,   -- ^ Maximum level of refinement for
+                                        --   refinement hole fits in typed hole
                                         --   error messages
-  refLevelSubstitutions :: Maybe Int,   -- ^ Maximum level of refinement for
-                                        --   refinement substitutions in typed
-                                        --   typed hole error messages
   maxUncoveredPatterns  :: Int,         -- ^ Maximum number of unmatched patterns to show
                                         --   in non-exhaustiveness warnings
   simplTickFactor       :: Int,         -- ^ Multiplier for simplifier ticks
@@ -1743,9 +1743,9 @@ defaultDynFlags mySettings myLlvmTargets =
         ruleCheck               = Nothing,
         inlineCheck             = Nothing,
         maxRelevantBinds        = Just 6,
-        maxValidSubstitutions   = Just 6,
-        maxRefSubstitutions     = Just 6,
-        refLevelSubstitutions   = Nothing,
+        maxValidHoleFits   = Just 6,
+        maxRefHoleFits     = Just 6,
+        refLevelHoleFits   = Nothing,
         maxUncoveredPatterns    = 4,
         simplTickFactor         = 100,
         specConstrThreshold     = Just 2000,
@@ -3377,18 +3377,20 @@ dynamic_flags_deps = [
       (intSuffix (\n d -> d { maxRelevantBinds = Just n }))
   , make_ord_flag defFlag "fno-max-relevant-binds"
       (noArg (\d -> d { maxRelevantBinds = Nothing }))
-  , make_ord_flag defFlag "fmax-valid-substitutions"
-      (intSuffix (\n d -> d { maxValidSubstitutions = Just n }))
-  , make_ord_flag defFlag "fno-max-valid-substitutions"
-      (noArg (\d -> d { maxValidSubstitutions = Nothing }))
-  , make_ord_flag defFlag "fmax-refinement-substitutions"
-      (intSuffix (\n d -> d { maxRefSubstitutions = Just n }))
-  , make_ord_flag defFlag "fno-max-refinement-substitutions"
-      (noArg (\d -> d { maxRefSubstitutions = Nothing }))
-  , make_ord_flag defFlag "frefinement-level-substitutions"
-      (intSuffix (\n d -> d { refLevelSubstitutions = Just n }))
-  , make_ord_flag defFlag "fno-refinement-level-substitutions"
-      (noArg (\d -> d { refLevelSubstitutions = Nothing }))
+
+  , make_ord_flag defFlag "fmax-valid-hole-fits"
+      (intSuffix (\n d -> d { maxValidHoleFits = Just n }))
+  , make_ord_flag defFlag "fno-max-valid-hole-fits"
+      (noArg (\d -> d { maxValidHoleFits = Nothing }))
+  , make_ord_flag defFlag "fmax-refinement-hole-fits"
+      (intSuffix (\n d -> d { maxRefHoleFits = Just n }))
+  , make_ord_flag defFlag "fno-max-refinement-hole-fits"
+      (noArg (\d -> d { maxRefHoleFits = Nothing }))
+  , make_ord_flag defFlag "frefinement-level-hole-fits"
+      (intSuffix (\n d -> d { refLevelHoleFits = Just n }))
+  , make_ord_flag defFlag "fno-refinement-level-hole-fits"
+      (noArg (\d -> d { refLevelHoleFits = Nothing }))
+
   , make_ord_flag defFlag "fmax-uncovered-patterns"
       (intSuffix (\n d -> d { maxUncoveredPatterns = n }))
   , make_ord_flag defFlag "fsimplifier-phases"
@@ -4008,16 +4010,18 @@ fFlagsDeps = [
   flagSpec "show-warning-groups"              Opt_ShowWarnGroups,
   flagSpec "hide-source-paths"                Opt_HideSourcePaths,
   flagSpec "show-hole-constraints"            Opt_ShowHoleConstraints,
-  flagSpec "show-valid-substitutions"         Opt_ShowValidSubstitutions,
-  flagSpec "sort-valid-substitutions"         Opt_SortValidSubstitutions,
-  flagSpec "sort-by-size-substitutions"         Opt_SortBySizeSubstitutions,
-  flagSpec "sort-by-subsumption-substitutions"  Opt_SortBySubsumSubstitutions,
-  flagSpec "abstract-refinement-substitutions"  Opt_AbstractRefSubstitutions,
-  flagSpec "unclutter-valid-substitutions"      Opt_UnclutterValidSubstitutions,
-  flagSpec "show-type-app-of-substitutions"     Opt_ShowTypeAppOfSubstitutions,
-  flagSpec "show-type-of-substitutions"         Opt_ShowTypeOfSubstitutions,
-  flagSpec "show-provenance-of-substitutions"   Opt_ShowProvOfSubstitutions,
-  flagSpec "show-hole-matches-of-substitutions" Opt_ShowMatchesOfSubstitutions,
+  depFlagSpec' "show-valid-substitutions"     Opt_ShowValidHoleFits
+   (useInstead "-f" "show-valid-hole-fits"),
+  flagSpec "show-valid-hole-fits"             Opt_ShowValidHoleFits,
+  flagSpec "sort-valid-hole-fits"             Opt_SortValidHoleFits,
+  flagSpec "sort-by-size-hole-fits"           Opt_SortBySizeHoleFits,
+  flagSpec "sort-by-subsumption-hole-fits"    Opt_SortBySubsumHoleFits,
+  flagSpec "abstract-refinement-hole-fits"    Opt_AbstractRefHoleFits,
+  flagSpec "unclutter-valid-hole-fits"        Opt_UnclutterValidHoleFits,
+  flagSpec "show-type-app-of-hole-fits"       Opt_ShowTypeAppOfHoleFits,
+  flagSpec "show-type-of-hole-fits"           Opt_ShowTypeOfHoleFits,
+  flagSpec "show-provenance-of-hole-fits"     Opt_ShowProvOfHoleFits,
+  flagSpec "show-hole-matches-of-hole-fits"   Opt_ShowMatchesOfHoleFits,
   flagSpec "show-loaded-modules"              Opt_ShowLoadedModules,
   flagSpec "whole-archive-hs-libs"            Opt_WholeArchiveHsLibs
   ]
@@ -4275,26 +4279,26 @@ defaultFlags settings
     ++ default_PIC platform
 
     ++ concatMap (wayGeneralFlags platform) (defaultWays settings)
-    ++ validSubstitutionDefaults
+    ++ validHoleFitDefaults
 
     where platform = sTargetPlatform settings
 
-validSubstitutionDefaults :: [GeneralFlag]
-validSubstitutionDefaults
-  =  [ Opt_ShowTypeAppOfSubstitutions
-     , Opt_ShowTypeOfSubstitutions
-     , Opt_ShowProvOfSubstitutions
-     , Opt_ShowMatchesOfSubstitutions
-     , Opt_ShowValidSubstitutions
-     , Opt_SortValidSubstitutions
-     , Opt_SortBySizeSubstitutions
+validHoleFitDefaults :: [GeneralFlag]
+validHoleFitDefaults
+  =  [ Opt_ShowTypeAppOfHoleFits
+     , Opt_ShowTypeOfHoleFits
+     , Opt_ShowProvOfHoleFits
+     , Opt_ShowMatchesOfHoleFits
+     , Opt_ShowValidHoleFits
+     , Opt_SortValidHoleFits
+     , Opt_SortBySizeHoleFits
      , Opt_ShowHoleConstraints ]
 
 
-validSubstitutionsImpliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]
-validSubstitutionsImpliedGFlags
-  = [ (Opt_UnclutterValidSubstitutions, turnOff, Opt_ShowTypeAppOfSubstitutions)
-    , (Opt_UnclutterValidSubstitutions, turnOff, Opt_ShowProvOfSubstitutions) ]
+validHoleFitsImpliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]
+validHoleFitsImpliedGFlags
+  = [ (Opt_UnclutterValidHoleFits, turnOff, Opt_ShowTypeAppOfHoleFits)
+    , (Opt_UnclutterValidHoleFits, turnOff, Opt_ShowProvOfHoleFits) ]
 
 default_PIC :: Platform -> [GeneralFlag]
 default_PIC platform =
@@ -4314,7 +4318,7 @@ impliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]
 impliedGFlags = [(Opt_DeferTypeErrors, turnOn, Opt_DeferTypedHoles)
                 ,(Opt_DeferTypeErrors, turnOn, Opt_DeferOutOfScopeVariables)
                 ,(Opt_Strictness, turnOn, Opt_WorkerWrapper)
-                ] ++ validSubstitutionsImpliedGFlags
+                ] ++ validHoleFitsImpliedGFlags
 
 -- General flags that are switched on/off when other general flags are switched
 -- off

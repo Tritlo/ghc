@@ -6,7 +6,7 @@ T14884.hs:4:5: error:
       In the expression: _ print "abc"
       In an equation for ‘x’: x = _ print "abc"
     • Relevant bindings include x :: IO () (bound at T14884.hs:4:1)
-      Valid substitutions include
+      Valid hole fits include
         mapM_ :: forall (t :: * -> *) (m :: * -> *) a b.
                  (Foldable t, Monad m) =>
                  (a -> m b) -> t a -> m ()

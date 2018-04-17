@@ -1,12 +1,12 @@
 
-abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
+abstract_refinement_hole_fits.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: [Integer] -> Integer
     • In the expression: _
       In an equation for ‘f’: f = _
     • Relevant bindings include
         f :: [Integer] -> Integer
-          (bound at abstract_refinement_substitutions.hs:4:1)
-      Valid substitutions include
+          (bound at abstract_refinement_hole_fits.hs:4:1)
+      Valid hole fits include
         f :: [Integer] -> Integer
         g :: [Integer] -> Integer
         head :: forall a. [a] -> a
@@ -23,7 +23,7 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
         sum :: forall (t :: * -> *).
                Foldable t =>
                forall a. Num a => t a -> a
-      Valid refinement substitutions include
+      Valid refinement hole fits include
         foldl1 (_ :: Integer -> Integer -> Integer)
           where foldl1 :: forall (t :: * -> *).
                           Foldable t =>
@@ -44,7 +44,7 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where const :: forall a b. a -> b -> a
         ($) (_ :: [Integer] -> Integer)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: String)
+        fail (_ :: [Char])
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
@@ -118,13 +118,13 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
                         forall a b. a -> f b -> f a
         ($) (_ :: a5 -> [Integer] -> Integer) (_ :: a5)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: String)
+        fail (_ :: [Char]) (_ :: t0)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
-        return (_ :: [Integer] -> Integer)
+        return (_ :: [Integer] -> Integer) (_ :: t0)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        pure (_ :: [Integer] -> Integer)
+        pure (_ :: [Integer] -> Integer) (_ :: t0)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
@@ -132,30 +132,30 @@ abstract_refinement_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)
           where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
         ($!) (_ :: a6 -> [Integer] -> Integer) (_ :: a6)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t0 -> [Integer] -> Integer)
+        id (_ :: t0 -> [Integer] -> Integer) (_ :: t0)
           where id :: forall a. a -> a
-        head (_ :: [t0 -> [Integer] -> Integer])
+        head (_ :: [t0 -> [Integer] -> Integer]) (_ :: t0)
           where head :: forall a. [a] -> a
-        last (_ :: [t0 -> [Integer] -> Integer])
+        last (_ :: [t0 -> [Integer] -> Integer]) (_ :: t0)
           where last :: forall a. [a] -> a
-        fst (_ :: (t0 -> [Integer] -> Integer, b2))
+        fst (_ :: (t0 -> [Integer] -> Integer, b2)) (_ :: t0)
           where fst :: forall a b. (a, b) -> a
-        snd (_ :: (a3, t0 -> [Integer] -> Integer))
+        snd (_ :: (a3, t0 -> [Integer] -> Integer)) (_ :: t0)
           where snd :: forall a b. (a, b) -> b
 
-abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
+abstract_refinement_hole_fits.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: Integer -> [Integer] -> Integer
     • In the expression: _
       In the expression: _ 0
       In an equation for ‘g’: g = _ 0
     • Relevant bindings include
         g :: [Integer] -> Integer
-          (bound at abstract_refinement_substitutions.hs:7:1)
-      Valid substitutions include
+          (bound at abstract_refinement_hole_fits.hs:7:1)
+      Valid hole fits include
         const :: forall a b. a -> b -> a
         return :: forall (m :: * -> *). Monad m => forall a. a -> m a
         pure :: forall (f :: * -> *). Applicative f => forall a. a -> f a
-      Valid refinement substitutions include
+      Valid refinement hole fits include
         foldl (_ :: Integer -> Integer -> Integer)
           where foldl :: forall (t :: * -> *).
                          Foldable t =>
@@ -172,7 +172,7 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where const :: forall a b. a -> b -> a
         ($) (_ :: Integer -> [Integer] -> Integer)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: String)
+        fail (_ :: [Char])
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
@@ -250,13 +250,13 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
                         forall a b. a -> f b -> f a
         ($) (_ :: a5 -> Integer -> [Integer] -> Integer) (_ :: a5)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: String)
+        fail (_ :: [Char]) (_ :: t0)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
-        return (_ :: Integer -> [Integer] -> Integer)
+        return (_ :: Integer -> [Integer] -> Integer) (_ :: t0)
           where return :: forall (m :: * -> *). Monad m => forall a. a -> m a
-        pure (_ :: Integer -> [Integer] -> Integer)
+        pure (_ :: Integer -> [Integer] -> Integer) (_ :: t0)
           where pure :: forall (f :: * -> *).
                         Applicative f =>
                         forall a. a -> f a
@@ -265,13 +265,13 @@ abstract_refinement_substitutions.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)
           where uncurry :: forall a b c. (a -> b -> c) -> (a, b) -> c
         ($!) (_ :: a6 -> Integer -> [Integer] -> Integer) (_ :: a6)
           where ($!) :: forall a b. (a -> b) -> a -> b
-        id (_ :: t0 -> Integer -> [Integer] -> Integer)
+        id (_ :: t0 -> Integer -> [Integer] -> Integer) (_ :: t0)
           where id :: forall a. a -> a
-        head (_ :: [t0 -> Integer -> [Integer] -> Integer])
+        head (_ :: [t0 -> Integer -> [Integer] -> Integer]) (_ :: t0)
           where head :: forall a. [a] -> a
-        last (_ :: [t0 -> Integer -> [Integer] -> Integer])
+        last (_ :: [t0 -> Integer -> [Integer] -> Integer]) (_ :: t0)
           where last :: forall a. [a] -> a
-        fst (_ :: (t0 -> Integer -> [Integer] -> Integer, b2))
+        fst (_ :: (t0 -> Integer -> [Integer] -> Integer, b2)) (_ :: t0)
           where fst :: forall a b. (a, b) -> a
-        snd (_ :: (a3, t0 -> Integer -> [Integer] -> Integer))
+        snd (_ :: (a3, t0 -> Integer -> [Integer] -> Integer)) (_ :: t0)
           where snd :: forall a b. (a, b) -> b

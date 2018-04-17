@@ -10,7 +10,7 @@ T10267.hs:8:1: error:
     • Relevant bindings include
         x :: a (bound at T10267.hs:8:1)
         j :: a -> a (bound at T10267.hs:8:1)
-      Valid substitutions include x :: a (bound at T10267.hs:8:1)
+      Valid hole fits include x :: a (bound at T10267.hs:8:1)
 
 T10267.hs:8:1: error:
     • Found hole: _foo :: a -> a
@@ -22,7 +22,7 @@ T10267.hs:8:1: error:
     • In the expression: _foo
       In an equation for ‘i’: i = _foo
     • Relevant bindings include i :: a -> a (bound at T10267.hs:8:1)
-      Valid substitutions include
+      Valid hole fits include
         i :: a -> a (bound at T10267.hs:8:1)
         j :: forall a. a -> a
           with j @a
@@ -51,7 +51,7 @@ T10267.hs:14:3: error:
     • In the expression: _foo
       In an equation for ‘k’: k = _foo
     • Relevant bindings include k :: a -> a (bound at T10267.hs:14:3)
-      Valid substitutions include
+      Valid hole fits include
         k :: a -> a (bound at T10267.hs:14:3)
         j :: forall a. a -> a
           with j @a
@@ -81,4 +81,4 @@ T10267.hs:23:3: error:
     • Relevant bindings include
         x :: a (bound at T10267.hs:23:3)
         l :: a -> a (bound at T10267.hs:23:3)
-      Valid substitutions include x :: a (bound at T10267.hs:23:3)
+      Valid hole fits include x :: a (bound at T10267.hs:23:3)

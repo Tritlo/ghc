@@ -7,7 +7,7 @@ holes3.hs:3:5: error:
     • In the expression: _
       In an equation for ‘f’: f = _
     • Relevant bindings include f :: t (bound at holes3.hs:3:1)
-      Valid substitutions include f :: forall t. t
+      Valid hole fits include f :: forall t. t
 
 holes3.hs:6:7: error:
     • Found hole: _gr :: Char
@@ -17,7 +17,7 @@ holes3.hs:6:7: error:
     • Relevant bindings include
         x :: Int (bound at holes3.hs:6:3)
         g :: Int -> Char (bound at holes3.hs:6:1)
-      Valid substitutions include
+      Valid hole fits include
         f :: forall t. t
         maxBound :: forall a. Bounded a => a
         minBound :: forall a. Bounded a => a
@@ -29,7 +29,7 @@ holes3.hs:8:5: error:
       In the expression: _aa ++ "a"
       In an equation for ‘h’: h = _aa ++ "a"
     • Relevant bindings include h :: [Char] (bound at holes3.hs:8:1)
-      Valid substitutions include
+      Valid hole fits include
         h :: [Char]
         f :: forall t. t
         mempty :: forall a. Monoid a => a
@@ -44,7 +44,7 @@ holes3.hs:11:15: error:
     • Relevant bindings include
         y :: [a] (bound at holes3.hs:11:3)
         z :: [a] -> [a] (bound at holes3.hs:11:1)
-      Valid substitutions include
+      Valid hole fits include
         y :: [a]
         z :: [a] -> [a]
         g :: Int -> Char

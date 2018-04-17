@@ -63,7 +63,7 @@ import Data.Foldable    ( toList )
 import Data.List        ( partition, mapAccumL, nub, sortBy, unfoldr )
 import qualified Data.Set as Set
 
-import {-# SOURCE #-} TcHoleErrors ( findValidHoleSubstitutions )
+import {-# SOURCE #-} TcHoleErrors ( findValidHoleFits )
 
 import Data.Semigroup   ( Semigroup )
 import qualified Data.Semigroup as Semigroup
@@ -229,13 +229,13 @@ report_unsolved mb_binds_var type_errors expr_holes
 data Report
   = Report { report_important :: [SDoc]
            , report_relevant_bindings :: [SDoc]
-           , report_valid_substitutions :: [SDoc]
+           , report_valid_hole_fits :: [SDoc]
            }
 
 instance Outputable Report where   -- Debugging only
   ppr (Report { report_important = imp
               , report_relevant_bindings = rel
-              , report_valid_substitutions = val })
+              , report_valid_hole_fits = val })
     = vcat [ text "important:" <+> vcat imp
            , text "relevant:"  <+> vcat rel
            , text "valid:"  <+> vcat val ]
@@ -268,9 +268,9 @@ important doc = mempty { report_important = [doc] }
 relevant_bindings :: SDoc -> Report
 relevant_bindings doc = mempty { report_relevant_bindings = [doc] }
 
--- | Put a doc into the valid substitutions block.
-valid_substitutions :: SDoc -> Report
-valid_substitutions docs = mempty { report_valid_substitutions = [docs] }
+-- | Put a doc into the valid hole fits block.
+valid_hole_fits :: SDoc -> Report
+valid_hole_fits docs = mempty { report_valid_hole_fits = [docs] }
 
 data TypeErrorChoice   -- What to do for type errors found by the type checker
   = TypeError     -- A type error aborts compilation with an error message
@@ -1119,14 +1119,14 @@ mkHoleError tidy_simples ctxt ct@(CHoleCan { cc_hole = hole })
                   = givenConstraintsMsg ctxt
                | otherwise = empty
 
-       ; show_valid_substitutions <- goptM Opt_ShowValidSubstitutions
-       ; (ctxt, sub_msg) <- if show_valid_substitutions
-                            then validHoleSubstitutions ctxt tidy_simples ct
+       ; show_valid_hole_fits <- goptM Opt_ShowValidHoleFits
+       ; (ctxt, sub_msg) <- if show_valid_hole_fits
+                            then validHoleFits ctxt tidy_simples ct
                             else return (ctxt, empty)
        ; mkErrorMsgFromCt ctxt ct $
             important hole_msg `mappend`
             relevant_bindings (binds_msg $$ constraints_msg) `mappend`
-            valid_substitutions sub_msg}
+            valid_hole_fits sub_msg}
 
   where
     occ       = holeOcc hole
@@ -1185,7 +1185,7 @@ mkHoleError _ _ ct = pprPanic "mkHoleError" (ppr ct)
 
 -- We unwrap the ReportErrCtxt here, to avoid introducing a loop in module
 -- imports
-validHoleSubstitutions :: ReportErrCtxt -- The context we're in, i.e. the
+validHoleFits :: ReportErrCtxt -- The context we're in, i.e. the
                                         -- implications and the tidy environment
                        -> [Ct]          -- Unsolved simple constraints
                        -> Ct            -- The hole constraint.
@@ -1193,9 +1193,9 @@ validHoleSubstitutions :: ReportErrCtxt -- The context we're in, i.e. the
                                                     -- with a possibly updated
                                                     -- tidy environment, and
                                                     -- the message.
-validHoleSubstitutions ctxt@(CEC {cec_encl = implics
+validHoleFits ctxt@(CEC {cec_encl = implics
                              , cec_tidy = lcl_env}) simps ct
-  = do { (tidy_env, msg) <- findValidHoleSubstitutions lcl_env implics simps ct
+  = do { (tidy_env, msg) <- findValidHoleFits lcl_env implics simps ct
        ; return (ctxt {cec_tidy = tidy_env}, msg) }
 
 -- See Note [Constraints include ...]

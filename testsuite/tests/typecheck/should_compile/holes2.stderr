@@ -21,7 +21,7 @@ holes2.hs:3:10: warning: [-Wtyped-holes (in -Wdefault)]
       In the expression: show _
       In an equation for ‘f’: f = show _
     • Relevant bindings include f :: String (bound at holes2.hs:3:1)
-      Valid substitutions include
+      Valid hole fits include
         f :: String
         otherwise :: Bool
         False :: Bool

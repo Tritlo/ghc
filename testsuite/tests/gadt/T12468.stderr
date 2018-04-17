@@ -5,7 +5,7 @@ T12468.hs:9:7: error:
       In an equation for ‘f’: f I = _
     • Relevant bindings include f :: T a -> a (bound at T12468.hs:9:1)
       Constraints include a ~ Int (from T12468.hs:9:3)
-      Valid substitutions include
+      Valid hole fits include
         maxBound :: forall a. Bounded a => a
           with maxBound @Int
           (imported from ‘Prelude’ at T12468.hs:3:8-13

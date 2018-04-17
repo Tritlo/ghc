@@ -1,16 +1,16 @@
 
-constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
+constraint_hole_fits.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Found hole: _ :: [a] -> a
       Where: ‘a’ is a rigid type variable bound by
                the type signature for:
                  g :: forall a. Ord a => [a] -> a
-               at constraint_substitutions.hs:3:1-22
+               at constraint_hole_fits.hs:3:1-22
     • In the expression: _
       In an equation for ‘g’: g = _
     • Relevant bindings include
-        g :: [a] -> a (bound at constraint_substitutions.hs:4:1)
-      Constraints include Ord a (from constraint_substitutions.hs:3:1-22)
-      Valid substitutions include
+        g :: [a] -> a (bound at constraint_hole_fits.hs:4:1)
+      Constraints include Ord a (from constraint_hole_fits.hs:3:1-22)
+      Valid hole fits include
         g :: [a] -> a
         head :: forall a. [a] -> a
         last :: forall a. [a] -> a
@@ -20,7 +20,7 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
         minimum :: forall (t :: * -> *).
                    Foldable t =>
                    forall a. Ord a => t a -> a
-      Valid refinement substitutions include
+      Valid refinement hole fits include
         foldl1 (_ :: a -> a -> a)
           where foldl1 :: forall (t :: * -> *).
                           Foldable t =>
@@ -41,7 +41,7 @@ constraint_substitutions.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where const :: forall a b. a -> b -> a
         ($) (_ :: [a] -> a)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: String)
+        fail (_ :: [Char])
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a

@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -frefinement-level-substitutions=2 #-}
+{-# OPTIONS_GHC -frefinement-level-hole-fits=2 #-}
 module TG where
 import Prelude ( Monad, Applicative, Functor
                , fmap, (<*>), pure, (>>=)
