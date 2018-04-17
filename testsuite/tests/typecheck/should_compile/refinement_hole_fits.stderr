@@ -79,7 +79,7 @@ refinement_hole_fits.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where ($) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at refinement_hole_fits.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        fail (_ :: [Char])
+        fail (_ :: String)
           with fail @((->) [Integer]) @Integer
           where fail :: forall (m :: * -> *).
                         Monad m =>
@@ -184,7 +184,7 @@ refinement_hole_fits.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
           where ($) :: forall a b. (a -> b) -> a -> b
           (imported from ‘Prelude’ at refinement_hole_fits.hs:1:8-30
            (and originally defined in ‘GHC.Base’))
-        fail (_ :: [Char])
+        fail (_ :: String)
           with fail @((->) Integer) @([Integer] -> Integer)
           where fail :: forall (m :: * -> *).
                         Monad m =>

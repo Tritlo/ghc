@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -frefinement-level-hole-fits=2 #-}
+{-# LANGUAGE MonoLocalBinds #-}
 module TG where
 import Prelude ( Monad, Applicative, Functor
                , fmap, (<*>), pure, (>>=)

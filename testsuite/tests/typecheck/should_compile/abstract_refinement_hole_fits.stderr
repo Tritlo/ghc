@@ -44,7 +44,7 @@ abstract_refinement_hole_fits.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where const :: forall a b. a -> b -> a
         ($) (_ :: [Integer] -> Integer)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: [Char])
+        fail (_ :: String)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
@@ -118,7 +118,7 @@ abstract_refinement_hole_fits.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
                         forall a b. a -> f b -> f a
         ($) (_ :: a5 -> [Integer] -> Integer) (_ :: a5)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: [Char]) (_ :: t0)
+        fail (_ :: String) (_ :: t0)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
@@ -172,7 +172,7 @@ abstract_refinement_hole_fits.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
           where const :: forall a b. a -> b -> a
         ($) (_ :: Integer -> [Integer] -> Integer)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: [Char])
+        fail (_ :: String)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
@@ -250,7 +250,7 @@ abstract_refinement_hole_fits.hs:7:5: warning: [-Wtyped-holes (in -Wdefault)]
                         forall a b. a -> f b -> f a
         ($) (_ :: a5 -> Integer -> [Integer] -> Integer) (_ :: a5)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: [Char]) (_ :: t0)
+        fail (_ :: String) (_ :: t0)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a

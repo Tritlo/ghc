@@ -41,7 +41,7 @@ constraint_hole_fits.hs:4:5: warning: [-Wtyped-holes (in -Wdefault)]
           where const :: forall a b. a -> b -> a
         ($) (_ :: [a] -> a)
           where ($) :: forall a b. (a -> b) -> a -> b
-        fail (_ :: [Char])
+        fail (_ :: String)
           where fail :: forall (m :: * -> *).
                         Monad m =>
                         forall a. String -> m a
