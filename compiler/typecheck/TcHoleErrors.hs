@@ -394,11 +394,12 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
      ; (searchDiscards, subs) <-
         findSubs sortingAlg maxVSubs to_check (hole_ty, [])
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
-     ; (vDiscards, tidy_sorted_subs) <-
-        sortFits sortingAlg maxVSubs searchDiscards tidy_subs
-     ; let vMsg = ppUnless (null tidy_sorted_subs) $
+     ; tidy_sorted_subs <- sortFits sortingAlg tidy_subs
+     ; let (pVDisc, limited_subs) = possiblyDiscard maxVSubs tidy_sorted_subs
+           vDiscards = pVDisc || searchDiscards
+     ; let vMsg = ppUnless (null limited_subs) $
                     hang (text "Valid hole fits include") 2 $
-                      vcat (map (pprHoleFit hfdc) tidy_sorted_subs)
+                      vcat (map (pprHoleFit hfdc) limited_subs)
                         $$ ppWhen vDiscards subsDiscardMsg
      -- Refinement hole fits. See Note [Valid refinement hole fits include ...]
      ; (tidy_env, refMsg) <- if refLevel >= Just 0 then
@@ -412,12 +413,21 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             ; traceTc "ref_tys are" $ ppr ref_tys
             ; refDs <- mapM (findSubs sortingAlg maxRSubs to_check) ref_tys
             ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env $ concatMap snd refDs
-            ; (rDiscards, tidy_sorted_rsubs) <-
-                sortFits sortingAlg maxRSubs (any fst refDs) tidy_rsubs
+            ; tidy_sorted_rsubs <- sortFits sortingAlg tidy_rsubs
+            -- For refinement substitutions we want matches
+            -- like id (_ :: t), head (_ :: [t]), asTypeOf (_ :: t),
+            -- and others in that vein to appear last, since these are
+            -- unlikely to be the most relevant fits.
+            ; (tidy_env, tidy_hole_ty) <- zonkTidyTcType tidy_env hole_ty
+            ; let hasExactApp = any (tcEqType tidy_hole_ty) . hfWrap
+                  (exact, not_exact) = partition hasExactApp tidy_sorted_rsubs
+                  (pRDisc, exact_last_rfits) =
+                    possiblyDiscard maxRSubs $ not_exact ++ exact
+                  rDiscards = pRDisc || any fst refDs
             ; return (tidy_env,
                 ppUnless (null tidy_sorted_rsubs) $
                   hang (text "Valid refinement hole fits include") 2 $
-                  vcat (map (pprHoleFit hfdc) tidy_sorted_rsubs)
+                  vcat (map (pprHoleFit hfdc) exact_last_rfits)
                     $$ ppWhen rDiscards refSubsDiscardMsg) }
        else return (tidy_env, empty)
      ; traceTc "findingValidHoleFitsFor }" empty
@@ -444,17 +454,12 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             wrapWithVars vars = mkFunTys (map mkTyVarTy vars) hole_ty
 
     sortFits :: SortingAlg    -- How we should sort the hole fits
-             -> Maybe Int     -- How many we should output, if limited.
-             -> Bool          -- Whether there were any discards in the
-                              -- initial search
              -> [HoleFit]     -- The subs to sort
-             -> TcM (Bool, [HoleFit])
-
-    sortFits NoSorting _ discards subs = return (discards, subs)
-    sortFits BySize limit _ subs
-        = possiblyDiscard limit <$>
-            ((++) <$> sortBySize (sort lclFits)
-                  <*> sortBySize (sort gblFits))
+             -> TcM [HoleFit]
+    sortFits NoSorting subs = return subs
+    sortFits BySize subs
+        = (++) <$> sortBySize (sort lclFits)
+               <*> sortBySize (sort gblFits)
         where (lclFits, gblFits) = span isLocalHoleFit subs
 
     -- To sort by subsumption, we invoke the sortByGraph function, which
@@ -463,10 +468,9 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
     -- them separately. The substitutions are already checked in local then
     -- global order, so we can get away with using span here.
     -- We use (<*>) to expose the parallelism, in case it becomes useful later.
-    sortFits BySubsumption limit _ subs
-        = possiblyDiscard limit <$>
-            ((++) <$> sortByGraph (sort lclFits)
-                  <*> sortByGraph (sort gblFits))
+    sortFits BySubsumption subs
+        = (++) <$> sortByGraph (sort lclFits)
+               <*> sortByGraph (sort gblFits)
         where (lclFits, gblFits) = span isLocalHoleFit subs
 
     findSubs :: SortingAlg         -- Whether we should sort the subs or not
@@ -517,25 +521,6 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             unfWrp' (WpCompose w1 w2) = unfWrp' w1 ++ unfWrp' w2
             unfWrp' _ = []
 
-    -- Takes a list of types and makes sure that the given action
-    -- is run with the right TcLevel and restores any Flexi type
-    -- variables after the action is run.
-    withoutUnification :: FV -> TcM a -> TcM a
-    withoutUnification free_vars action
-      = do { flexis <- filterM isFlexiTyVar fuvs
-           ; result <- setTcLevel deepestFreeTyVarLvl action
-             -- Reset any mutated free variables
-           ; mapM_ restore flexis
-           ; return result }
-      where restore = flip writeTcRef Flexi . metaTyVarRef
-            fuvs = fvVarList free_vars
-            deepestFreeTyVarLvl = foldl' max topTcLevel $ map tcTyVarLevel fuvs
-
-    -- We need to freshen the ev_binds of implications so that we don't have
-    -- side effects on them.
-    freshenEvBinds :: Implication -> TcM Implication
-    freshenEvBinds imp = do { nbinds <- newTcEvBinds
-                            ; return imp {ic_binds = nbinds} }
 
     -- We only clone flexi type variables, and we need to be able to check
     -- whether a variable is filled or not.
@@ -543,16 +528,30 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
     isFlexiTyVar tv | isMetaTyVar tv = isFlexi <$> readMetaTyVar tv
     isFlexiTyVar _ = return False
 
+    -- Takes a list of free variables and makes sure that the given action
+    -- is run with the right TcLevel and restores any Flexi type
+    -- variables after the action is run.
+    withoutUnification :: FV -> TcM a -> TcM a
+    withoutUnification free_vars action
+      = do { flexis <- filterM isFlexiTyVar fuvs
+            ; result <- setTcLevel deepestFreeTyVarLvl action
+              -- Reset any mutated free variables
+            ; mapM_ restore flexis
+            ; return result }
+      where restore = flip writeTcRef Flexi . metaTyVarRef
+            fuvs = fvVarList free_vars
+            deepestFreeTyVarLvl = foldl' max topTcLevel $ map tcTyVarLevel fuvs
+            
 
     -- The real work happens here, where we invoke the type checker using
     -- tcCheckHoleFit to see whether the given type fits the hole.
+    -- We wrap this with the withoutUnification to avoid having side-effects
+    -- beyond the check, but we rely on the side-effects when looking for
+    -- refinement hole fits, so we can't wrap the side-effects deeper than this 
     fitsHole :: (TcType, [TcTyVar]) -> Type -> TcM (Maybe ([TcType], [TcType]))
-    fitsHole (h_ty, ref_vars) ty =
-      withoutUnification fvs $
+    fitsHole (h_ty, ref_vars) ty = withoutUnification fvs $
       do { traceTc "checkingFitOf {" $ ppr ty
-         ; fresh_implics <- mapM freshenEvBinds implics
-         ; (fits, wrp) <-
-             tcCheckHoleFit (listToBag relevantCts) fresh_implics h_ty ty
+         ; (fits, wrp) <- tcCheckHoleFit (listToBag relevantCts) implics h_ty ty
          ; traceTc "Did it fit?" $ ppr fits
          ; traceTc "wrap is: " $ ppr wrp
          ; traceTc "checkingFitOf }" empty
@@ -696,6 +695,7 @@ refSubsDiscardMsg =
     text "use -fmax-refinement-hole-fits=N" <+>
     text "or -fno-max-refinement-hole-fits)"
 
+
 -- | Reports whether first type (ty_a) subsumes the second type (ty_b),
 -- discarding any errors. Subsumption here means that the ty_b can fit into the
 -- ty_a, i.e. `tcSubsumes a b == True` if b is a subtype of a.
@@ -716,22 +716,29 @@ tcCheckHoleFit :: Cts                   -- Any relevant Cts to the hole.
                -> TcM (Bool, HsWrapper)
 tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty
     = return (True, idHsWrapper)
-tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
- do { (wrp, wanted) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
-    ; traceTc "Checking hole fit {" empty
-    ; traceTc "wanteds are: " $ ppr wanted
-    ; let w_rel_cts = addSimples wanted relevantCts
-    ; if isEmptyWC w_rel_cts
-      then traceTc "}" empty >> return (True, wrp)
-      else do { let w_givens = foldl' setWC w_rel_cts implics
-              ; traceTc "w_givens are: " $ ppr w_givens
-              ; rem <- runTcSDeriveds $ simpl_top w_givens
-              -- We don't want any insoluble or simple constraints left, but
-              -- solved implications are ok (and neccessary for e.g. undefined)
-              ; traceTc "rems was:" $ ppr rem
-              ; traceTc "}" empty
-              ; return (isSolvedWC rem, wrp) } }
-    where
-      setWC :: WantedConstraints -> Implication -> WantedConstraints
-      setWC wc imp = WC { wc_simple = emptyBag
-                        , wc_impl = unitBag $ imp {ic_wanted = wc} }
+tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $ 
+  do { (wrp, wanted) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
+     ; traceTc "Checking hole fit {" empty
+     ; traceTc "wanteds are: " $ ppr wanted
+     ; let w_rel_cts = addSimples wanted relevantCts
+     ; if isEmptyWC w_rel_cts
+       then traceTc "}" empty >> return (True, wrp)
+       else do { fresh_binds <- newTcEvBinds
+               ; let outermost_first = reverse implics
+                     setWC = setWCAndBinds fresh_binds
+                     w_givens = foldr setWC w_rel_cts outermost_first
+               ; traceTc "w_givens are: " $ ppr w_givens
+               ; rem <- runTcSDeriveds $ simpl_top w_givens
+               -- We don't want any insoluble or simple constraints left, but
+               -- solved implications are ok (and neccessary for e.g. undefined)
+               ; traceTc "rems was:" $ ppr rem
+               ; traceTc "}" empty
+               ; return (isSolvedWC rem, wrp) } }
+     where
+       setWCAndBinds :: EvBindsVar         -- Fresh ev binds var.
+                     -> Implication        -- The implication to put WC in.
+                     -> WantedConstraints  -- The WC constraints to put implic.
+                     -> WantedConstraints  -- The new constraints.
+       setWCAndBinds binds imp wc
+         = WC { wc_simple = emptyBag
+              , wc_impl = unitBag $ imp { ic_wanted = wc , ic_binds = binds } }
