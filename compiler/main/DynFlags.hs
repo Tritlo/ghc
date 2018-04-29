@@ -574,6 +574,7 @@ data GeneralFlag
    | Opt_AbstractRefHoleFits
    | Opt_UnclutterValidHoleFits
    | Opt_ShowTypeAppOfHoleFits
+   | Opt_ShowTypeAppVarsOfHoleFits
    | Opt_ShowTypeOfHoleFits
    | Opt_ShowProvOfHoleFits
    | Opt_ShowMatchesOfHoleFits
@@ -4011,21 +4012,33 @@ fFlagsDeps = [
   flagSpec "alignment-sanitisation"           Opt_AlignmentSanitisation,
   flagSpec "show-warning-groups"              Opt_ShowWarnGroups,
   flagSpec "hide-source-paths"                Opt_HideSourcePaths,
+  flagSpec "show-loaded-modules"              Opt_ShowLoadedModules,
+  flagSpec "whole-archive-hs-libs"            Opt_WholeArchiveHsLibs
+  ]
+  ++ fHoleFlags
+
+-- | These @-f\<blah\>@ flags have to do with the typed-hole error message or
+-- the valid hole fits in that message. See Note [Valid hole fits include ...]
+-- in the TcHoleErrors module. These flags can all be reversed with
+-- @-fno-\<blah\>@
+fHoleFlags :: [(Deprecation, FlagSpec GeneralFlag)]
+fHoleFlags = [
   flagSpec "show-hole-constraints"            Opt_ShowHoleConstraints,
   depFlagSpec' "show-valid-substitutions"     Opt_ShowValidHoleFits
    (useInstead "-f" "show-valid-hole-fits"),
   flagSpec "show-valid-hole-fits"             Opt_ShowValidHoleFits,
+  -- Sorting settings
   flagSpec "sort-valid-hole-fits"             Opt_SortValidHoleFits,
   flagSpec "sort-by-size-hole-fits"           Opt_SortBySizeHoleFits,
   flagSpec "sort-by-subsumption-hole-fits"    Opt_SortBySubsumHoleFits,
   flagSpec "abstract-refinement-hole-fits"    Opt_AbstractRefHoleFits,
-  flagSpec "unclutter-valid-hole-fits"        Opt_UnclutterValidHoleFits,
-  flagSpec "show-type-app-of-hole-fits"       Opt_ShowTypeAppOfHoleFits,
-  flagSpec "show-type-of-hole-fits"           Opt_ShowTypeOfHoleFits,
-  flagSpec "show-provenance-of-hole-fits"     Opt_ShowProvOfHoleFits,
+  -- Output format settings
   flagSpec "show-hole-matches-of-hole-fits"   Opt_ShowMatchesOfHoleFits,
-  flagSpec "show-loaded-modules"              Opt_ShowLoadedModules,
-  flagSpec "whole-archive-hs-libs"            Opt_WholeArchiveHsLibs
+  flagSpec "show-provenance-of-hole-fits"     Opt_ShowProvOfHoleFits,
+  flagSpec "show-type-of-hole-fits"           Opt_ShowTypeOfHoleFits,
+  flagSpec "show-type-app-of-hole-fits"       Opt_ShowTypeAppOfHoleFits,
+  flagSpec "show-type-app-vars-of-hole-fits"  Opt_ShowTypeAppVarsOfHoleFits,
+  flagSpec "unclutter-valid-hole-fits"        Opt_UnclutterValidHoleFits
   ]
 
 -- | These @-f\<blah\>@ flags can all be reversed with @-fno-\<blah\>@
@@ -4285,6 +4298,9 @@ defaultFlags settings
 
     where platform = sTargetPlatform settings
 
+-- | These are the default settings for the display and sorting of valid hole
+--  fits in typed-hole error messages. See Note [Valid hole fits include ...]
+ -- in the TcHoleErrors module.
 validHoleFitDefaults :: [GeneralFlag]
 validHoleFitDefaults
   =  [ Opt_ShowTypeAppOfHoleFits
@@ -4300,6 +4316,8 @@ validHoleFitDefaults
 validHoleFitsImpliedGFlags :: [(GeneralFlag, TurnOnFlag, GeneralFlag)]
 validHoleFitsImpliedGFlags
   = [ (Opt_UnclutterValidHoleFits, turnOff, Opt_ShowTypeAppOfHoleFits)
+    , (Opt_UnclutterValidHoleFits, turnOff, Opt_ShowTypeAppVarsOfHoleFits)
+    , (Opt_ShowTypeAppVarsOfHoleFits, turnOff, Opt_ShowTypeAppOfHoleFits)
     , (Opt_UnclutterValidHoleFits, turnOff, Opt_ShowProvOfHoleFits) ]
 
 default_PIC :: Platform -> [GeneralFlag]

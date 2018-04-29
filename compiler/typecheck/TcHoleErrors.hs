@@ -92,7 +92,7 @@ The hole in `f` would generate the message:
           (and originally defined in ‘GHC.Base’))
 
 Valid hole fits are found by checking top level identifiers and local bindings
-in scope for whether their type is subsumed by the type of the hole.
+in scope for whether their type can be instantiated to the the type of the hole.
 Additionally, we also need to check whether all relevant constraints are solved
 by choosing an identifier of that type as well, see Note [Relevant Constraints]
 
@@ -108,14 +108,13 @@ constraints and relevant constraints within the enclosing implications. However
 to avoid side-effects on those implications, we must freshen their EvBindsVar by
 creating a new EvBindsVar which is then discarded after the check.
 
-
 When outputting, we sort the hole fits by the size of the types we'd need to
 apply by type application to the type of the fit to to make it fit. This is done
 in order to display "more relevant" suggestions first. Another option is to
 sort by building a subsumption graph of fits, i.e. a graph of which fits subsume
-what other fits, and then outputting those fits which are subsumed by other fits
-first. This results in the most specific fits, the ones "closest" to the type
-of the hole to bee displayed first.
+what other fits, and then outputting those fits which are are subsumed by other
+fits (i.e. those more specific than other fits) first. This results in the ones
+"closest" to the type of the hole to be displayed first.
 
 To help users understand how the suggested fit works, we also display the values
 that the quantified type variables would take if that fit is used, like
@@ -126,8 +125,26 @@ replacement for the hole.
 
 Note [Valid refinement hole fits include ...]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When the `-frefinement-level-hole-fits=1` flag is given, we additionally
-compute and report valid refinement hole fits:
+When the `-frefinement-level-hole-fits=N` flag is given, we additionally look
+for "valid refinement hole fits"", i.e. valid hole fits with up to N
+additional holes in them.
+
+With `-frefinement-level-hole-fits=0` (the default), GHC will find all
+identifiers 'f' (top-level or nested) that will fit in the hole.
+
+With `-frefinement-level-hole-fits=1`, GHC will additionally find all
+applications 'f _' that will fit in the hole, where 'f' is an in-scope
+identifier, applied to single argument.  It will also report the type of the
+needed argument (a new hole).
+
+And similarly as the number of arguments increases
+
+As an example, let's look at the following code:
+
+  f :: [Integer] -> Integer
+  f = _
+
+with `-frefinement-level-hole-fits=1`, we'd get:
 
   Valid refinement hole fits include
 
@@ -238,12 +255,13 @@ that would otherwise fit the hole).
 
 
 data HoleFitDispConfig = HFDC { showWrap :: Bool
+                              , showWrapVars :: Bool
                               , showType :: Bool
                               , showProv :: Bool
                               , showMatches :: Bool }
 
 debugHoleFitDispConfig :: HoleFitDispConfig
-debugHoleFitDispConfig = HFDC True True False False
+debugHoleFitDispConfig = HFDC True True True False False
 
 
 -- We read the various -no-show-*-of-hole-fits flags
@@ -251,11 +269,13 @@ debugHoleFitDispConfig = HFDC True True False False
 getHoleFitDispConfig :: TcM HoleFitDispConfig
 getHoleFitDispConfig
   = do { sWrap <- goptM Opt_ShowTypeAppOfHoleFits
+       ; sWrapVars <- goptM Opt_ShowTypeAppVarsOfHoleFits
        ; sType <- goptM Opt_ShowTypeOfHoleFits
        ; sProv <- goptM Opt_ShowProvOfHoleFits
        ; sMatc <- goptM Opt_ShowMatchesOfHoleFits
-       ; return HFDC{ showWrap = sWrap, showProv = sProv
-                    , showType = sType, showMatches = sMatc } }
+       ; return HFDC{ showWrap = sWrap, showWrapVars = sWrapVars
+                    , showProv = sProv, showType = sType
+                    , showMatches = sMatc } }
 
 -- Which sorting algorithm to use
 data SortingAlg = NoSorting      -- Do not sort the fits at all
@@ -316,11 +336,12 @@ instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
 instance HasOccName GlobalRdrElt where
     occName = occName . gre_name
 
+
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
 -- refinement level.
 pprHoleFit :: HoleFitDispConfig -> HoleFit -> SDoc
-pprHoleFit (HFDC sWrp sTy sProv sMs) hf = hang display 2 provenance
+pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf = hang display 2 provenance
     where name = case hfElem hf of
                       Just gre -> gre_name gre
                       Nothing -> idName (hfId hf)
@@ -328,18 +349,34 @@ pprHoleFit (HFDC sWrp sTy sProv sMs) hf = hang display 2 provenance
           matches =  hfMatches hf
           wrap = hfWrap hf
           tyApp = sep $ map ((text "@" <>) . pprParendType) wrap
+          tyAppVars = sep $ punctuate comma $
+              map (\(v,t) -> ppr v <+> text "~" <+> pprParendType t) $
+                zip vars wrap
+            where
+              vars = unwrapTypeVars ty
+              -- Attempts to get all the quantified type variables in a type,
+              -- e.g.
+              -- return :: forall (m :: * -> *) Monad m => (forall a . a) -> m a
+              -- into [m, a]
+              unwrapTypeVars :: Type -> [TyVar]
+              unwrapTypeVars t = vars ++ case splitFunTy_maybe unforalled of
+                                  Just (_, unfunned) -> unwrapTypeVars unfunned
+                                  _ -> []
+                where (vars, unforalled) = splitForAllTys t
           holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
           holeDisp = if sMs then holeVs
                      else sep $ replicate (length matches) $ text "_"
           occDisp = pprPrefixOcc name
           tyDisp = ppWhen sTy $ dcolon <+> ppr ty
           has = not . null
-          wrapDisp = ppWhen (sWrp && has wrap)
-                      $ text "with" <+> occDisp <+> tyApp
-          funcInfo = ppWhen (has matches) $
-                       ppWhen sTy $ text "where" <+> occDisp <+> tyDisp
+          wrapDisp = ppWhen (has wrap && (sWrp || sWrpVars))
+                      $ text "with" <+> if sWrp || not sTy
+                                        then occDisp <+> tyApp
+                                        else tyAppVars
+          funcInfo = ppWhen (has matches && sTy) $
+                       text "where" <+> occDisp <+> tyDisp
           subDisp = occDisp <+> if has matches then holeDisp else tyDisp
-          display =  subDisp $$ nest 2 (wrapDisp $+$ funcInfo)
+          display =  subDisp $$ nest 2 (funcInfo $+$ wrapDisp)
           provenance = ppWhen sProv $
             parens $
                 case hfElem hf of
@@ -473,25 +510,6 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
                <*> sortByGraph (sort gblFits)
         where (lclFits, gblFits) = span isLocalHoleFit subs
 
-    findSubs :: SortingAlg         -- Whether we should sort the subs or not
-             -> Maybe Int          -- How many we should output, if limited
-             -> [Either Id GlobalRdrElt] -- The elements to check whether fit
-             -> (TcType, [TcTyVar]) -- The type to check for fits and refinement
-                                    -- variables for emulating additional holes
-             -> TcM (Bool, [HoleFit]) -- We return whether or not we stopped due
-                                      -- to running out of gas and the fits we
-                                      -- found.
-    -- We don't check if no output is desired.
-    findSubs _ (Just 0) _ _ = return (False, [])
-    findSubs sortAlg maxSubs to_check ht@(hole_ty, _) =
-      do { traceTc "checkingFitsFor {" $ ppr hole_ty
-         -- If we're not going to sort anyway, we can stop going after
-         -- having found `maxSubs` hole fits.
-         ; let limit = if sortAlg > NoSorting then Nothing else maxSubs
-         ; (discards, subs) <- go limit ht to_check
-         ; traceTc "checkingFitsFor }" empty
-         ; return (discards, subs) }
-
     isLocalHoleFit :: HoleFit -> Bool
     isLocalHoleFit hf = case hfElem hf of
                           Just gre -> gre_lcl gre
@@ -542,14 +560,39 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             fuvs = fvVarList free_vars
             deepestFreeTyVarLvl = foldl' max topTcLevel $ map tcTyVarLevel fuvs
             
-
     -- The real work happens here, where we invoke the type checker using
     -- tcCheckHoleFit to see whether the given type fits the hole.
+    fitsHole :: (TcType, [TcTyVar]) -- The type of the hole wrapped with the
+                                    -- refinement variables created to simulate
+                                    -- additional holes (if any), and the list
+                                    -- of those variables (possibly empty).
+                                    -- As an example: If the actual type of the
+                                    -- hole (as specified by the hole
+                                    -- constraint CHoleExpr passed to
+                                    -- findValidHoleFits) is t and we want to
+                                    -- simulate N additional holes, h_ty will
+                                    -- be  r_1 -> ... -> r_N -> t, and
+                                    -- ref_vars will be [r_1, ... , r_N].
+                                    -- In the base case with no additional
+                                    -- holes, h_ty will just be t and ref_vars
+                                    -- will be [].
+             -> TcType -- The type we're checking to whether it can be
+                       -- instantiated to the type h_ty.
+             -> TcM (Maybe ([TcType], [TcType])) -- If it is not a match, we
+                                                 -- return Nothing. Otherwise,
+                                                 -- we Just return the list of
+                                                 -- types that quantified type
+                                                 -- variables in ty would take
+                                                 -- if used in place of h_ty,
+                                                 -- and the list types of any
+                                                 -- additional holes simulated
+                                                 -- with the refinement
+                                                 -- variables in ref_vars.
+    fitsHole (h_ty, ref_vars) ty =
     -- We wrap this with the withoutUnification to avoid having side-effects
     -- beyond the check, but we rely on the side-effects when looking for
-    -- refinement hole fits, so we can't wrap the side-effects deeper than this 
-    fitsHole :: (TcType, [TcTyVar]) -> Type -> TcM (Maybe ([TcType], [TcType]))
-    fitsHole (h_ty, ref_vars) ty = withoutUnification fvs $
+    -- refinement hole fits, so we can't wrap the side-effects deeper than this.
+      withoutUnification fvs $
       do { traceTc "checkingFitOf {" $ ppr ty
          ; (fits, wrp) <- tcCheckHoleFit (listToBag relevantCts) implics h_ty ty
          ; traceTc "Did it fit?" $ ppr fits
@@ -633,51 +676,66 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
                      filterM (tcSubsumesWCloning (hfType hf) . hfType) fits
                  ; go ((hf, adjs):sofar) hfs }
 
-    -- Kickoff the checking of the elements.
-    go :: Maybe Int -> (TcType, [TcTyVar])
-        -> [Either Id GlobalRdrElt] -> TcM (Bool, [HoleFit])
-    go = go_ [] emptyVarSet
-
-    -- We iterate over the elements, checking each one in turn for whether it
-    -- fits, and adding it to the results if it does.
-    go_ :: [HoleFit]           -- What we've found so far.
-        -> VarSet              -- Ids we've already checked
-        -> Maybe Int           -- How many we're allowed to find, if limited
-        -> (TcType, [TcTyVar]) -- The type, and its refinement variables.
-        -> [Either Id GlobalRdrElt]     -- The elements we've yet to check.
-        -> TcM (Bool, [HoleFit])
-    go_ subs _ _ _ [] = return (False, reverse subs)
-    go_ subs _ (Just 0) _ _ = return (True, reverse subs)
-    go_ subs seen maxleft ty (el:elts) =
-      do { traceTc "lookingUp" $ ppr el
-         ; maybeThing <- lookup el
-         ; case maybeThing of
-             Just id | not_trivial id ->
-                       do { fits <- fitsHole ty (idType id)
-                          ; case fits of
-                              Just (wrp, matches) -> keep_it id wrp matches
-                              _ -> discard_it }
-             _ -> discard_it }
-      where discard_it = go_ subs seen maxleft ty elts
-            keep_it id wrp ms = go_ (fit:subs) (extendVarSet seen id)
-                              ((\n -> n - 1) <$> maxleft) ty elts
-              where fit = HoleFit { hfElem = mbel , hfId = id
-                                  , hfType = idType id
-                                  , hfRefLvl = length (snd ty)
-                                  , hfWrap = wrp , hfMatches = ms }
-                    mbel = either (const Nothing) Just el
-            -- We want to filter out undefined and the likes from GHC.Err
-            not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
-            lookup :: Either Id GlobalRdrElt -> TcM (Maybe Id)
-            lookup (Left id) = return $ Just id
-            lookup (Right el) =
-              do { thing <- tcLookup (gre_name el)
-                 ; case thing of
-                     ATcId {tct_id = id} -> return $ Just id
-                     AGlobal (AnId id)   -> return $ Just id
-                     AGlobal (AConLike (RealDataCon con))  ->
-                       return $ Just (dataConWrapId con)
-                     _ -> return Nothing }
+    findSubs :: SortingAlg         -- Whether we should sort the subs or not
+             -> Maybe Int          -- How many we should output, if limited
+             -> [Either Id GlobalRdrElt] -- The elements to check whether fit
+             -> (TcType, [TcTyVar]) -- The type to check for fits and refinement
+                                    -- variables for emulating additional holes
+             -> TcM (Bool, [HoleFit]) -- We return whether or not we stopped due
+                                      -- to running out of gas and the fits we
+                                      -- found.
+    -- We don't check if no output is desired.
+    findSubs _ (Just 0) _ _ = return (False, [])
+    findSubs sortAlg maxSubs to_check ht@(hole_ty, _) =
+      do { traceTc "checkingFitsFor {" $ ppr hole_ty
+         -- If we're not going to sort anyway, we can stop going after
+         -- having found `maxSubs` hole fits.
+         ; let limit = if sortAlg > NoSorting then Nothing else maxSubs
+         ; (discards, subs) <- go [] emptyVarSet limit ht to_check
+         ; traceTc "checkingFitsFor }" empty
+         ; return (discards, subs) }
+      where
+        -- Kickoff the checking of the elements.
+        -- We iterate over the elements, checking each one in turn for whether 
+        -- it fits, and adding it to the results if it does.
+        go :: [HoleFit]            -- What we've found so far.
+            -> VarSet              -- Ids we've already checked
+            -> Maybe Int           -- How many we're allowed to find, if limited
+            -> (TcType, [TcTyVar]) -- The type, and its refinement variables.
+            -> [Either Id GlobalRdrElt] -- The elements we've yet to check.
+            -> TcM (Bool, [HoleFit])
+        go subs _ _ _ [] = return (False, reverse subs)
+        go subs _ (Just 0) _ _ = return (True, reverse subs)
+        go subs seen maxleft ty (el:elts) =
+          do { traceTc "lookingUp" $ ppr el
+             ; maybeThing <- lookup el
+             ; case maybeThing of
+                 Just id | not_trivial id ->
+                           do { fits <- fitsHole ty (idType id)
+                              ; case fits of
+                                  Just (wrp, matches) -> keep_it id wrp matches
+                                  _ -> discard_it }
+                 _ -> discard_it }
+          where discard_it = go subs seen maxleft ty elts
+                keep_it id wrp ms = go (fit:subs) (extendVarSet seen id)
+                                  ((\n -> n - 1) <$> maxleft) ty elts
+                  where fit = HoleFit { hfElem = mbel , hfId = id
+                                      , hfType = idType id
+                                      , hfRefLvl = length (snd ty)
+                                      , hfWrap = wrp , hfMatches = ms }
+                        mbel = either (const Nothing) Just el
+                -- We want to filter out undefined and the likes from GHC.Err
+                not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
+                lookup :: Either Id GlobalRdrElt -> TcM (Maybe Id)
+                lookup (Left id) = return $ Just id
+                lookup (Right el) =
+                  do { thing <- tcLookup (gre_name el)
+                     ; case thing of
+                         ATcId {tct_id = id} -> return $ Just id
+                         AGlobal (AnId id)   -> return $ Just id
+                         AGlobal (AConLike (RealDataCon con))  ->
+                           return $ Just (dataConWrapId con)
+                         _ -> return Nothing }
 
 
 -- We don't (as of yet) handle holes in types, only in expressions.

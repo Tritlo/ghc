@@ -11140,6 +11140,22 @@ configurable by a few flags.
     ``mempty @(Int -> [Int])``. This can be toggled off with
     the reverse of this flag.
 
+.. ghc-flag:: -fshow-type-app-vars-of-hole-fits
+    :shortdesc: Toggles whether to show what type each quantified
+       variable takes in a valid hole fit.
+    :type: dynamic
+    :category: verbosity
+    :reverse: -fno-show-type-app-vars-of-hole-fits
+
+    :default: on
+
+    By default, the hole fits show the type application needed to make
+    this hole fit fit the type of the hole, e.g. for the hole
+    ``(_ :: Int -> [Int])``, ``mempty :: Monoid a => a`` is a hole fit
+    with ``mempty @(Int -> [Int])``. This flag toggles whether to show
+    ``a ~ (Int -> [Int])`` instead of ``mempty @(Int -> [Int])`` in the where
+    clause of the valid hole fit message.
+
 .. ghc-flag:: -fshow-provenance-of-hole-fits
     :shortdesc: Toggles whether to show the provenance of the valid hole fits
        in the output.
