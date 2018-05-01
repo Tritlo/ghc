@@ -102,12 +102,6 @@ to being flexible type variables after we've checked for subsumption.
 This is to avoid affecting the hole and later checks by prematurely having
 unified one of the free unification variables.
 
-For the simplifier to be able to use any givens present in the enclosing
-implications to solve relevant constraints, we nest the wanted subsumption
-constraints and relevant constraints within the enclosing implications. However
-to avoid side-effects on those implications, we must freshen their EvBindsVar by
-creating a new EvBindsVar which is then discarded after the check.
-
 When outputting, we sort the hole fits by the size of the types we'd need to
 apply by type application to the type of the fit to to make it fit. This is done
 in order to display "more relevant" suggestions first. Another option is to
@@ -121,6 +115,87 @@ that the quantified type variables would take if that fit is used, like
 `mempty @([Char] -> [String])` and `pure @[] @String` in the example above.
 If -XTypeApplications is enabled, this can even be copied verbatim as a
 replacement for the hole.
+
+
+Note [Nested implications]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For the simplifier to be able to use any givens present in the enclosing
+implications to solve relevant constraints, we nest the wanted subsumption
+constraints and relevant constraints within the enclosing implications.
+
+As an example, let's look at the following code:
+
+  f :: Show a => a -> String
+  f x = show _
+
+The hole will result in the hole constraint:
+
+  [WD] __a1ph {0}:: a0_a1pd[tau:2] (CHoleCan: ExprHole(_))
+
+Here the nested implications are just one level deep, namely:
+
+  [Implic {
+      TcLevel = 2
+      Skolems = a_a1pa[sk:2]
+      No-eqs = True
+      Status = Unsolved
+      Given = $dShow_a1pc :: Show a_a1pa[sk:2]
+      Wanted =
+        WC {wc_simple =
+              [WD] __a1ph {0}:: a_a1pd[tau:2] (CHoleCan: ExprHole(_))
+              [WD] $dShow_a1pe {0}:: Show a_a1pd[tau:2] (CDictCan(psc))}
+      Binds = EvBindsVar<a1pi>
+      Needed inner = []
+      Needed outer = []
+      the type signature for:
+        f :: forall a. Show a => a -> String }]
+
+As we can see, the givens say that the information about the skolem
+`a_a1pa[sk:2]` fulfills the Show constraint.
+
+The simples are:
+
+  [[WD] __a1ph {0}:: a0_a1pd[tau:2] (CHoleCan: ExprHole(_)),
+    [WD] $dShow_a1pe {0}:: Show a0_a1pd[tau:2] (CNonCanonical)]
+
+I.e. the hole `a0_a1pd[tau:2]` and the constraint that the type of the hole must
+fulfill `Show a0_a1pd[tau:2])`.
+
+So when we run the check, we need to make sure that the
+
+  [WD] $dShow_a1pe {0}:: Show a0_a1pd[tau:2] (CNonCanonical)
+
+Constraint gets solved. When we now check for whether `x :: a0_a1pd[tau:2]` fits
+the hole in `tcCheckHoleFit`, the call to `tcSubType` will end up writing the
+meta type variable `a0_a1pd[tau:2] := a_a1pa[sk:2]`. By wrapping the wanted
+constraints needed by tcSubType_NC and the relevant constraints (see
+Note [Relevant Constraints] for more details) in the nested implications, we
+can pass the information in the givens along to the simplifier. For our example,
+we end up needing to check whether the following constraints are soluble.
+
+  WC {wc_impl =
+        Implic {
+          TcLevel = 2
+          Skolems = a_a1pa[sk:2]
+          No-eqs = True
+          Status = Unsolved
+          Given = $dShow_a1pc :: Show a_a1pa[sk:2]
+          Wanted =
+            WC {wc_simple =
+                  [WD] $dShow_a1pe {0}:: Show a0_a1pd[tau:2] (CNonCanonical)}
+          Binds = EvBindsVar<a1pl>
+          Needed inner = []
+          Needed outer = []
+          the type signature for:
+            f :: forall a. Show a => a -> String }}
+
+But since `a0_a1pd[tau:2] := a_a1pa[sk:2]` and we have from the nested
+implications that Show a_a1pa[sk:2] is a given, this is trivial, and we end up
+with a final WC of WC {}, confirming x :: a0_a1pd[tau:2] as a match.
+
+To avoid side-effects on the nested implications, we create a new EvBindsVar so
+that any changes to the ev binds during a check remains localised to that check.
 
 
 Note [Valid refinement hole fits include ...]
@@ -241,13 +316,44 @@ Note [Relevant Constraints]
 
 As highlighted by Trac #14273, we need to check any relevant constraints as well
 as checking for subsumption. Relevant constraints are the simple constraints
-whose free unification variables are mentioned in the type of the hole. These
-are then the constraints for which any type that subsumes the type of the hole
-has to fulfill in order to be a valid hole fit. We only check relevant
-constraints so that e.g. when there are multiple holes, we can still find fits
-for each of those holes. This is to make sure we don't suggest a hole fit which
-does not fulfill the constraints imposed on the hole (even though it has a type
-that would otherwise fit the hole).
+whose free unification variables are mentioned in the type of the hole.
+
+In the simplest case, these are all non-hole constraints in the simples, such
+as is the case in
+
+  f :: String
+  f = show _
+
+Where the simples will be :
+
+  [[WD] __a1kz {0}:: a0_a1kv[tau:1] (CHoleCan: ExprHole(_)),
+    [WD] $dShow_a1kw {0}:: Show a0_a1kv[tau:1] (CNonCanonical)]
+
+However, when there are multiple holes, we need to be more careful. As an
+example, Let's take a look at the following code:
+
+  f :: Show a => a -> String
+  f x = show (_b (show _a))
+
+Here there are two holes, `_a` and `_b`, and the simple constraints passed to
+findValidHoleFits are:
+
+  [[WD] _a_a1pi {0}:: String
+                        -> a0_a1pd[tau:2] (CHoleCan: ExprHole(_b)),
+    [WD] _b_a1ps {0}:: a1_a1po[tau:2] (CHoleCan: ExprHole(_a)),
+    [WD] $dShow_a1pe {0}:: Show a0_a1pd[tau:2] (CNonCanonical),
+    [WD] $dShow_a1pp {0}:: Show a1_a1po[tau:2] (CNonCanonical)]
+
+
+Here we have the two hole constraints for `_a` and `_b`, but also additional
+constraints that these holes must fulfill. When we are looking for a match for
+the hole `_a`, we filter the simple constraints to the "Relevant constraints",
+by throwing out all hole constraints and any constraints which do not mention
+a variable mentioned in the type of the hole. For hole `_a`, we will then
+only require that the `$dShow_a1pp` constraint is solved, since that is
+the only non-hole constraint that mentions any free type variables mentioned in
+the hole constraint for `_a`, namely `a_a1pd[tau:2]` , and similarly for the
+hole `_b` we only require that the `$dShow_a1pe` constraint is solved.
 
 -}
 
@@ -559,7 +665,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
       where restore = flip writeTcRef Flexi . metaTyVarRef
             fuvs = fvVarList free_vars
             deepestFreeTyVarLvl = foldl' max topTcLevel $ map tcTyVarLevel fuvs
-            
+
     -- The real work happens here, where we invoke the type checker using
     -- tcCheckHoleFit to see whether the given type fits the hole.
     fitsHole :: (TcType, [TcTyVar]) -- The type of the hole wrapped with the
@@ -603,24 +709,29 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
          -- `head _ _`, and only suggest refinements where our all phantom
          -- variables got unified during the checking. This can be disabled
          -- with the `-fabstract-refinement-hole-fits` flag.
-         ; if fits then fmap ((, ) z_wrp_tys) <$>
-           if null ref_vars then return (Just []) else
-            do { let -- To be concrete matches, matches have to
-                     -- be more than just an invented type variable.
-                     fvSet = fvVarSet fvs
-                     notAbstract :: TcType -> Bool
-                     notAbstract t = case getTyVar_maybe t of
-                                       Just tv -> tv `elemVarSet` fvSet
-                                       _ -> True
-                     allConcrete = all notAbstract z_wrp_tys
-                ; z_vars  <- zonkTcTyVars ref_vars
-                ; let z_mtvs = mapMaybe tcGetTyVar_maybe z_vars
-                ; allFilled <- not <$> anyM isFlexiTyVar z_mtvs
-                ; allowAbstract <- goptM Opt_AbstractRefHoleFits
-                ; if allowAbstract || (allFilled && allConcrete )
-                  then return $ Just z_vars
-                  else return Nothing }
-            else return Nothing }
+         -- Here we do the additional handling when there are refinement
+         -- variables, i.e. zonk them to read their final value to check for
+         -- abstract refinements, and to report what the type of the simulated
+         -- holes must be for this to be a match.
+         ; if fits
+           then if null ref_vars
+                then return (Just (z_wrp_tys, []))
+                else do { let -- To be concrete matches, matches have to
+                              -- be more than just an invented type variable.
+                              fvSet = fvVarSet fvs
+                              notAbstract :: TcType -> Bool
+                              notAbstract t = case getTyVar_maybe t of
+                                                Just tv -> tv `elemVarSet` fvSet
+                                                _ -> True
+                              allConcrete = all notAbstract z_wrp_tys
+                        ; z_vars  <- zonkTcTyVars ref_vars
+                        ; let z_mtvs = mapMaybe tcGetTyVar_maybe z_vars
+                        ; allFilled <- not <$> anyM isFlexiTyVar z_mtvs
+                        ; allowAbstract <- goptM Opt_AbstractRefHoleFits
+                        ; if allowAbstract || (allFilled && allConcrete )
+                          then return $ Just (z_wrp_tys, z_vars)
+                          else return Nothing }
+           else return Nothing }
      where fvs = mkFVs ref_vars `unionFV` hole_fvs `unionFV` tyCoFVsOfType ty
 
     -- We zonk the hole fits so that the output aligns with the rest
@@ -696,7 +807,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
          ; return (discards, subs) }
       where
         -- Kickoff the checking of the elements.
-        -- We iterate over the elements, checking each one in turn for whether 
+        -- We iterate over the elements, checking each one in turn for whether
         -- it fits, and adding it to the results if it does.
         go :: [HoleFit]            -- What we've found so far.
             -> VarSet              -- Ids we've already checked
@@ -774,14 +885,18 @@ tcCheckHoleFit :: Cts                   -- Any relevant Cts to the hole.
                -> TcM (Bool, HsWrapper)
 tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty
     = return (True, idHsWrapper)
-tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $ 
+tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
   do { (wrp, wanted) <- captureConstraints $ tcSubType_NC ExprSigCtxt ty hole_ty
      ; traceTc "Checking hole fit {" empty
      ; traceTc "wanteds are: " $ ppr wanted
+     -- We add the relevantCts to the wanteds generated by the call to
+     -- tcSubType_NC, see Note [Relevant Constraints]
      ; let w_rel_cts = addSimples wanted relevantCts
      ; if isEmptyWC w_rel_cts
        then traceTc "}" empty >> return (True, wrp)
        else do { fresh_binds <- newTcEvBinds
+                 -- We wrap the WC in the nested implications, see
+                 -- Note [Nested Implications]
                ; let outermost_first = reverse implics
                      setWC = setWCAndBinds fresh_binds
                      w_givens = foldr setWC w_rel_cts outermost_first
