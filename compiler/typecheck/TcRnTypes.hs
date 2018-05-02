@@ -83,7 +83,7 @@ module TcRnTypes(
         tyCoVarsOfCtList, tyCoVarsOfCtsList,
 
         WantedConstraints(..), insolubleWC, emptyWC, isEmptyWC,
-        andWC, unionsWC, mkSimpleWC, mkImplicWC,
+        isSolvedWC, andWC, unionsWC, mkSimpleWC, mkImplicWC,
         addInsols, insolublesOnly, addSimples, addImplics,
         tyCoVarsOfWC, dropDerivedWC, dropDerivedSimples,
         tyCoVarsOfWCList, insolubleWantedCt, insolubleEqCt,
@@ -2317,6 +2317,14 @@ mkImplicWC implic
 isEmptyWC :: WantedConstraints -> Bool
 isEmptyWC (WC { wc_simple = f, wc_impl = i })
   = isEmptyBag f && isEmptyBag i
+
+
+-- | Checks whether a the given wanted constraints are solved, i.e.
+-- that there are no simple constraints left and all the implications
+-- are solved.
+isSolvedWC :: WantedConstraints -> Bool
+isSolvedWC WC {wc_simple = wc_simple, wc_impl = wc_impl} =
+  isEmptyBag wc_simple && allBag (isSolvedStatus . ic_status) wc_impl
 
 andWC :: WantedConstraints -> WantedConstraints -> WantedConstraints
 andWC (WC { wc_simple = f1, wc_impl = i1 })

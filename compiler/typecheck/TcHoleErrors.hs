@@ -34,7 +34,7 @@ import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
 
 
-import TcSimplify    ( simpl_top, runTcSDeriveds, isSolvedWC )
+import TcSimplify    ( simpl_top, runTcSDeriveds )
 import TcUnify       ( tcSubType_NC )
 
 {-
@@ -531,9 +531,14 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
            -- this is so we e.g. suggest the global fmap from the Functor class
            -- even though there is a local definition as well, such as in the
            -- Free monad example.
-           locals = map Left lclBinds ++ map Right lcl
+           locals = removeBindingShadowing $ map Left lclBinds ++ map Right lcl
            globals = map Right gbl
-           to_check = removeBindingShadowing locals ++ globals
+           -- If the type is an unbound type variable with no relevant
+           -- constraints, we'll (correctly) match anything in scope. However,
+           -- this is not very useful, so in that case we only check the local
+           -- bindings.
+           to_check = if null relevantCts && isTyVarTy hole_ty
+                      then locals else locals ++ globals
      ; (searchDiscards, subs) <-
         findSubs sortingAlg maxVSubs to_check (hole_ty, [])
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs

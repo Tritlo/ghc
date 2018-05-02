@@ -11,7 +11,6 @@ module TcSimplify(
        simplifyWantedsTcM,
        tcCheckSatisfiability,
 
-       isSolvedWC,
        simpl_top,
 
        promoteTyVar,
@@ -510,14 +509,6 @@ simplifyDefault theta
        ; reportAllUnsolved unsolved
        ; traceTc "reportUnsolved }" empty
        ; return () }
-
-
--- | Checks whether a the given wanted constraints are solved, i.e.
--- that there are no simple constraints left and all the implications
--- are solved.
-isSolvedWC :: WantedConstraints -> Bool
-isSolvedWC WC {wc_simple = wc_simple, wc_impl = wc_impl} =
-  isEmptyBag wc_simple && allBag (isSolvedStatus . ic_status) wc_impl
 
 ------------------
 tcCheckSatisfiability :: Bag EvVar -> TcM Bool
