@@ -30,7 +30,7 @@ module InteractiveEval (
         exprType,
         typeKind,
         parseName,
-        getDocs,
+        getDocs, getDocsIO,
         GetDocsFailure(..),
         showModule,
         moduleIsBootOrNotObjectLinkable,
@@ -825,12 +825,17 @@ parseThing parser dflags stmt = do
 
   Lexer.unP parser (Lexer.mkPState dflags buf loc)
 
+
 getDocs :: GhcMonad m
         => Name
         -> m (Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString))
            -- TODO: What about docs for constructors etc.?
-getDocs name =
-  withSession $ \hsc_env -> do
+getDocs n = withSession (liftIO . getDocsIO  n)
+
+getDocsIO :: Name
+          -> HscEnv
+          -> IO (Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString))
+getDocsIO name hsc_env = do
      case nameModule_maybe name of
        Nothing -> pure (Left (NameHasNoModule name))
        Just mod -> do
@@ -840,7 +845,7 @@ getDocs name =
              ModIface { mi_doc_hdr = mb_doc_hdr
                       , mi_decl_docs = DeclDocMap dmap
                       , mi_arg_docs = ArgDocMap amap
-                      } <- liftIO $ hscGetModuleInterface hsc_env mod
+                      } <- hscGetModuleInterface hsc_env mod
              if isNothing mb_doc_hdr && Map.null dmap && Map.null amap
                then pure (Left (NoDocsInIface mod compiled))
                else pure (Right ( Map.lookup name dmap
