@@ -11620,7 +11620,7 @@ configurable by a few flags.
     fit is not enough to realize what the fit stands for. This flag
     adds the documentation of the fit to the message, if the 
     documentation is available (and the module from which the function
-    comes was compiled with the ``-haddock`` flag command).
+    comes was compiled with the ``-haddock`` flag).
 
 .. ghc-flag:: -fshow-type-app-vars-of-hole-fits
     :shortdesc: Toggles whether to show what type each quantified
