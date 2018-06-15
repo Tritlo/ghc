@@ -830,7 +830,7 @@ getDocs :: GhcMonad m
         => Name
         -> m (Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString))
            -- TODO: What about docs for constructors etc.?
-getDocs n = withSession (liftIO . getDocsIO  n)
+getDocs n = withSession (liftIO . getDocsIO n)
 
 getDocsIO :: Name
           -> HscEnv
@@ -840,17 +840,21 @@ getDocsIO name hsc_env = do
        Nothing -> pure (Left (NameHasNoModule name))
        Just mod -> do
          if isInteractiveModule mod
-           then pure (Left InteractiveName)
-           else do
-             ModIface { mi_doc_hdr = mb_doc_hdr
-                      , mi_decl_docs = DeclDocMap dmap
-                      , mi_arg_docs = ArgDocMap amap
-                      } <- hscGetModuleInterface hsc_env mod
-             if isNothing mb_doc_hdr && Map.null dmap && Map.null amap
+         then pure (Left InteractiveName)
+         else do
+           modLoadRes <- tryJust loadErrors (hscGetModuleInterface hsc_env mod)
+           case modLoadRes of
+             Left err -> pure (Left (IFaceLoadError mod err))
+             Right (ModIface { mi_doc_hdr = mb_doc_hdr
+                             , mi_decl_docs = DeclDocMap dmap
+                             , mi_arg_docs = ArgDocMap amap }) ->
+               if isNothing mb_doc_hdr && Map.null dmap && Map.null amap
                then pure (Left (NoDocsInIface mod compiled))
                else pure (Right ( Map.lookup name dmap
                                 , Map.findWithDefault Map.empty name amap))
   where
+    loadErrors (ProgramError msg) = Just msg
+    loadErrors _ = Nothing
     compiled =
       -- TODO: Find a more direct indicator.
       case nameSrcLoc name of
@@ -875,6 +879,10 @@ data GetDocsFailure
 
     -- | The 'Name' was defined interactively.
   | InteractiveName
+  -- | This is when the interface could not be loaded, due to the '.hi' file
+  -- not existing or something similar, as thrown by `hscGetModuleInterface`
+  -- see comment on `getModuleInterface` in the `TcRnDriver` module.
+  | IFaceLoadError Module String
 
 instance Outputable GetDocsFailure where
   ppr (NameHasNoModule name) =
@@ -893,6 +901,8 @@ instance Outputable GetDocsFailure where
     ]
   ppr InteractiveName =
     text "Docs are unavailable for interactive declarations."
+  ppr (IFaceLoadError mod err) =
+    text "Error encountered while loading" <+> ppr mod <> char ':' $+$ text err
 
 -- -----------------------------------------------------------------------------
 -- Getting the type of an expression

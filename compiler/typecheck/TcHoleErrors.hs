@@ -39,8 +39,10 @@ import TcUnify       ( tcSubType_NC )
 
 
 import InteractiveEval ( getDocsIO, GetDocsFailure )
+import ExtractDocs ( extractDocs )
 import Data.Map        ( Map )
-import HsDoc           ( HsDocString, unpackHDS )
+import qualified Data.Map as Map
+import HsDoc           ( HsDocString, unpackHDS, DeclDocMap(..) )
 
 {-
 Note [Valid hole fits include ...]
@@ -423,11 +425,15 @@ data HoleFit = HoleFit { hfElem :: Maybe GlobalRdrElt -- The element that was
                        , hfMatches :: [TcType]  -- What the refinement
                                                 -- variables got matched with,
                                                 -- if anything
-                       , hfDoc :: Maybe DocRes }  -- Documentation of this
-                                                  -- HoleFit, if available.
+                       , hfDoc :: Maybe HsDocString } -- Documentation of this
+                                                      -- HoleFit, if available.
 
 hfName :: HoleFit -> Name
 hfName = idName . hfId
+hfIsLcl :: HoleFit -> Bool
+hfIsLcl hf = case hfElem hf of
+               Just gre -> gre_lcl gre
+               Nothing -> True
 
 type DocRes = Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString)
 
@@ -454,15 +460,24 @@ instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
 instance HasOccName GlobalRdrElt where
     occName = occName . gre_name
 
-getHoleFitDocs :: HoleFit -> TcM DocRes
-getHoleFitDocs hf = getTopEnv >>= liftIO . getDocsIO (hfName hf)
 
 
 addDocs :: [HoleFit] -> TcM [HoleFit]
 addDocs fits = do { showDocs <- goptM Opt_ShowDocsOfHoleFits
-                  ; if showDocs then mapM upd fits else return fits }
-  where upd fit = do { doc <- getHoleFitDocs fit
-                     ; return $ fit {hfDoc = Just doc} }
+                  ; (_, DeclDocMap lclDocs, _) <- extractDocs <$> getGblEnv
+                  ; if showDocs
+                    then do
+                      top <- getTopEnv
+                      mapM (upd top lclDocs) fits
+                    else return fits }
+  where upd top lclDocs fit = do {
+   doc <- if hfIsLcl fit
+          then pure (Map.lookup (hfName fit) lclDocs)
+          else do gblDoc <- liftIO (getDocsIO (hfName fit) top)
+                  pure $ case gblDoc of
+                           Left _ -> Nothing
+                           Right (d, _) -> d
+   ; return $ fit {hfDoc = doc} }
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
 -- refinement level.
@@ -500,7 +515,7 @@ pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf = hang display 2 provenance
                                         then occDisp <+> tyApp
                                         else tyAppVars
           docs = case hfDoc hf of
-                   Just (Right (Just d,_)) ->
+                   Just d ->
                      text "{-^" <>
                      (vcat . map text . lines . unpackHDS) d
                      <> text "-}"
@@ -563,8 +578,6 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
         findSubs sortingAlg maxVSubs to_check (hole_ty, [])
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
      ; tidy_sorted_subs <- sortFits sortingAlg tidy_subs
-     ; docs <- mapM getHoleFitDocs tidy_sorted_subs
-     ; traceTc "docs are:" $ ppr docs
      ; let (pVDisc, limited_subs) = possiblyDiscard maxVSubs tidy_sorted_subs
            vDiscards = pVDisc || searchDiscards
      ; subs_with_docs <- addDocs limited_subs
@@ -632,7 +645,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
     sortFits BySize subs
         = (++) <$> sortBySize (sort lclFits)
                <*> sortBySize (sort gblFits)
-        where (lclFits, gblFits) = span isLocalHoleFit subs
+        where (lclFits, gblFits) = span hfIsLcl subs
 
     -- To sort by subsumption, we invoke the sortByGraph function, which
     -- builds the subsumption graph for the fits and then sorts them using a
@@ -643,12 +656,8 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
     sortFits BySubsumption subs
         = (++) <$> sortByGraph (sort lclFits)
                <*> sortByGraph (sort gblFits)
-        where (lclFits, gblFits) = span isLocalHoleFit subs
+        where (lclFits, gblFits) = span hfIsLcl subs
 
-    isLocalHoleFit :: HoleFit -> Bool
-    isLocalHoleFit hf = case hfElem hf of
-                          Just gre -> gre_lcl gre
-                          Nothing -> True
 
     -- See Note [Relevant Constraints]
     relevantCts :: [Ct]
@@ -807,7 +816,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             go :: [(HoleFit, [HoleFit])] -> [HoleFit] -> TcM [HoleFit]
             go sofar [] = do { traceTc "subsumptionGraph was" $ ppr sofar
                              ; return $ uncurry (++)
-                                         $ partition isLocalHoleFit topSorted }
+                                         $ partition hfIsLcl topSorted }
               where toV (hf, adjs) = (hf, hfId hf, map hfId adjs)
                     (graph, fromV, _) = graphFromEdges $ map toV sofar
                     topSorted = map ((\(h,_,_) -> h) . fromV) $ topSort graph
