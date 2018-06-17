@@ -1639,7 +1639,6 @@ handleGetDocsFailure no_docs = do
   throwGhcException $ case no_docs of
     NameHasNoModule {} -> Sorry msg
     NoDocsInIface {} -> InstallationError msg
-    IFaceLoadError {} -> ProgramError msg
     InteractiveName -> ProgramError msg
 
 -----------------------------------------------------------------------------

@@ -37,12 +37,11 @@ import Data.Function    ( on )
 import TcSimplify    ( simpl_top, runTcSDeriveds )
 import TcUnify       ( tcSubType_NC )
 
-import LoadIface       ( loadInterfaceForNameMaybe )
-import TcIface         ( ifaceLookupDocs )
-
 import ExtractDocs ( extractDocs )
 import qualified Data.Map as Map
 import HsDoc           ( HsDocString, unpackHDS, DeclDocMap(..) )
+import HscTypes        ( ModIface(..) )
+import LoadIface       ( loadInterfaceForNameMaybe )
 
 {-
 Note [Valid hole fits include ...]
@@ -470,14 +469,14 @@ addDocs fits =
        else return fits }
   where
    msg = text "TcHoleErrors addDocs"
+   lookupInIface name (ModIface { mi_decl_docs = DeclDocMap dmap })
+     = Map.lookup name dmap
    upd lclDocs fit =
      let name = hfName fit in
      do { doc <- if hfIsLcl fit
                  then pure (Map.lookup name lclDocs)
                  else do { mbIface <- loadInterfaceForNameMaybe msg name
-                         ; return $ do { iface <- mbIface
-                                       ; (doc,_) <- ifaceLookupDocs name iface
-                                       ; doc } }
+                         ; return $ mbIface >>= lookupInIface name }
         ; return $ fit {hfDoc = doc} }
 
 -- For pretty printing hole fits, we display the name and type of the fit,

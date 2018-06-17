@@ -94,12 +94,12 @@ import Data.Either
 import qualified Data.IntMap as IntMap
 import Data.List (find,intercalate)
 import Data.Map (Map)
+import qualified Data.Map as Map
 import StringBuffer (stringToStringBuffer)
 import Control.Monad
 import GHC.Exts
 import Data.Array
 import Exception
-import TcIface ( ifaceLookupDocs )
 
 -- -----------------------------------------------------------------------------
 -- running a statement interactively
@@ -829,23 +829,23 @@ getDocs :: GhcMonad m
         => Name
         -> m (Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString))
            -- TODO: What about docs for constructors etc.?
-getDocs name = withSession $ \hsc_env -> liftIO $ do
+getDocs name =
+  withSession $ \hsc_env -> do
      case nameModule_maybe name of
        Nothing -> pure (Left (NameHasNoModule name))
        Just mod -> do
          if isInteractiveModule mod
-         then pure (Left InteractiveName)
-         else do
-           modLoadRes <- tryJust loadErrors (hscGetModuleInterface hsc_env mod)
-           pure $ case modLoadRes of
-                    Left err -> Left (IFaceLoadError mod err)
-                    Right iface ->
-                      case ifaceLookupDocs name iface of
-                        Nothing -> Left (NoDocsInIface mod compiled)
-                        Just res -> Right res
+           then pure (Left InteractiveName)
+           else do
+             ModIface { mi_doc_hdr = mb_doc_hdr
+                      , mi_decl_docs = DeclDocMap dmap
+                      , mi_arg_docs = ArgDocMap amap
+                      } <- liftIO $ hscGetModuleInterface hsc_env mod
+             if isNothing mb_doc_hdr && Map.null dmap && Map.null amap
+               then pure (Left (NoDocsInIface mod compiled))
+               else pure (Right ( Map.lookup name dmap
+                                , Map.findWithDefault Map.empty name amap))
   where
-    loadErrors (ProgramError msg) = Just msg
-    loadErrors _ = Nothing
     compiled =
       -- TODO: Find a more direct indicator.
       case nameSrcLoc name of
@@ -870,10 +870,6 @@ data GetDocsFailure
 
     -- | The 'Name' was defined interactively.
   | InteractiveName
-  -- | This is when the interface could not be loaded, due to the '.hi' file
-  -- not existing or something similar, as thrown by `hscGetModuleInterface`
-  -- see comment on `getModuleInterface` in the `TcRnDriver` module.
-  | IFaceLoadError Module String
 
 instance Outputable GetDocsFailure where
   ppr (NameHasNoModule name) =
@@ -892,8 +888,6 @@ instance Outputable GetDocsFailure where
     ]
   ppr InteractiveName =
     text "Docs are unavailable for interactive declarations."
-  ppr (IFaceLoadError mod err) =
-    text "Error encountered while loading" <+> ppr mod <> char ':' $+$ text err
 
 -- -----------------------------------------------------------------------------
 -- Getting the type of an expression
