@@ -17,7 +17,8 @@ module TcIface (
         tcIfaceDecl, tcIfaceInst, tcIfaceFamInst, tcIfaceRules,
         tcIfaceAnnotations, tcIfaceCompleteSigs,
         tcIfaceExpr,    -- Desired by HERMIT (Trac #7683)
-        tcIfaceGlobal
+        tcIfaceGlobal,
+        ifaceLookupDocs
  ) where
 
 #include "HsVersions.h"
@@ -78,6 +79,8 @@ import qualified BooleanFormula as BF
 import Data.List
 import Control.Monad
 import qualified Data.Map as Map
+
+import HsDoc
 
 {-
 This module takes
@@ -1797,3 +1800,20 @@ bindIfaceTyConBinderX :: (IfaceTvBndr -> (TyVar -> IfL a) -> IfL a)
 bindIfaceTyConBinderX bind_tv (TvBndr tv vis) thing_inside
   = bind_tv tv $ \tv' ->
     thing_inside (TvBndr tv' vis)
+
+{-
+************************************************************************
+*                                                                      *
+                Documentation
+*                                                                      *
+************************************************************************
+-}
+
+ifaceLookupDocs :: Name -> ModIface
+                -> Maybe (Maybe HsDocString, Map.Map Int HsDocString)
+ifaceLookupDocs name (ModIface { mi_doc_hdr = mb_doc_hdr
+                               , mi_decl_docs = DeclDocMap dmap
+                               , mi_arg_docs = ArgDocMap amap })
+ = if isNothing mb_doc_hdr && Map.null dmap && Map.null amap
+   then Nothing
+   else Just (Map.lookup name dmap, Map.findWithDefault Map.empty name amap)

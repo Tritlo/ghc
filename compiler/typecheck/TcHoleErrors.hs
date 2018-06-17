@@ -37,10 +37,10 @@ import Data.Function    ( on )
 import TcSimplify    ( simpl_top, runTcSDeriveds )
 import TcUnify       ( tcSubType_NC )
 
+import LoadIface       ( loadInterfaceForNameMaybe )
+import TcIface         ( ifaceLookupDocs )
 
-import InteractiveEval ( getDocsIO, GetDocsFailure )
 import ExtractDocs ( extractDocs )
-import Data.Map        ( Map )
 import qualified Data.Map as Map
 import HsDoc           ( HsDocString, unpackHDS, DeclDocMap(..) )
 
@@ -430,12 +430,11 @@ data HoleFit = HoleFit { hfElem :: Maybe GlobalRdrElt -- The element that was
 
 hfName :: HoleFit -> Name
 hfName = idName . hfId
+
 hfIsLcl :: HoleFit -> Bool
 hfIsLcl hf = case hfElem hf of
                Just gre -> gre_lcl gre
                Nothing -> True
-
-type DocRes = Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString)
 
 -- We define an Eq and Ord instance to be able to build a graph.
 instance Eq HoleFit where
@@ -460,24 +459,27 @@ instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
 instance HasOccName GlobalRdrElt where
     occName = occName . gre_name
 
-
-
+-- If enabled, we go through the fits and add any associated documentation,
+--  by looking it up in the module or the environment (for local fits)
 addDocs :: [HoleFit] -> TcM [HoleFit]
-addDocs fits = do { showDocs <- goptM Opt_ShowDocsOfHoleFits
-                  ; (_, DeclDocMap lclDocs, _) <- extractDocs <$> getGblEnv
-                  ; if showDocs
-                    then do
-                      top <- getTopEnv
-                      mapM (upd top lclDocs) fits
-                    else return fits }
-  where upd top lclDocs fit = do {
-   doc <- if hfIsLcl fit
-          then pure (Map.lookup (hfName fit) lclDocs)
-          else do gblDoc <- liftIO (getDocsIO (hfName fit) top)
-                  pure $ case gblDoc of
-                           Left _ -> Nothing
-                           Right (d, _) -> d
-   ; return $ fit {hfDoc = doc} }
+addDocs fits =
+  do { showDocs <- goptM Opt_ShowDocsOfHoleFits
+     ; if showDocs
+       then do { (_, DeclDocMap lclDocs, _) <- extractDocs <$> getGblEnv
+               ; mapM (upd lclDocs) fits }
+       else return fits }
+  where
+   msg = text "TcHoleErrors addDocs"
+   upd lclDocs fit =
+     let name = hfName fit in
+     do { doc <- if hfIsLcl fit
+                 then pure (Map.lookup name lclDocs)
+                 else do { mbIface <- loadInterfaceForNameMaybe msg name
+                         ; return $ do { iface <- mbIface
+                                       ; (doc,_) <- ifaceLookupDocs name iface
+                                       ; doc } }
+        ; return $ fit {hfDoc = doc} }
+
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
 -- refinement level.

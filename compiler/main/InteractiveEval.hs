@@ -30,7 +30,7 @@ module InteractiveEval (
         exprType,
         typeKind,
         parseName,
-        getDocs, getDocsIO,
+        getDocs,
         GetDocsFailure(..),
         showModule,
         moduleIsBootOrNotObjectLinkable,
@@ -94,12 +94,12 @@ import Data.Either
 import qualified Data.IntMap as IntMap
 import Data.List (find,intercalate)
 import Data.Map (Map)
-import qualified Data.Map as Map
 import StringBuffer (stringToStringBuffer)
 import Control.Monad
 import GHC.Exts
 import Data.Array
 import Exception
+import TcIface ( ifaceLookupDocs )
 
 -- -----------------------------------------------------------------------------
 -- running a statement interactively
@@ -825,17 +825,11 @@ parseThing parser dflags stmt = do
 
   Lexer.unP parser (Lexer.mkPState dflags buf loc)
 
-
 getDocs :: GhcMonad m
         => Name
         -> m (Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString))
            -- TODO: What about docs for constructors etc.?
-getDocs n = withSession (liftIO . getDocsIO n)
-
-getDocsIO :: Name
-          -> HscEnv
-          -> IO (Either GetDocsFailure (Maybe HsDocString, Map Int HsDocString))
-getDocsIO name hsc_env = do
+getDocs name = withSession $ \hsc_env -> liftIO $ do
      case nameModule_maybe name of
        Nothing -> pure (Left (NameHasNoModule name))
        Just mod -> do
@@ -843,15 +837,12 @@ getDocsIO name hsc_env = do
          then pure (Left InteractiveName)
          else do
            modLoadRes <- tryJust loadErrors (hscGetModuleInterface hsc_env mod)
-           case modLoadRes of
-             Left err -> pure (Left (IFaceLoadError mod err))
-             Right (ModIface { mi_doc_hdr = mb_doc_hdr
-                             , mi_decl_docs = DeclDocMap dmap
-                             , mi_arg_docs = ArgDocMap amap }) ->
-               if isNothing mb_doc_hdr && Map.null dmap && Map.null amap
-               then pure (Left (NoDocsInIface mod compiled))
-               else pure (Right ( Map.lookup name dmap
-                                , Map.findWithDefault Map.empty name amap))
+           pure $ case modLoadRes of
+                    Left err -> Left (IFaceLoadError mod err)
+                    Right iface ->
+                      case ifaceLookupDocs name iface of
+                        Nothing -> Left (NoDocsInIface mod compiled)
+                        Just res -> Right res
   where
     loadErrors (ProgramError msg) = Just msg
     loadErrors _ = Nothing
