@@ -29,8 +29,7 @@ import FV ( fvVarList, fvVarSet, unionFV, mkFVs, FV )
 import Control.Arrow ( (&&&) )
 
 import Control.Monad    ( filterM, replicateM )
-import Data.List        ( partition, sort, sortOn, nubBy, foldl' )
-import Data.Maybe       ( fromMaybe )
+import Data.List        ( partition, sort, sortOn, nubBy )
 import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
 
@@ -930,18 +929,24 @@ tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag [] ty_a ty_b
 -- free type variables to avoid side-effects.
 tcCheckHoleFit :: Cts                   -- Any relevant Cts to the hole.
                -> [Implication]         -- The nested implications of the hole
+                                        -- with the innermost implication first
                -> TcSigmaType           -- The type of the hole.
                -> TcSigmaType           -- The type to check whether fits.
                -> TcM (Bool, HsWrapper)
 tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty
     = return (True, idHsWrapper)
 tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
-  do { cur_lvl <- getTcLevel
-     -- We wrap the subtype constraint in the implications to pass along
-     -- the Givens, and so we must ensure that any nested implications
-     -- in the subtype constraint have the correct TcLevel.
-     ; let hi_lvl = fromMaybe cur_lvl (subTLevel implics)
-     ; (wrp, wanted) <- setTcLevel hi_lvl $ captureConstraints $
+  do { -- We wrap the subtype constraint in the implications to pass along the
+       -- givens, and so we must ensure that any nested implications and skolems
+       -- end up with the correct level. The implications are ordered so that
+       -- the innermost (the one with the highest level) is first, so it
+       -- suffices to get the level of the first one (or the current level, if
+       -- there are no implications involved).
+       innermost_lvl <- case implics of
+                          [] -> getTcLevel
+                          -- imp is the innermost implication
+                          (imp:_) -> return (ic_tclvl imp)
+     ; (wrp, wanted) <- setTcLevel innermost_lvl $ captureConstraints $
                           tcSubType_NC ExprSigCtxt ty hole_ty
      ; traceTc "Checking hole fit {" empty
      ; traceTc "wanteds are: " $ ppr wanted
@@ -964,10 +969,6 @@ tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
                ; traceTc "}" empty
                ; return (isSolvedWC rem, wrp) } }
      where
-       subTLevel :: [Implication] -> Maybe TcLevel
-       subTLevel [] = Nothing
-       subTLevel (imp:_) = Just (ic_tclvl imp)
-
        setWCAndBinds :: EvBindsVar         -- Fresh ev binds var.
                      -> Implication        -- The implication to put WC in.
                      -> WantedConstraints  -- The WC constraints to put implic.
