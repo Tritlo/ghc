@@ -29,6 +29,7 @@ holes.hs:8:5: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include h :: [Char] (bound at holes.hs:8:1)
       Valid hole fits include
         h :: [Char]
+        [] :: forall a. [a]
         f :: forall t. t
         mempty :: forall a. Monoid a => a
 
@@ -42,14 +43,20 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         y :: [a] (bound at holes.hs:11:3)
         z :: [a] -> [a] (bound at holes.hs:11:1)
       Valid hole fits include
+        () :: ()
         y :: [a]
         z :: [a] -> [a]
         g :: Int -> Char
         h :: [Char]
+        (:) :: forall a. a -> [a] -> [a]
+        [] :: forall a. [a]
         f :: forall t. t
         otherwise :: Bool
         False :: Bool
         True :: Bool
+        LT :: Ordering
+        EQ :: Ordering
+        GT :: Ordering
         lines :: String -> [String]
         unlines :: [String] -> String
         unwords :: [String] -> String
@@ -72,9 +79,6 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         (&&) :: Bool -> Bool -> Bool
         not :: Bool -> Bool
         (||) :: Bool -> Bool -> Bool
-        EQ :: Ordering
-        LT :: Ordering
-        GT :: Ordering
         (++) :: forall a. [a] -> [a] -> [a]
         filter :: forall a. (a -> Bool) -> [a] -> [a]
         fromInteger :: forall a. Num a => Integer -> a
@@ -166,6 +170,8 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
         snd :: forall a b. (a, b) -> b
         map :: forall a b. (a -> b) -> [a] -> [b]
         realToFrac :: forall a b. (Real a, Fractional b) => a -> b
+        Left :: forall a b. a -> Either a b
+        Right :: forall a b. b -> Either a b
         maybe :: forall b a. b -> (a -> b) -> Maybe a -> b
         const :: forall a b. a -> b -> a
         scanl :: forall b a. (b -> a -> b) -> b -> [a] -> [b]
@@ -179,8 +185,6 @@ holes.hs:11:15: warning: [-Wtyped-holes (in -Wdefault)]
                           a -> (b, a)
         round :: forall a b. (RealFrac a, Integral b) => a -> b
         truncate :: forall a b. (RealFrac a, Integral b) => a -> b
-        Right :: forall a b. b -> Either a b
-        Left :: forall a b. a -> Either a b
         ($) :: forall a b. (a -> b) -> a -> b
         either :: forall a c b. (a -> c) -> (b -> c) -> Either a b -> c
         curry :: forall a b c. ((a, b) -> c) -> a -> b -> c

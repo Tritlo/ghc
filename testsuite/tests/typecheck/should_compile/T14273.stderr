@@ -30,6 +30,7 @@ T14273.hs:7:32: warning: [-Wtyped-holes (in -Wdefault)]
         pleaseShow :: Bool -> a -> Maybe String (bound at T14273.hs:6:1)
       Constraints include Show a (from T14273.hs:5:1-49)
       Valid hole fits include
+        () :: () (bound at <wired into compiler>)
         a :: a (bound at T14273.hs:7:17)
         k :: String (bound at T14273.hs:10:1)
         otherwise :: Bool
@@ -41,10 +42,10 @@ T14273.hs:7:32: warning: [-Wtyped-holes (in -Wdefault)]
         True :: Bool
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Types’))
-        EQ :: Ordering
+        LT :: Ordering
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Types’))
-        LT :: Ordering
+        EQ :: Ordering
           (imported from ‘Prelude’ at T14273.hs:1:8-40
            (and originally defined in ‘GHC.Types’))
         GT :: Ordering

@@ -22,11 +22,12 @@ holes2.hs:3:10: warning: [-Wtyped-holes (in -Wdefault)]
       In an equation for ‘f’: f = show _
     • Relevant bindings include f :: String (bound at holes2.hs:3:1)
       Valid hole fits include
+        () :: ()
         f :: String
         otherwise :: Bool
         False :: Bool
         True :: Bool
-        EQ :: Ordering
         LT :: Ordering
+        EQ :: Ordering
         GT :: Ordering
         pi :: forall a. Floating a => a
