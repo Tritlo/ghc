@@ -97,7 +97,6 @@ valid_hole_fits.hs:30:10: warning: [-Wtyped-holes (in -Wdefault)]
     • Relevant bindings include
         f :: String (bound at valid_hole_fits.hs:30:1)
       Valid hole fits include
-        () :: () (bound at <wired into compiler>)
         f :: String (bound at valid_hole_fits.hs:30:1)
         k :: Maybe Integer (defined at valid_hole_fits.hs:27:1)
         h :: String (bound at valid_hole_fits.hs:34:1)
@@ -119,6 +118,7 @@ valid_hole_fits.hs:30:10: warning: [-Wtyped-holes (in -Wdefault)]
         GT :: Ordering
           (imported from ‘Prelude’ at valid_hole_fits.hs:3:1-40
            (and originally defined in ‘GHC.Types’))
+        () :: () (bound at <wired into compiler>)
         pi :: forall a. Floating a => a
           with pi @Double
           (imported from ‘Prelude’ at valid_hole_fits.hs:3:1-40

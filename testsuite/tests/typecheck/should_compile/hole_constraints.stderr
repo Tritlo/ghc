@@ -42,8 +42,8 @@ hole_constraints.hs:16:35: warning: [-Wtyped-holes (in -Wdefault)]
       Constraints include Eq a (from hole_constraints.hs:16:10-22)
       Valid hole fits include
         f3 :: [a]
-        [] :: forall a. [a]
         f1 :: forall a. Eq a => a
+        [] :: forall a. [a]
         mempty :: forall a. Monoid a => a
 
 hole_constraints.hs:20:19: warning: [-Wtyped-holes (in -Wdefault)]
@@ -71,8 +71,8 @@ hole_constraints.hs:27:32: warning: [-Wtyped-holes (in -Wdefault)]
         foo :: AnyShow -> String (bound at hole_constraints.hs:27:1)
       Constraints include Show a (from hole_constraints.hs:27:19-27)
       Valid hole fits include
-        [] :: forall a. [a]
         f3 :: forall a. C a => a
         f1 :: forall a. Eq a => a
         f2 :: forall a. (Show a, Eq a) => a
+        [] :: forall a. [a]
         mempty :: forall a. Monoid a => a

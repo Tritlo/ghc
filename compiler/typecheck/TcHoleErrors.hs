@@ -1,7 +1,6 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-} -- We don't want to spread the HasOccName
-                                      -- instance for Either
 module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits, HoleFit (..)
-                    , tcCheckHoleFit, tcSubsumes, withoutUnification ) where
+                    , HoleFitCandidate (..), tcCheckHoleFit, tcSubsumes
+                    , withoutUnification ) where
 
 import GhcPrelude
 
@@ -422,34 +421,60 @@ getSortingAlg =
                               then BySize
                               else NoSorting }
 
--- HoleFit is the type we use for valid hole fits. It contains the
+
+-- | HoleFitCandidates are passed to the filter and checked whether they can be
+-- made to fit.
+data HoleFitCandidate = IdHFCand Id             -- An id, like locals.
+                      | NameHFCand Name         -- A name, like built-in syntax.
+                      | GreHFCand GlobalRdrElt  -- A global, like imported ids.
+                      deriving (Eq)
+instance Outputable HoleFitCandidate where
+  ppr = pprHoleFitCand
+
+pprHoleFitCand :: HoleFitCandidate -> SDoc
+pprHoleFitCand (IdHFCand id) = text "Id HFC: " <> ppr id
+pprHoleFitCand (NameHFCand name) = text "Name HFC: " <> ppr name
+pprHoleFitCand (GreHFCand gre) = text "Gre HFC: " <> ppr gre
+
+instance HasOccName HoleFitCandidate where
+  occName hfc = case hfc of
+                  IdHFCand id -> occName id
+                  NameHFCand name -> occName name
+                  GreHFCand gre -> occName (gre_name gre)
+
+-- | HoleFit is the type we use for valid hole fits. It contains the
 -- element that was checked, the Id of that element as found by `tcLookup`,
 -- and the refinement level of the fit, which is the number of extra argument
 -- holes that this fit uses (e.g. if hfRefLvl is 2, the fit is for `Id _ _`).
-data HoleFit = HoleFit { hfElem :: Maybe GlobalRdrElt -- The element that was
-                                                      -- if a global, nothing
-                                                      -- if it is a local.
-                       , hfId :: Id       -- The elements id in the TcM
-                       , hfName :: Name   -- The elements original name
-                       , hfType :: TcType -- The type of the id, possibly zonked
-                       , hfRefLvl :: Int  -- The number of holes in this fit
-                       , hfWrap :: [TcType] -- The wrapper for the match
-                       , hfMatches :: [TcType]  -- What the refinement
-                                                -- variables got matched with,
-                                                -- if anything
-                       , hfDoc :: Maybe HsDocString } -- Documentation of this
-                                                      -- HoleFit, if available.
+data HoleFit =
+  HoleFit { hfId   :: Id       -- The elements id in the TcM
+          , hfCand :: HoleFitCandidate  -- The candidate that was checked.
+          , hfType :: TcType -- The type of the id, possibly zonked.
+          , hfRefLvl :: Int  -- The number of holes in this fit.
+          , hfWrap :: [TcType] -- The wrapper for the match.
+          , hfMatches :: [TcType]  -- What the refinement variables got matched
+                                   -- with, if anything
+          , hfDoc :: Maybe HsDocString } -- Documentation of this HoleFit, if
+                                         -- available.
+
+
+hfName :: HoleFit -> Name
+hfName hf = case hfCand hf of
+              IdHFCand id -> idName id
+              NameHFCand name -> name
+              GreHFCand gre -> gre_name gre
 
 hfIsLcl :: HoleFit -> Bool
-hfIsLcl hf = case hfElem hf of
-               Just gre -> gre_lcl gre
-               Nothing -> True
+hfIsLcl hf = case hfCand hf of
+               IdHFCand _    -> True
+               NameHFCand _  -> False
+               GreHFCand gre -> gre_lcl gre
 
 -- We define an Eq and Ord instance to be able to build a graph.
 instance Eq HoleFit where
    (==) = (==) `on` hfId
 
--- We compare HoleFits by their gre_name instead of their Id, since we don't
+-- We compare HoleFits by their name instead of their Id, since we don't
 -- want our tests to be affected by the non-determinism of `nonDetCmpVar`,
 -- which is used to compare Ids. When comparing, we want HoleFits with a lower
 -- refinement level to come first.
@@ -462,14 +487,8 @@ instance Ord HoleFit where
 instance Outputable HoleFit where
     ppr = pprHoleFit debugHoleFitDispConfig
 
-instance (HasOccName a, HasOccName b) => HasOccName (Either a b) where
-    occName = either occName occName
-
-instance HasOccName GlobalRdrElt where
-    occName = occName . gre_name
-
 -- If enabled, we go through the fits and add any associated documentation,
---  by looking it up in the module or the environment (for local fits)
+-- by looking it up in the module or the environment (for local fits)
 addDocs :: [HoleFit] -> TcM [HoleFit]
 addDocs fits =
   do { showDocs <- goptM Opt_ShowDocsOfHoleFits
@@ -524,19 +543,18 @@ pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf = hang display 2 provenance
                                         then occDisp <+> tyApp
                                         else tyAppVars
           docs = case hfDoc hf of
-                   Just d ->
-                     text "{-^" <>
-                     (vcat . map text . lines . unpackHDS) d
-                     <> text "-}"
+                   Just d -> text "{-^" <>
+                             (vcat . map text . lines . unpackHDS) d
+                             <> text "-}"
                    _ -> empty
           funcInfo = ppWhen (has matches && sTy) $
                        text "where" <+> occDisp <+> tyDisp
           subDisp = occDisp <+> if has matches then holeDisp else tyDisp
           display =  subDisp $$ nest 2 (funcInfo $+$ docs $+$ wrapDisp)
           provenance = ppWhen sProv $ parens $
-                case hfElem hf of
-                    Just gre -> pprNameProvenance gre
-                    Nothing -> text "bound at" <+> ppr (getSrcLoc name)
+                case hfCand hf of
+                    GreHFCand gre -> pprNameProvenance gre
+                    _ -> text "bound at" <+> ppr (getSrcLoc name)
 
 getLocalBindings :: TidyEnv -> Ct -> TcM [Id]
 getLocalBindings tidy_orig ct
@@ -585,9 +603,9 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
            -- even though there is a local definition as well, such as in the
            -- Free monad example.
            locals = removeBindingShadowing $
-                      map Left lclBinds ++ map (Right . Right) lcl
-           globals = map (Right . Right) gbl
-           syntax = map (Right . Left) builtIns
+                      map IdHFCand lclBinds ++ map GreHFCand lcl
+           globals = map GreHFCand gbl
+           syntax = map NameHFCand builtIns
            to_check = locals ++ syntax ++ globals
      ; (searchDiscards, subs) <-
         tcFilterHoleFits findVLimit implics relevantCts (hole_ty, []) to_check
@@ -768,11 +786,8 @@ tcFilterHoleFits :: Maybe Int
                -- ^ The type to check for fits and a list of refinement
                -- variables (free type variables in the type) for emulating
                -- additional holes.
-               -> [Either Id (Either Name GlobalRdrElt)]
-               -- ^ The candidates to check whether fit. Either it is an id, a
-               -- name (used for e.g. builtInSyntax) or an element from the
-               -- global reader. Names and GlobalRdrElt are turned into ids by
-               -- looking them up in the current environment.
+               -> [HoleFitCandidate]
+               -- ^ The candidates to check whether fit.
                -> TcM (Bool, [HoleFit])
                -- ^ We return whether or not we stopped due to hitting the limit
                -- and the fits we found.
@@ -792,8 +807,7 @@ tcFilterHoleFits limit implics relevantCts ht@(hole_ty, _) candidates =
        -> VarSet              -- Ids we've already checked
        -> Maybe Int           -- How many we're allowed to find, if limited
        -> (TcType, [TcTyVar]) -- The type, and its refinement variables.
-       -> [Either Id  (Either Name GlobalRdrElt)] -- The elements we've yet to
-                                                  -- check.
+       -> [HoleFitCandidate]  -- The elements we've yet to check.
        -> TcM (Bool, [HoleFit])
     go subs _ _ _ [] = return (False, reverse subs)
     go subs _ (Just 0) _ _ = return (True, reverse subs)
@@ -801,37 +815,40 @@ tcFilterHoleFits limit implics relevantCts ht@(hole_ty, _) candidates =
         -- See Note [Leaking errors]
         tryTcDiscardingErrs discard_it $
         do { traceTc "lookingUp" $ ppr el
-            ; maybeThing <- lookup el
-            ; case maybeThing of
-                Just id | not_trivial id ->
-                        do { fits <- fitsHole ty (idType id)
-                            ; case fits of
-                                Just (wrp, matches) -> keep_it id wrp matches
-                                _ -> discard_it }
-                _ -> discard_it }
+           ; maybeThing <- lookup el
+           ; case maybeThing of
+               Just id | not_trivial id ->
+                       do { fits <- fitsHole ty (idType id)
+                          ; case fits of
+                              Just (wrp, matches) -> keep_it id wrp matches
+                              _ -> discard_it }
+               _ -> discard_it }
         where
           -- We want to filter out undefined and the likes from GHC.Err
           not_trivial id = nameModule_maybe (idName id) /= Just gHC_ERR
-          lookup :: Either Id (Either Name GlobalRdrElt) -> TcM (Maybe Id)
-          lookup = either (return . Just) (lookupFit . either id gre_name)
+
+          lookup :: HoleFitCandidate -> TcM (Maybe Id)
+          lookup (IdHFCand id) = return (Just id)
+          lookup hfc = do { thing <- tcLookup name
+                          ; return $ case thing of
+                                       ATcId {tct_id = id} -> Just id
+                                       AGlobal (AnId id)   -> Just id
+                                       AGlobal (AConLike (RealDataCon con)) ->
+                                           Just (dataConWrapId con)
+                                       _ -> Nothing }
+            where name = case hfc of
+                           IdHFCand id -> idName id
+                           GreHFCand gre -> gre_name gre
+                           NameHFCand name -> name
           discard_it = go subs seen maxleft ty elts
           keep_it eid wrp ms = go (fit:subs) (extendVarSet seen eid)
-                                ((\n -> n - 1) <$> maxleft) ty elts
+                                 ((\n -> n - 1) <$> maxleft) ty elts
             where
-              fit = HoleFit { hfElem = mbgre, hfId = eid, hfType = idType eid
-                            , hfName = elname, hfRefLvl = length (snd ty)
-                            , hfWrap = wrp, hfMatches = ms, hfDoc = Nothing }
-              mbgre = either (const Nothing) (either (const Nothing) Just) el
-              elname = either idName (either id gre_name) el
+              fit = HoleFit { hfId = eid, hfCand = el, hfType = (idType eid)
+                            , hfRefLvl = length (snd ty)
+                            , hfWrap = wrp, hfMatches = ms
+                            , hfDoc = Nothing }
 
-    lookupFit :: Name -> TcM (Maybe Id)
-    lookupFit name = do { thing <- tcLookup name
-                        ; return $ case thing of
-                                     ATcId {tct_id = id} -> Just id
-                                     AGlobal (AnId id)   -> Just id
-                                     AGlobal (AConLike (RealDataCon con)) ->
-                                        Just (dataConWrapId con)
-                                     _ -> Nothing }
 
 
 
