@@ -6,6 +6,7 @@ module Plugins (
     , defaultPlugin, keepRenamedSource, withPlugins, withPlugins_
     , PluginRecompile(..)
     , purePlugin, impurePlugin, flagRecompile
+    , HoleFitPlugin (..), defaultHoleFitPlugin,
     ) where
 
 import GhcPrelude
@@ -22,6 +23,8 @@ import Module ( ModuleName, Module(moduleName))
 import Fingerprint
 import Data.List
 import Outputable (Outputable(..), text, (<+>))
+
+import {-# Source #-} TcHoleErrors (HoleFit, HoleFitCandidate)
 
 --Qualified import so we can define a Semigroup instance
 -- but it doesn't clash with Outputable.<>
@@ -186,3 +189,12 @@ data FrontendPlugin = FrontendPlugin {
     }
 defaultFrontendPlugin :: FrontendPlugin
 defaultFrontendPlugin = FrontendPlugin { frontend = \_ _ -> return () }
+
+data HoleFitPlugin = HoleFitPlugin {
+      preHoleFitHook :: [HoleFitCandidate] -> TcM [HoleFitCandidate]
+    , postHoleFitHook :: [HoleFit] -> TcM [HoleFit] }
+
+defaultHoleFitPlugin :: HoleFitPlugin
+defaultHoleFitPlugin = HoleFitPlugin {
+    preHoleFitHook = return
+  , postHoleFitHook = return }

@@ -6,6 +6,7 @@ module DynamicLoading (
 #if defined(GHCI)
         -- * Loading plugins
         loadFrontendPlugin,
+        loadHoleFitPlugin,
 
         -- * Force loading information
         forceLoadModuleInterfaces,
@@ -41,7 +42,8 @@ import RdrName          ( RdrName, ImportSpec(..), ImpDeclSpec(..)
 import OccName          ( OccName, mkVarOcc )
 import RnNames          ( gresFromAvails )
 import Plugins
-import PrelNames        ( pluginTyConName, frontendPluginTyConName )
+import PrelNames        ( pluginTyConName, frontendPluginTyConName
+                        , holeFitPluginTyConName )
 
 import HscTypes
 import GHCi.RemoteTypes ( HValue )
@@ -116,6 +118,12 @@ loadFrontendPlugin :: HscEnv -> ModuleName -> IO FrontendPlugin
 loadFrontendPlugin hsc_env mod_name = do
     checkExternalInterpreter hsc_env
     fst <$> loadPlugin' (mkVarOcc "frontendPlugin") frontendPluginTyConName
+                hsc_env mod_name
+
+loadHoleFitPlugin :: HscEnv -> ModuleName -> IO HoleFitPlugin
+loadHoleFitPlugin hsc_env mod_name = do
+    checkExternalInterpreter hsc_env
+    fst <$> loadPlugin' (mkVarOcc "holeFitPlugin") holeFitPluginTyConName
                 hsc_env mod_name
 
 -- #14335

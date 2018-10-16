@@ -433,6 +433,7 @@ basicKnownKeyNames
         -- Plugins
         , pluginTyConName
         , frontendPluginTyConName
+        , holeFitPluginTyConName
 
         -- Generics
         , genClassName, gen1ClassName
@@ -1517,6 +1518,8 @@ pluginTyConName :: Name
 pluginTyConName = tcQual pLUGINS (fsLit "Plugin") pluginTyConKey
 frontendPluginTyConName :: Name
 frontendPluginTyConName = tcQual pLUGINS (fsLit "FrontendPlugin") frontendPluginTyConKey
+holeFitPluginTyConName :: Name
+holeFitPluginTyConName = tcQual pLUGINS (fsLit "HoleFitPlugin") holeFitPluginTyConKey
 
 -- Static pointers
 makeStaticName :: Name
@@ -1790,6 +1793,7 @@ vecElemTyConKey                         = mkPreludeTyConUnique 97
 pluginTyConKey, frontendPluginTyConKey :: Unique
 pluginTyConKey                          = mkPreludeTyConUnique 102
 frontendPluginTyConKey                  = mkPreludeTyConUnique 103
+holeFitPluginTyConKey                   = mkPreludeTyConUnique 104
 
 unknownTyConKey, unknown1TyConKey, unknown2TyConKey, unknown3TyConKey,
     opaqueTyConKey :: Unique
