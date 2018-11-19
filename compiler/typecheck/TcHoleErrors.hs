@@ -1,6 +1,7 @@
+{-# LANGUAGE RecordWildCards #-}
 module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits, HoleFit (..)
                     , HoleFitCandidate (..), tcCheckHoleFit, tcSubsumes
-                    , withoutUnification ) where
+                    , withoutUnification, HoleFitPlugin ) where
 
 import GhcPrelude
 
@@ -592,10 +593,9 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
      ; sortingAlg <- getSortingAlg
      ; let findVLimit = if sortingAlg > NoSorting then Nothing else maxVSubs
      ; refLevel <- refLevelHoleFits <$> getDynFlags
-     ; traceTc "findingValidHoleFitsFor { " $ ppr ct
+     ; let hole = TyH (listToBag relevantCts) implics (Just ct)
+     ; traceTc "findingValidHoleFitsFor { " $ ppr hole
      ; traceTc "hole_lvl is:" $ ppr hole_lvl
-     ; traceTc "implics are: " $ ppr implics
-     ; traceTc "simples are: " $ ppr simples
      ; traceTc "locals are: " $ ppr lclBinds
      ; let (lcl, gbl) = partition gre_lcl (globalRdrEnvElts rdr_env)
            -- We remove binding shadowings here, but only for the local level.
@@ -608,7 +608,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
            syntax = map NameHFCand builtIns
            to_check = locals ++ syntax ++ globals
      ; (searchDiscards, subs) <-
-        tcFilterHoleFits findVLimit implics relevantCts (hole_ty, []) to_check
+        tcFilterHoleFits findVLimit hole (hole_ty, []) to_check
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
      ; tidy_sorted_subs <- sortFits sortingAlg tidy_subs
      ; let (pVDisc, limited_subs) = possiblyDiscard maxVSubs tidy_sorted_subs
@@ -630,8 +630,8 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             ; traceTc "ref_tys are" $ ppr ref_tys
             ; let findRLimit = if sortingAlg > NoSorting then Nothing
                                                          else maxRSubs
-            ; refDs <- mapM (flip (tcFilterHoleFits findRLimit implics
-                                     relevantCts) to_check) ref_tys
+            ; refDs <- mapM (flip (tcFilterHoleFits findRLimit hole)
+                              to_check) ref_tys
             ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env $ concatMap snd refDs
             ; tidy_sorted_rsubs <- sortFits sortingAlg tidy_rsubs
             -- For refinement substitutions we want matches
@@ -778,10 +778,7 @@ findValidHoleFits env _ _ _ = return (env, empty)
 -- running the type checker. Stops after finding limit matches.
 tcFilterHoleFits :: Maybe Int
                -- ^ How many we should output, if limited
-               -> [Implication]
-               -- ^ Enclosing implications for givens
-               -> [Ct]
-               -- ^ Any relevant unsolved simple constraints
+               -> TypedHole -- ^ The hole to filter against
                -> (TcType, [TcTyVar])
                -- ^ The type to check for fits and a list of refinement
                -- variables (free type variables in the type) for emulating
@@ -791,8 +788,8 @@ tcFilterHoleFits :: Maybe Int
                -> TcM (Bool, [HoleFit])
                -- ^ We return whether or not we stopped due to hitting the limit
                -- and the fits we found.
-tcFilterHoleFits (Just 0) _ _ _ _ = return (False, []) -- Stop right away on 0
-tcFilterHoleFits limit implics relevantCts ht@(hole_ty, _) candidates =
+tcFilterHoleFits (Just 0) _ _ _ = return (False, []) -- Stop right away on 0
+tcFilterHoleFits limit (TyH {..}) ht@(hole_ty, _) candidates =
   do { traceTc "checkingFitsFor {" $ ppr hole_ty
      ; (discards, subs) <- go [] emptyVarSet limit ht candidates
      ; traceTc "checkingFitsFor }" empty
@@ -893,7 +890,7 @@ tcFilterHoleFits limit implics relevantCts ht@(hole_ty, _) candidates =
     -- refinement hole fits, so we can't wrap the side-effects deeper than this.
       withoutUnification fvs $
       do { traceTc "checkingFitOf {" $ ppr ty
-         ; (fits, wrp) <- tcCheckHoleFit (listToBag relevantCts) implics h_ty ty
+         ; (fits, wrp) <- tcCheckHoleFit (TyH relevantCts implics Nothing) h_ty ty
          ; traceTc "Did it fit?" $ ppr fits
          ; traceTc "wrap is: " $ ppr wrp
          ; traceTc "checkingFitOf }" empty
@@ -962,7 +959,26 @@ withoutUnification free_vars action =
 -- discarding any errors. Subsumption here means that the ty_b can fit into the
 -- ty_a, i.e. `tcSubsumes a b == True` if b is a subtype of a.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag [] ty_a ty_b
+tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit (TyH emptyBag [] Nothing) ty_a ty_b
+
+
+data HoleFitPlugin = HoleFP { candPlugin :: TypedHole -> [HoleFitCandidate] -> TcM [HoleFitCandidate]
+                            , fitPlugin :: TypedHole -> [HoleFit] -> TcM [HoleFit] }
+
+
+data TypedHole = TyH { relevantCts :: Cts
+                       -- ^ Any relevant Cts to the hole
+                     , implics :: [Implication]
+                       -- ^ The nested implications of the hole
+                       --   with the innermost implication first.
+                     , holeCt :: Maybe Ct
+                       -- ^ The hole constraint itself
+                     }
+
+instance Outputable TypedHole where
+  ppr (TyH rels implics ct)
+    = hang (text "TypedHole") 2
+        (ppr rels $+$ ppr implics $+$ ppr ct)
 
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
@@ -971,17 +987,15 @@ tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit emptyBag [] ty_a ty_b
 -- constraints on the type of the hole.
 -- Note: The simplifier may perform unification, so make sure to restore any
 -- free type variables to avoid side-effects.
-tcCheckHoleFit :: Cts                   -- ^  Any relevant Cts to the hole.
-               -> [Implication]
-               -- ^ The nested implications of the hole with the innermost
-               -- implication first.
-               -> TcSigmaType           -- ^ The type of the hole.
-               -> TcSigmaType           -- ^ The type to check whether fits.
+tcCheckHoleFit :: TypedHole   -- ^ The hole to check against
+               -> TcSigmaType
+               -- ^ The type to check against (possibly modified, e.g. refined)
+               -> TcSigmaType -- ^ The type to check whether fits.
                -> TcM (Bool, HsWrapper)
                -- ^ Whether it was a match, and the wrapper from hole_ty to ty.
-tcCheckHoleFit _ _ hole_ty ty | hole_ty `eqType` ty
+tcCheckHoleFit _ hole_ty ty | hole_ty `eqType` ty
     = return (True, idHsWrapper)
-tcCheckHoleFit relevantCts implics hole_ty ty = discardErrs $
+tcCheckHoleFit (TyH {..}) hole_ty ty = discardErrs $
   do { -- We wrap the subtype constraint in the implications to pass along the
        -- givens, and so we must ensure that any nested implications and skolems
        -- end up with the correct level. The implications are ordered so that
