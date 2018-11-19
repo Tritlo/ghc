@@ -29,7 +29,7 @@ import FV ( fvVarList, fvVarSet, unionFV, mkFVs, FV )
 
 import Control.Arrow ( (&&&) )
 
-import Control.Monad    ( filterM, replicateM )
+import Control.Monad    ( filterM, replicateM, foldM )
 import Data.List        ( partition, sort, sortOn, nubBy )
 import Data.Graph       ( graphFromEdges, topSort )
 import Data.Function    ( on )
@@ -46,6 +46,8 @@ import LoadIface       ( loadInterfaceForNameMaybe )
 
 import PrelInfo (knownKeyNames)
 import Name (isBuiltInSyntax)
+
+import Plugins (holeFitPlugin, lpPlugin, lpArguments)
 
 
 {-
@@ -591,9 +593,13 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
      ; maxVSubs <- maxValidHoleFits <$> getDynFlags
      ; hfdc <- getHoleFitDispConfig
      ; sortingAlg <- getSortingAlg
+     ; dflags <- getDynFlags
      ; let findVLimit = if sortingAlg > NoSorting then Nothing else maxVSubs
-     ; refLevel <- refLevelHoleFits <$> getDynFlags
-     ; let hole = TyH (listToBag relevantCts) implics (Just ct)
+           refLevel = refLevelHoleFits dflags
+           hole = TyH (listToBag relevantCts) implics (Just ct)
+           (candidatePlugins, fitPlugins) =
+              mapAndUnzip (\p -> ((candPlugin p) hole, (fitPlugin p) hole)) $
+                getHoleFitPlugins dflags
      ; traceTc "findingValidHoleFitsFor { " $ ppr hole
      ; traceTc "hole_lvl is:" $ ppr hole_lvl
      ; traceTc "locals are: " $ ppr lclBinds
@@ -607,11 +613,13 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
            globals = map GreHFCand gbl
            syntax = map NameHFCand builtIns
            to_check = locals ++ syntax ++ globals
+     ; cands <- foldM (flip ($)) to_check candidatePlugins
      ; (searchDiscards, subs) <-
-        tcFilterHoleFits findVLimit hole (hole_ty, []) to_check
+        tcFilterHoleFits findVLimit hole (hole_ty, []) cands
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
      ; tidy_sorted_subs <- sortFits sortingAlg tidy_subs
-     ; let (pVDisc, limited_subs) = possiblyDiscard maxVSubs tidy_sorted_subs
+     ; plugin_handled_subs <- foldM (flip ($)) tidy_sorted_subs fitPlugins
+     ; let (pVDisc, limited_subs) = possiblyDiscard maxVSubs plugin_handled_subs
            vDiscards = pVDisc || searchDiscards
      ; subs_with_docs <- addDocs limited_subs
      ; let vMsg = ppUnless (null subs_with_docs) $
@@ -631,7 +639,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             ; let findRLimit = if sortingAlg > NoSorting then Nothing
                                                          else maxRSubs
             ; refDs <- mapM (flip (tcFilterHoleFits findRLimit hole)
-                              to_check) ref_tys
+                              cands) ref_tys
             ; (tidy_env, tidy_rsubs) <- zonkSubs tidy_env $ concatMap snd refDs
             ; tidy_sorted_rsubs <- sortFits sortingAlg tidy_rsubs
             -- For refinement substitutions we want matches
@@ -641,8 +649,10 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
             ; (tidy_env, tidy_hole_ty) <- zonkTidyTcType tidy_env hole_ty
             ; let hasExactApp = any (tcEqType tidy_hole_ty) . hfWrap
                   (exact, not_exact) = partition hasExactApp tidy_sorted_rsubs
-                  (pRDisc, exact_last_rfits) =
-                    possiblyDiscard maxRSubs $ not_exact ++ exact
+            ; plugin_handled_rsubs <- foldM (flip ($))
+                                        (not_exact ++ exact) fitPlugins
+            ; let (pRDisc, exact_last_rfits) =
+                    possiblyDiscard maxRSubs $ plugin_handled_rsubs
                   rDiscards = pRDisc || any fst refDs
             ; rsubs_with_docs <- addDocs exact_last_rfits
             ; return (tidy_env,
@@ -938,6 +948,10 @@ refSubsDiscardMsg =
     text "or -fno-max-refinement-hole-fits)"
 
 
+getHoleFitPlugins :: DynFlags -> [HoleFitPlugin]
+getHoleFitPlugins dflags = catMaybes $ map get_plugin (plugins dflags)
+  where get_plugin p = holeFitPlugin (lpPlugin p) (lpArguments p)
+
 -- | Checks whether a MetaTyVar is flexible or not.
 isFlexiTyVar :: TcTyVar -> TcM Bool
 isFlexiTyVar tv | isMetaTyVar tv = isFlexi <$> readMetaTyVar tv
@@ -969,10 +983,10 @@ data HoleFitPlugin = HoleFP { candPlugin :: TypedHole -> [HoleFitCandidate] -> T
 data TypedHole = TyH { relevantCts :: Cts
                        -- ^ Any relevant Cts to the hole
                      , implics :: [Implication]
-                       -- ^ The nested implications of the hole
-                       --   with the innermost implication first.
+                       -- ^ The nested implications of the hole with the
+                       --   innermost implication first.
                      , holeCt :: Maybe Ct
-                       -- ^ The hole constraint itself
+                       -- ^ The hole constraint itself, if available.
                      }
 
 instance Outputable TypedHole where
