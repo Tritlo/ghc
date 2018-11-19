@@ -1,7 +1,9 @@
 {-# LANGUAGE RecordWildCards #-}
 module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits, HoleFit (..)
                     , HoleFitCandidate (..), tcCheckHoleFit, tcSubsumes
-                    , withoutUnification, HoleFitPlugin ) where
+                    , withoutUnification
+                    , HoleFitPlugin (..), TypedHole (..), CandPlugin, FitPlugin
+                    ) where
 
 import GhcPrelude
 
@@ -614,6 +616,7 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
            syntax = map NameHFCand builtIns
            to_check = locals ++ syntax ++ globals
      ; cands <- foldM (flip ($)) to_check candidatePlugins
+     ; traceTc "numPlugins are:" $ ppr (length candidatePlugins)
      ; (searchDiscards, subs) <-
         tcFilterHoleFits findVLimit hole (hole_ty, []) cands
      ; (tidy_env, tidy_subs) <- zonkSubs tidy_env subs
@@ -976,8 +979,10 @@ tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
 tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit (TyH emptyBag [] Nothing) ty_a ty_b
 
 
-data HoleFitPlugin = HoleFP { candPlugin :: TypedHole -> [HoleFitCandidate] -> TcM [HoleFitCandidate]
-                            , fitPlugin :: TypedHole -> [HoleFit] -> TcM [HoleFit] }
+type FitPlugin = TypedHole -> [HoleFit] -> TcM [HoleFit]
+type CandPlugin = TypedHole -> [HoleFitCandidate] -> TcM [HoleFitCandidate]
+data HoleFitPlugin = HoleFitPlugin { candPlugin :: CandPlugin
+                                   , fitPlugin :: FitPlugin }
 
 
 data TypedHole = TyH { relevantCts :: Cts
