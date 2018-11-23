@@ -912,7 +912,7 @@ tcFilterHoleFits limit (TyH {..}) ht@(hole_ty, _) candidates =
     -- refinement hole fits, so we can't wrap the side-effects deeper than this.
       withoutUnification fvs $
       do { traceTc "checkingFitOf {" $ ppr ty
-         ; (fits, wrp) <- tcCheckHoleFit (TyH relevantCts implics Nothing) h_ty ty
+         ; (fits, wrp) <- tcCheckHoleFit hole h_ty ty
          ; traceTc "Did it fit?" $ ppr fits
          ; traceTc "wrap is: " $ ppr wrp
          ; traceTc "checkingFitOf }" empty
@@ -945,6 +945,7 @@ tcFilterHoleFits limit (TyH {..}) ht@(hole_ty, _) candidates =
                           else return Nothing }
            else return Nothing }
      where fvs = mkFVs ref_vars `unionFV` hole_fvs `unionFV` tyCoFVsOfType ty
+           hole = TyH relevantCts implics Nothing
 
 
 subsDiscardMsg :: SDoc
@@ -985,7 +986,8 @@ withoutUnification free_vars action =
 -- discarding any errors. Subsumption here means that the ty_b can fit into the
 -- ty_a, i.e. `tcSubsumes a b == True` if b is a subtype of a.
 tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
-tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit (TyH emptyBag [] Nothing) ty_a ty_b
+tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit dummyHole ty_a ty_b
+  where dummyHole = TyH emptyBag [] Nothing
 
 
 type FitPlugin = TypedHole -> [HoleFit] -> TcM [HoleFit]
