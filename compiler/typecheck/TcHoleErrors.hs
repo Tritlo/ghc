@@ -461,19 +461,24 @@ data HoleFit =
                                    -- with, if anything
           , hfDoc :: Maybe HsDocString } -- Documentation of this HoleFit, if
                                          -- available.
+ | RawHoleFit SDoc
+ -- ^ A fit that is just displayed as is. Her so thatHoleFitPlugins
+ --   can inject any fit they want.
 
-
-hfName :: HoleFit -> Name
-hfName hf = case hfCand hf of
-              IdHFCand id -> idName id
-              NameHFCand name -> name
-              GreHFCand gre -> gre_name gre
+hfName :: HoleFit -> Maybe Name
+hfName hf@(HoleFit {}) = Just $ case hfCand hf of
+                                  IdHFCand id -> idName id
+                                  NameHFCand name -> name
+                                  GreHFCand gre -> gre_name gre
+hfName _ = Nothing
 
 hfIsLcl :: HoleFit -> Bool
-hfIsLcl hf = case hfCand hf of
-               IdHFCand _    -> True
-               NameHFCand _  -> False
-               GreHFCand gre -> gre_lcl gre
+hfIsLcl hf@(HoleFit {}) = case hfCand hf of
+                            IdHFCand _    -> True
+                            NameHFCand _  -> False
+                            GreHFCand gre -> gre_lcl gre
+hfIsLcl _ = False
+
 
 -- We define an Eq and Ord instance to be able to build a graph.
 instance Eq HoleFit where
@@ -484,7 +489,10 @@ instance Eq HoleFit where
 -- which is used to compare Ids. When comparing, we want HoleFits with a lower
 -- refinement level to come first.
 instance Ord HoleFit where
-  compare a b = cmp a b
+  compare (RawHoleFit a) (RawHoleFit b) = EQ
+  compare (RawHoleFit _) _ = LT
+  compare _ (RawHoleFit _) = GT
+  compare a@(HoleFit {}) b@(HoleFit {}) = cmp a b
     where cmp  = if hfRefLvl a == hfRefLvl b
                  then compare `on` hfName
                  else compare `on` hfRefLvl
@@ -506,60 +514,61 @@ addDocs fits =
    lookupInIface name (ModIface { mi_decl_docs = DeclDocMap dmap })
      = Map.lookup name dmap
    upd lclDocs fit =
-     let name = hfName fit in
-     do { doc <- if hfIsLcl fit
-                 then pure (Map.lookup name lclDocs)
-                 else do { mbIface <- loadInterfaceForNameMaybe msg name
-                         ; return $ mbIface >>= lookupInIface name }
+    case hfName fit of
+     Just name ->
+        do { doc <- if hfIsLcl fit
+                    then pure (Map.lookup name lclDocs)
+                    else do { mbIface <- loadInterfaceForNameMaybe msg name
+                            ; return $ mbIface >>= lookupInIface name }
         ; return $ fit {hfDoc = doc} }
+     Nothing -> return fit
 
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
 -- refinement level.
 pprHoleFit :: HoleFitDispConfig -> HoleFit -> SDoc
-pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf = hang display 2 provenance
-    where name = hfName hf
-          ty = hfType hf
-          matches =  hfMatches hf
-          wrap = hfWrap hf
-          tyApp = sep $ map ((text "@" <>) . pprParendType) wrap
-          tyAppVars = sep $ punctuate comma $
-              map (\(v,t) -> ppr v <+> text "~" <+> pprParendType t) $
-                zip vars wrap
-            where
-              vars = unwrapTypeVars ty
-              -- Attempts to get all the quantified type variables in a type,
-              -- e.g.
-              -- return :: forall (m :: * -> *) Monad m => (forall a . a) -> m a
-              -- into [m, a]
-              unwrapTypeVars :: Type -> [TyVar]
-              unwrapTypeVars t = vars ++ case splitFunTy_maybe unforalled of
-                                  Just (_, unfunned) -> unwrapTypeVars unfunned
-                                  _ -> []
-                where (vars, unforalled) = splitForAllTys t
-          holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) matches
-          holeDisp = if sMs then holeVs
-                     else sep $ replicate (length matches) $ text "_"
-          occDisp = pprPrefixOcc name
-          tyDisp = ppWhen sTy $ dcolon <+> ppr ty
-          has = not . null
-          wrapDisp = ppWhen (has wrap && (sWrp || sWrpVars))
-                      $ text "with" <+> if sWrp || not sTy
-                                        then occDisp <+> tyApp
-                                        else tyAppVars
-          docs = case hfDoc hf of
-                   Just d -> text "{-^" <>
-                             (vcat . map text . lines . unpackHDS) d
-                             <> text "-}"
-                   _ -> empty
-          funcInfo = ppWhen (has matches && sTy) $
-                       text "where" <+> occDisp <+> tyDisp
-          subDisp = occDisp <+> if has matches then holeDisp else tyDisp
-          display =  subDisp $$ nest 2 (funcInfo $+$ docs $+$ wrapDisp)
-          provenance = ppWhen sProv $ parens $
-                case hfCand hf of
-                    GreHFCand gre -> pprNameProvenance gre
-                    _ -> text "bound at" <+> ppr (getSrcLoc name)
+pprHoleFit _ (RawHoleFit sd) = sd
+pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf@(HoleFit {..}) =
+ hang display 2 provenance
+ where name = fromJust (hfName hf)
+       tyApp = sep $ map ((text "@" <>) . pprParendType) hfWrap
+       tyAppVars = sep $ punctuate comma $
+           map (\(v,t) -> ppr v <+> text "~" <+> pprParendType t) $
+             zip vars hfWrap
+         where
+           vars = unwrapTypeVars hfType
+           -- Attempts to get all the quantified type variables in a type,
+           -- e.g.
+           -- return :: forall (m :: * -> *) Monad m => (forall a . a) -> m a
+           -- into [m, a]
+           unwrapTypeVars :: Type -> [TyVar]
+           unwrapTypeVars t = vars ++ case splitFunTy_maybe unforalled of
+                               Just (_, unfunned) -> unwrapTypeVars unfunned
+                               _ -> []
+             where (vars, unforalled) = splitForAllTys t
+       holeVs = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) hfMatches
+       holeDisp = if sMs then holeVs
+                  else sep $ replicate (length hfMatches) $ text "_"
+       occDisp = pprPrefixOcc name
+       tyDisp = ppWhen sTy $ dcolon <+> ppr hfType
+       has = not . null
+       wrapDisp = ppWhen (has hfWrap && (sWrp || sWrpVars))
+                   $ text "with" <+> if sWrp || not sTy
+                                     then occDisp <+> tyApp
+                                     else tyAppVars
+       docs = case hfDoc of
+                Just d -> text "{-^" <>
+                          (vcat . map text . lines . unpackHDS) d
+                          <> text "-}"
+                _ -> empty
+       funcInfo = ppWhen (has hfMatches && sTy) $
+                    text "where" <+> occDisp <+> tyDisp
+       subDisp = occDisp <+> if has hfMatches then holeDisp else tyDisp
+       display =  subDisp $$ nest 2 (funcInfo $+$ docs $+$ wrapDisp)
+       provenance = ppWhen sProv $ parens $
+             case hfCand of
+                 GreHFCand gre -> pprNameProvenance gre
+                 _ -> text "bound at" <+> ppr (getSrcLoc name)
 
 getLocalBindings :: TidyEnv -> Ct -> TcM [Id]
 getLocalBindings tidy_orig ct
