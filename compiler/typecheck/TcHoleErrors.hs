@@ -1,8 +1,14 @@
 {-# LANGUAGE RecordWildCards #-}
-module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits, HoleFit (..)
-                    , HoleFitCandidate (..), tcCheckHoleFit, tcSubsumes
+{-# LANGUAGE ExistentialQuantification #-}
+module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits
+                    , tcCheckHoleFit, tcSubsumes
                     , withoutUnification
-                    , HoleFitPlugin (..), TypedHole (..), CandPlugin, FitPlugin
+                    , fromPurePlugin
+
+                    -- Re-exported from TcRnTypes
+                    , TypedHole (..), HoleFit (..), HoleFitCandidate (..)
+                    , CandPlugin, FitPlugin
+                    , HoleFitPlugin (..), HoleFitPluginR (..)
                     ) where
 
 import GhcPrelude
@@ -42,14 +48,11 @@ import TcUnify       ( tcSubType_NC )
 
 import ExtractDocs ( extractDocs )
 import qualified Data.Map as Map
-import HsDoc           ( HsDocString, unpackHDS, DeclDocMap(..) )
+import HsDoc           ( unpackHDS, DeclDocMap(..) )
 import HscTypes        ( ModIface(..) )
 import LoadIface       ( loadInterfaceForNameMaybe )
 
 import PrelInfo (knownKeyNames)
-
-import Plugins (holeFitPlugin, plugins, paPlugin, paArguments)
-
 
 {-
 Note [Valid hole fits include ...]
@@ -426,44 +429,6 @@ getSortingAlg =
                               else NoSorting }
 
 
--- | HoleFitCandidates are passed to the filter and checked whether they can be
--- made to fit.
-data HoleFitCandidate = IdHFCand Id             -- An id, like locals.
-                      | NameHFCand Name         -- A name, like built-in syntax.
-                      | GreHFCand GlobalRdrElt  -- A global, like imported ids.
-                      deriving (Eq)
-instance Outputable HoleFitCandidate where
-  ppr = pprHoleFitCand
-
-pprHoleFitCand :: HoleFitCandidate -> SDoc
-pprHoleFitCand (IdHFCand id) = text "Id HFC: " <> ppr id
-pprHoleFitCand (NameHFCand name) = text "Name HFC: " <> ppr name
-pprHoleFitCand (GreHFCand gre) = text "Gre HFC: " <> ppr gre
-
-instance HasOccName HoleFitCandidate where
-  occName hfc = case hfc of
-                  IdHFCand id -> occName id
-                  NameHFCand name -> occName name
-                  GreHFCand gre -> occName (gre_name gre)
-
--- | HoleFit is the type we use for valid hole fits. It contains the
--- element that was checked, the Id of that element as found by `tcLookup`,
--- and the refinement level of the fit, which is the number of extra argument
--- holes that this fit uses (e.g. if hfRefLvl is 2, the fit is for `Id _ _`).
-data HoleFit =
-  HoleFit { hfId   :: Id       -- The elements id in the TcM
-          , hfCand :: HoleFitCandidate  -- The candidate that was checked.
-          , hfType :: TcType -- The type of the id, possibly zonked.
-          , hfRefLvl :: Int  -- The number of holes in this fit.
-          , hfWrap :: [TcType] -- The wrapper for the match.
-          , hfMatches :: [TcType]  -- What the refinement variables got matched
-                                   -- with, if anything
-          , hfDoc :: Maybe HsDocString } -- Documentation of this HoleFit, if
-                                         -- available.
- | RawHoleFit SDoc
- -- ^ A fit that is just displayed as is. Here so thatHoleFitPlugins
- --   can inject any fit they want.
-
 hfName :: HoleFit -> Maybe Name
 hfName hf@(HoleFit {}) = Just $ case hfCand hf of
                                   IdHFCand id -> idName id
@@ -604,12 +569,12 @@ findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
      ; hfdc <- getHoleFitDispConfig
      ; sortingAlg <- getSortingAlg
      ; dflags <- getDynFlags
+     ; hfPlugs <- tcg_hf_plugins <$> getGblEnv
      ; let findVLimit = if sortingAlg > NoSorting then Nothing else maxVSubs
            refLevel = refLevelHoleFits dflags
            hole = TyH (listToBag relevantCts) implics (Just ct)
            (candidatePlugins, fitPlugins) =
-              mapAndUnzip (\p -> ((candPlugin p) hole, (fitPlugin p) hole)) $
-                getHoleFitPlugins dflags
+             unzip $ map (\p-> ((candPlugin p) hole, (fitPlugin p) hole)) hfPlugs
      ; traceTc "findingValidHoleFitsFor { " $ ppr hole
      ; traceTc "hole_lvl is:" $ ppr hole_lvl
      ; traceTc "locals are: " $ ppr lclBinds
@@ -963,10 +928,6 @@ refSubsDiscardMsg =
     text "or -fno-max-refinement-hole-fits)"
 
 
-getHoleFitPlugins :: DynFlags -> [HoleFitPlugin]
-getHoleFitPlugins dflags = catMaybes $ map get_plugin (plugins dflags)
-  where get_plugin p = holeFitPlugin (paPlugin p) (paArguments p)
-
 -- | Checks whether a MetaTyVar is flexible or not.
 isFlexiTyVar :: TcTyVar -> TcM Bool
 isFlexiTyVar tv | isMetaTyVar tv = isFlexi <$> readMetaTyVar tv
@@ -992,26 +953,14 @@ tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit dummyHole ty_a ty_b
   where dummyHole = TyH emptyBag [] Nothing
 
 
-type FitPlugin = TypedHole -> [HoleFit] -> TcM [HoleFit]
-type CandPlugin = TypedHole -> [HoleFitCandidate] -> TcM [HoleFitCandidate]
-data HoleFitPlugin = HoleFitPlugin { candPlugin :: CandPlugin
-                                   , fitPlugin :: FitPlugin }
 
 
-data TypedHole = TyH { relevantCts :: Cts
-                       -- ^ Any relevant Cts to the hole
-                     , implics :: [Implication]
-                       -- ^ The nested implications of the hole with the
-                       --   innermost implication first.
-                     , holeCt :: Maybe Ct
-                       -- ^ The hole constraint itself, if available.
-                     }
 
-instance Outputable TypedHole where
-  ppr (TyH rels implics ct)
-    = hang (text "TypedHole") 2
-        (ppr rels $+$ ppr implics $+$ ppr ct)
-
+fromPurePlugin :: HoleFitPlugin -> HoleFitPluginR
+fromPurePlugin plug =
+  HoleFitPluginR { hfPluginInit = newTcRef ()
+                 , holeFitPluginR = const plug
+                 , hfPluginStop = const $ return () }
 
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. This makes sure that when checking whether a type fits the hole,

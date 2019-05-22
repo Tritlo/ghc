@@ -130,6 +130,10 @@ module TcRnTypes(
         eqCanDischargeFR,
         funEqCanDischarge, funEqCanDischargeF,
 
+        -- Hole Fit Plugins
+        TypedHole (..), HoleFit (..), HoleFitCandidate (..),
+        CandPlugin, FitPlugin, HoleFitPlugin (..), HoleFitPluginR (..),
+
         -- Pretty printing
         pprEvVarTheta,
         pprEvVars, pprEvVarWithType,
@@ -685,6 +689,8 @@ data TcGblEnv
 
         tcg_tc_plugins :: [TcPluginSolver],
         -- ^ A list of user-defined plugins for the constraint solver.
+        tcg_hf_plugins :: [HoleFitPlugin],
+        -- ^ A list of user-defined plugins for hole fit suggestions.
 
         tcg_top_loc :: RealSrcSpan,
         -- ^ The RealSrcSpan this module came from
@@ -1020,7 +1026,7 @@ splice. In particular it is not set when the splice is renamed or typechecked.
 'RunSplice' is needed to provide a reference where 'addModFinalizer' can insert
 the finalizer (see Note [Delaying modFinalizers in untyped splices]), and
 'addModFinalizer' runs when doing Q things. Therefore, It doesn't make sense to
-set 'RunSplice' when renaming or typechecking the splice, where 'Splice', 
+set 'RunSplice' when renaming or typechecking the splice, where 'Splice',
 'Brack' or 'Comp' are used instead.
 
 -}
@@ -3912,3 +3918,75 @@ getRoleAnnots :: [Name] -> RoleAnnotEnv
 getRoleAnnots bndrs role_env
   = ( mapMaybe (lookupRoleAnnot role_env) bndrs
     , delListFromNameEnv role_env bndrs )
+
+{-
+Hole Fit Plugins
+-------------------------
+-}
+
+data TypedHole = TyH { relevantCts :: Cts
+                       -- ^ Any relevant Cts to the hole
+                     , implics :: [Implication]
+                       -- ^ The nested implications of the hole with the
+                       --   innermost implication first.
+                     , holeCt :: Maybe Ct
+                       -- ^ The hole constraint itself, if available.
+                     }
+
+instance Outputable TypedHole where
+  ppr (TyH rels implics ct)
+    = hang (text "TypedHole") 2
+        (ppr rels $+$ ppr implics $+$ ppr ct)
+
+-- | A plugin for modifying the candidate hole fits *before* they're checked.
+type CandPlugin = TypedHole -> [HoleFitCandidate] -> TcM [HoleFitCandidate]
+
+-- | A plugin for modifying hole fits  *after* they've been found.
+type FitPlugin =  TypedHole -> [HoleFit] -> TcM [HoleFit]
+
+data HoleFitPlugin = HoleFitPlugin
+  { candPlugin :: CandPlugin
+  , fitPlugin :: FitPlugin }
+
+data HoleFitPluginR = forall s. HoleFitPluginR
+  { hfPluginInit :: TcM (TcRef s)
+  , holeFitPluginR :: TcRef s -> HoleFitPlugin
+  , hfPluginStop :: TcRef s -> TcM () }
+
+-- | HoleFitCandidates are passed to the filter and checked whether they can be
+-- made to fit.
+data HoleFitCandidate = IdHFCand Id             -- An id, like locals.
+                      | NameHFCand Name         -- A name, like built-in syntax.
+                      | GreHFCand GlobalRdrElt  -- A global, like imported ids.
+                      deriving (Eq)
+instance Outputable HoleFitCandidate where
+  ppr = pprHoleFitCand
+
+pprHoleFitCand :: HoleFitCandidate -> SDoc
+pprHoleFitCand (IdHFCand id) = text "Id HFC: " <> ppr id
+pprHoleFitCand (NameHFCand name) = text "Name HFC: " <> ppr name
+pprHoleFitCand (GreHFCand gre) = text "Gre HFC: " <> ppr gre
+
+instance HasOccName HoleFitCandidate where
+  occName hfc = case hfc of
+                  IdHFCand id -> occName id
+                  NameHFCand name -> occName name
+                  GreHFCand gre -> occName (gre_name gre)
+
+-- | HoleFit is the type we use for valid hole fits. It contains the
+-- element that was checked, the Id of that element as found by `tcLookup`,
+-- and the refinement level of the fit, which is the number of extra argument
+-- holes that this fit uses (e.g. if hfRefLvl is 2, the fit is for `Id _ _`).
+data HoleFit =
+  HoleFit { hfId   :: Id       -- The elements id in the TcM
+          , hfCand :: HoleFitCandidate  -- The candidate that was checked.
+          , hfType :: TcType -- The type of the id, possibly zonked.
+          , hfRefLvl :: Int  -- The number of holes in this fit.
+          , hfWrap :: [TcType] -- The wrapper for the match.
+          , hfMatches :: [TcType]  -- What the refinement variables got matched
+                                   -- with, if anything
+          , hfDoc :: Maybe HsDocString } -- Documentation of this HoleFit, if
+                                         -- available.
+ | RawHoleFit SDoc
+ -- ^ A fit that is just displayed as is. Here so thatHoleFitPlugins
+ --   can inject any fit they want.

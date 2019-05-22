@@ -42,7 +42,8 @@ import GhcPrelude
 
 import {-# SOURCE #-} CoreMonad ( CoreToDo, CoreM )
 import qualified TcRnTypes
-import TcRnTypes ( TcGblEnv, IfM, TcM, tcg_rn_decls, tcg_rn_exports )
+import TcRnTypes ( TcGblEnv, IfM, TcM, tcg_rn_decls, tcg_rn_exports
+                 , HoleFitPluginR )
 import HsSyn
 import DynFlags
 import HscTypes
@@ -52,8 +53,6 @@ import Module ( ModuleName, Module(moduleName))
 import Fingerprint
 import Data.List
 import Outputable (Outputable(..), text, (<+>))
-
-import {-# SOURCE #-} qualified TcHoleErrors (HoleFitPlugin)
 
 --Qualified import so we can define a Semigroup instance
 -- but it doesn't clash with Outputable.<>
@@ -83,7 +82,7 @@ data Plugin = Plugin {
     -- behaviour of the constraint solver.
   , holeFitPlugin :: HoleFitPlugin
     -- ^ An optional plugin to handle hole fits, which may re-order
-    --   or change the list of valid hole fits and refinement hole fits
+    --   or change the list of valid hole fits and refinement hole fits.
   , pluginRecompile :: [CommandLineOption] -> IO PluginRecompile
     -- ^ Specify how the plugin should affect recompilation.
   , parsedResultAction :: [CommandLineOption] -> ModSummary -> HsParsedModule
@@ -174,7 +173,7 @@ instance Monoid PluginRecompile where
 
 type CorePlugin = [CommandLineOption] -> [CoreToDo] -> CoreM [CoreToDo]
 type TcPlugin = [CommandLineOption] -> Maybe TcRnTypes.TcPlugin
-type HoleFitPlugin = [CommandLineOption] -> Maybe TcHoleErrors.HoleFitPlugin
+type HoleFitPlugin = [CommandLineOption] -> Maybe TcRnTypes.HoleFitPluginR
 
 purePlugin, impurePlugin, flagRecompile :: [CommandLineOption] -> IO PluginRecompile
 purePlugin _args = return NoForceRecompile
