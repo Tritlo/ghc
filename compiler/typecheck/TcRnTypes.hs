@@ -3955,14 +3955,21 @@ pprHoleFitCand (IdHFCand id) = text "Id HFC: " <> ppr id
 pprHoleFitCand (NameHFCand name) = text "Name HFC: " <> ppr name
 pprHoleFitCand (GreHFCand gre) = text "Gre HFC: " <> ppr gre
 
+instance NamedThing HoleFitCandidate where
+  getName hfc = case hfc of
+                     IdHFCand id -> idName id
+                     NameHFCand name -> name
+                     GreHFCand gre -> gre_name gre
+  getOccName hfc = case hfc of
+                     IdHFCand id -> occName id
+                     NameHFCand name -> occName name
+                     GreHFCand gre -> occName (gre_name gre)
+
 instance HasOccName HoleFitCandidate where
-  occName hfc = case hfc of
-                  IdHFCand id -> occName id
-                  NameHFCand name -> occName name
-                  GreHFCand gre -> occName (gre_name gre)
+  occName = getOccName
 
 instance Ord HoleFitCandidate where
-  compare = compare `on` occName
+  compare = compare `on` getName
 
 -- | HoleFit is the type we use for valid hole fits. It contains the
 -- element that was checked, the Id of that element as found by `tcLookup`,
@@ -3991,7 +3998,7 @@ instance Outputable HoleFit where
   ppr (RawHoleFit sd) = sd
   ppr (HoleFit _ cand ty _ _ mtchs _) =
     hang (name <+> holes) 2 (text "where" <+> name <+> dcolon <+> (ppr ty))
-    where name = ppr $ occName cand
+    where name = ppr $ getName cand
           holes = sep $ map (parens . (text "_" <+> dcolon <+>) . ppr) mtchs
 
 -- We compare HoleFits by their name instead of their Id, since we don't
@@ -4004,7 +4011,7 @@ instance Ord HoleFit where
   compare _ (RawHoleFit _) = GT
   compare a@(HoleFit {}) b@(HoleFit {}) = cmp a b
     where cmp  = if hfRefLvl a == hfRefLvl b
-                 then compare `on` hfCand
+                 then compare `on` (getName . hfCand)
                  else compare `on` hfRefLvl
 
 

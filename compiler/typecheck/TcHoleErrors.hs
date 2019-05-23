@@ -5,7 +5,7 @@ module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits
                     , withoutUnification
                     , fromPureHFPlugin
                     -- Re-exports for convenience
-                    , hfName, hfIsLcl
+                    , hfIsLcl
                     , pprHoleFit, debugHoleFitDispConfig
 
                     -- Re-exported from TcRnTypes
@@ -430,13 +430,6 @@ getSortingAlg =
                               then BySize
                               else NoSorting }
 
-hfName :: HoleFit -> Maybe Name
-hfName hf@(HoleFit {}) = Just $ case hfCand hf of
-                                  IdHFCand id -> idName id
-                                  NameHFCand name -> name
-                                  GreHFCand gre -> gre_name gre
-hfName _ = Nothing
-
 hfIsLcl :: HoleFit -> Bool
 hfIsLcl hf@(HoleFit {}) = case hfCand hf of
                             IdHFCand _    -> True
@@ -457,15 +450,14 @@ addDocs fits =
    msg = text "TcHoleErrors addDocs"
    lookupInIface name (ModIface { mi_decl_docs = DeclDocMap dmap })
      = Map.lookup name dmap
-   upd lclDocs fit =
-    case hfName fit of
-     Just name ->
-        do { doc <- if hfIsLcl fit
+   upd lclDocs fit@(HoleFit {hfCand = cand}) =
+        do { let name = getName cand
+           ; doc <- if hfIsLcl fit
                     then pure (Map.lookup name lclDocs)
                     else do { mbIface <- loadInterfaceForNameMaybe msg name
                             ; return $ mbIface >>= lookupInIface name }
-        ; return $ fit {hfDoc = doc} }
-     Nothing -> return fit
+           ; return $ fit {hfDoc = doc} }
+   upd _ fit = return fit
 
 -- For pretty printing hole fits, we display the name and type of the fit,
 -- with added '_' to represent any extra arguments in case of a non-zero
@@ -474,7 +466,7 @@ pprHoleFit :: HoleFitDispConfig -> HoleFit -> SDoc
 pprHoleFit _ (RawHoleFit sd) = sd
 pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf@(HoleFit {..}) =
  hang display 2 provenance
- where name = fromJust (hfName hf)
+ where name =  getName hfCand
        tyApp = sep $ map ((text "@" <>) . pprParendType) hfWrap
        tyAppVars = sep $ punctuate comma $
            map (\(v,t) -> ppr v <+> text "~" <+> pprParendType t) $
