@@ -3,7 +3,10 @@
 module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits
                     , tcCheckHoleFit, tcSubsumes
                     , withoutUnification
-                    , fromPurePlugin
+                    , fromPureHFPlugin
+                    -- Re-exports for convenience
+                    , hfName, hfIsLcl
+                    , pprHoleFit, debugHoleFitDispConfig
 
                     -- Re-exported from TcRnTypes
                     , TypedHole (..), HoleFit (..), HoleFitCandidate (..)
@@ -40,7 +43,6 @@ import Control.Arrow ( (&&&) )
 import Control.Monad    ( filterM, replicateM, foldM )
 import Data.List        ( partition, sort, sortOn, nubBy )
 import Data.Graph       ( graphFromEdges, topSort )
-import Data.Function    ( on )
 
 
 import TcSimplify    ( simpl_top, runTcSDeriveds )
@@ -428,7 +430,6 @@ getSortingAlg =
                               then BySize
                               else NoSorting }
 
-
 hfName :: HoleFit -> Maybe Name
 hfName hf@(HoleFit {}) = Just $ case hfCand hf of
                                   IdHFCand id -> idName id
@@ -442,27 +443,6 @@ hfIsLcl hf@(HoleFit {}) = case hfCand hf of
                             NameHFCand _  -> False
                             GreHFCand gre -> gre_lcl gre
 hfIsLcl _ = False
-
-
--- We define an Eq and Ord instance to be able to build a graph.
-instance Eq HoleFit where
-   (==) = (==) `on` hfId
-
--- We compare HoleFits by their name instead of their Id, since we don't
--- want our tests to be affected by the non-determinism of `nonDetCmpVar`,
--- which is used to compare Ids. When comparing, we want HoleFits with a lower
--- refinement level to come first.
-instance Ord HoleFit where
-  compare (RawHoleFit _) (RawHoleFit _) = EQ
-  compare (RawHoleFit _) _ = LT
-  compare _ (RawHoleFit _) = GT
-  compare a@(HoleFit {}) b@(HoleFit {}) = cmp a b
-    where cmp  = if hfRefLvl a == hfRefLvl b
-                 then compare `on` hfName
-                 else compare `on` hfRefLvl
-
-instance Outputable HoleFit where
-    ppr = pprHoleFit debugHoleFitDispConfig
 
 -- If enabled, we go through the fits and add any associated documentation,
 -- by looking it up in the module or the environment (for local fits)
@@ -952,16 +932,6 @@ tcSubsumes :: TcSigmaType -> TcSigmaType -> TcM Bool
 tcSubsumes ty_a ty_b = fst <$> tcCheckHoleFit dummyHole ty_a ty_b
   where dummyHole = TyH emptyBag [] Nothing
 
-
-
-
-
-fromPurePlugin :: HoleFitPlugin -> HoleFitPluginR
-fromPurePlugin plug =
-  HoleFitPluginR { hfPluginInit = newTcRef ()
-                 , holeFitPluginR = const plug
-                 , hfPluginStop = const $ return () }
-
 -- | A tcSubsumes which takes into account relevant constraints, to fix trac
 -- #14273. This makes sure that when checking whether a type fits the hole,
 -- the type has to be subsumed by type of the hole as well as fulfill all
@@ -1022,3 +992,10 @@ tcCheckHoleFit (TyH {..}) hole_ty ty = discardErrs $
        setWCAndBinds binds imp wc
          = WC { wc_simple = emptyBag
               , wc_impl = unitBag $ imp { ic_wanted = wc , ic_binds = binds } }
+
+-- | Maps a plugin that needs no state to one with an empty one.
+fromPureHFPlugin :: HoleFitPlugin -> HoleFitPluginR
+fromPureHFPlugin plug =
+  HoleFitPluginR { hfPluginInit = newTcRef ()
+                 , holeFitPluginR = const plug
+                 , hfPluginStop = const $ return () }
