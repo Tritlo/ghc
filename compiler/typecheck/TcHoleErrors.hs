@@ -464,7 +464,7 @@ addDocs fits =
 -- refinement level.
 pprHoleFit :: HoleFitDispConfig -> HoleFit -> SDoc
 pprHoleFit _ (RawHoleFit sd) = sd
-pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) hf@(HoleFit {..}) =
+pprHoleFit (HFDC sWrp sWrpVars sTy sProv sMs) (HoleFit {..}) =
  hang display 2 provenance
  where name =  getName hfCand
        tyApp = sep $ map ((text "@" <>) . pprParendType) hfWrap
