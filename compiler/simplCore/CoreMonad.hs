@@ -37,9 +37,6 @@ module CoreMonad (
     liftIO, liftIOWithCount,
     liftIO1, liftIO2, liftIO3, liftIO4,
 
-    -- ** Global initialization
-    reinitializeGlobals,
-
     -- ** Dealing with annotations
     getAnnotations, getFirstAnnotations,
 
@@ -81,6 +78,7 @@ import qualified Data.Map.Strict as MapStrict
 import Data.Word
 import Control.Monad
 import Control.Applicative ( Alternative(..) )
+import Panic (throwGhcException, GhcException(..))
 
 {-
 ************************************************************************
@@ -317,7 +315,13 @@ plusSimplCount sc1@(SimplCount { ticks = tks1, details = dts1 })
              | otherwise       = sc2
 
 plusSimplCount (VerySimplCount n) (VerySimplCount m) = VerySimplCount (n+m)
-plusSimplCount _                  _                  = panic "plusSimplCount"
+plusSimplCount lhs                rhs                =
+  throwGhcException . PprProgramError "plusSimplCount" $ vcat
+    [ text "lhs"
+    , pprSimplCount lhs
+    , text "rhs"
+    , pprSimplCount rhs
+    ]
        -- We use one or the other consistently
 
 pprSimplCount (VerySimplCount n) = text "Total ticks:" <+> int n
@@ -558,7 +562,7 @@ data CoreReader = CoreReader {
 
 -- Note: CoreWriter used to be defined with data, rather than newtype.  If it
 -- is defined that way again, the cw_simpl_count field, at least, must be
--- strict to avoid a space leak (Trac #7702).
+-- strict to avoid a space leak (#7702).
 newtype CoreWriter = CoreWriter {
         cw_simpl_count :: SimplCount
 }
@@ -589,7 +593,7 @@ instance Monad CoreM where
             let w = w1 `plusWriter` w2
             return $ seq w (y, s'', w)
             -- forcing w before building the tuple avoids a space leak
-            -- (Trac #7702)
+            -- (#7702)
 
 instance Applicative CoreM where
     pure x = CoreM $ \s -> nop s x
@@ -727,10 +731,6 @@ getPackageFamInstEnv = do
     eps <- liftIO $ hscEPS hsc_env
     return $ eps_fam_inst_env eps
 
-{-# DEPRECATED reinitializeGlobals "It is not necessary to call reinitializeGlobals. Since GHC 8.2, this function is a no-op and will be removed in GHC 8.4" #-}
-reinitializeGlobals :: CoreM ()
-reinitializeGlobals = return ()
-
 {-
 ************************************************************************
 *                                                                      *
@@ -785,8 +785,8 @@ we aren't using annotations heavily.
 ************************************************************************
 -}
 
-msg :: Severity -> SDoc -> CoreM ()
-msg sev doc
+msg :: Severity -> WarnReason -> SDoc -> CoreM ()
+msg sev reason doc
   = do { dflags <- getDynFlags
        ; loc    <- getSrcSpanM
        ; unqual <- getPrintUnqualified
@@ -798,7 +798,7 @@ msg sev doc
              err_sty  = mkErrStyle dflags unqual
              user_sty = mkUserStyle dflags unqual AllTheWay
              dump_sty = mkDumpStyle dflags unqual
-       ; liftIO $ putLogMsg dflags NoReason sev loc sty doc }
+       ; liftIO $ putLogMsg dflags reason sev loc sty doc }
 
 -- | Output a String message to the screen
 putMsgS :: String -> CoreM ()
@@ -806,7 +806,7 @@ putMsgS = putMsg . text
 
 -- | Output a message to the screen
 putMsg :: SDoc -> CoreM ()
-putMsg = msg SevInfo
+putMsg = msg SevInfo NoReason
 
 -- | Output an error to the screen. Does not cause the compiler to die.
 errorMsgS :: String -> CoreM ()
@@ -814,9 +814,9 @@ errorMsgS = errorMsg . text
 
 -- | Output an error to the screen. Does not cause the compiler to die.
 errorMsg :: SDoc -> CoreM ()
-errorMsg = msg SevError
+errorMsg = msg SevError NoReason
 
-warnMsg :: SDoc -> CoreM ()
+warnMsg :: WarnReason -> SDoc -> CoreM ()
 warnMsg = msg SevWarning
 
 -- | Output a fatal error to the screen. Does not cause the compiler to die.
@@ -825,7 +825,7 @@ fatalErrorMsgS = fatalErrorMsg . text
 
 -- | Output a fatal error to the screen. Does not cause the compiler to die.
 fatalErrorMsg :: SDoc -> CoreM ()
-fatalErrorMsg = msg SevFatal
+fatalErrorMsg = msg SevFatal NoReason
 
 -- | Output a string debugging message at verbosity level of @-v@ or higher
 debugTraceMsgS :: String -> CoreM ()
@@ -833,7 +833,7 @@ debugTraceMsgS = debugTraceMsg . text
 
 -- | Outputs a debugging message at verbosity level of @-v@ or higher
 debugTraceMsg :: SDoc -> CoreM ()
-debugTraceMsg = msg SevDump
+debugTraceMsg = msg SevDump NoReason
 
 -- | Show some labelled 'SDoc' if a particular flag is set or at a verbosity level of @-v -ddump-most@ or higher
 dumpIfSet_dyn :: DumpFlag -> String -> SDoc -> CoreM ()

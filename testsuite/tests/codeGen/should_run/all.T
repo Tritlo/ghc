@@ -137,6 +137,7 @@ test('StaticByteArraySize', normal, compile_and_run, ['-O2'])
 test('CopySmallArray', normal, compile_and_run, [''])
 test('CopySmallArrayStressTest', reqlib('random'), compile_and_run, [''])
 test('SizeOfSmallArray', normal, compile_and_run, [''])
+test('NewSmallArray', normal, compile_and_run, [''])
 test('T9001', normal, compile_and_run, [''])
 test('T9013', omit_ways(['ghci']),  # ghci doesn't support unboxed tuples
      compile_and_run, [''])
@@ -193,3 +194,4 @@ test('T15892',
         # happen, so -G1 -A32k:
         extra_run_opts('+RTS -G1 -A32k -RTS') ],
      compile_and_run, ['-O'])
+test('T16617', normal, compile_and_run, [''])

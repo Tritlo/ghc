@@ -55,7 +55,8 @@ import HscMain (hscParseDeclsWithLocation, hscParseStmtWithLocation)
 import HsImpExp
 import HsSyn
 import HscTypes ( tyThingParent_maybe, handleFlagWarnings, getSafeMode, hsc_IC,
-                  setInteractivePrintName, hsc_dflags, msObjFilePath, runInteractiveHsc )
+                  setInteractivePrintName, hsc_dflags, msObjFilePath, runInteractiveHsc,
+                  hsc_dynLinker )
 import Module
 import Name
 import Packages ( trusted, getPackageDetails, getInstalledPackageDetails,
@@ -102,7 +103,7 @@ import Data.Char
 import Data.Function
 import Data.IORef ( IORef, modifyIORef, newIORef, readIORef, writeIORef )
 import Data.List ( find, group, intercalate, intersperse, isPrefixOf, nub,
-                   partition, sort, sortBy )
+                   partition, sort, sortBy, (\\) )
 import qualified Data.Set as S
 import Data.Maybe
 import Data.Map (Map)
@@ -351,13 +352,16 @@ defFullHelpText =
   "\n" ++
   "   :set <option> ...           set options\n" ++
   "   :seti <option> ...          set options for interactive evaluation only\n" ++
+  "   :set local-config { source | ignore }\n" ++
+  "                               set whether to source .ghci in current dir\n" ++
+  "                               (loading untrusted config is a security issue)\n" ++
   "   :set args <arg> ...         set the arguments returned by System.getArgs\n" ++
   "   :set prog <progname>        set the value returned by System.getProgName\n" ++
   "   :set prompt <prompt>        set the prompt used in GHCi\n" ++
   "   :set prompt-cont <prompt>   set the continuation prompt used in GHCi\n" ++
   "   :set prompt-function <expr> set the function to handle the prompt\n" ++
-  "   :set prompt-cont-function <expr>" ++
-                     "set the function to handle the continuation prompt\n" ++
+  "   :set prompt-cont-function <expr>\n" ++
+  "                               set the function to handle the continuation prompt\n" ++
   "   :set editor <cmd>           set the command used for :edit\n" ++
   "   :set stop [<n>] <cmd>       set the command to run when a breakpoint is hit\n" ++
   "   :unset <option> ...         unset options\n" ++
@@ -482,6 +486,7 @@ interactiveUI config srcs maybe_exprs = do
                    stop               = default_stop,
                    editor             = default_editor,
                    options            = [],
+                   localConfig        = SourceLocalConfig,
                    -- We initialize line number as 0, not 1, because we use
                    -- current line number while reporting errors which is
                    -- incremented after reading a line.
@@ -566,8 +571,6 @@ runGHCi paths maybe_exprs = do
   let
    ignore_dot_ghci = gopt Opt_IgnoreDotGhci dflags
 
-   current_dir = return (Just ".ghci")
-
    app_user_dir = liftIO $ withGhcAppData
                     (\dir -> return (Just (dir </> "ghci.conf")))
                     (return Nothing)
@@ -606,17 +609,44 @@ runGHCi paths maybe_exprs = do
 
   setGHCContextFromGHCiState
 
-  dot_cfgs <- if ignore_dot_ghci then return [] else do
-    dot_files <- catMaybes <$> sequence [ current_dir, app_user_dir, home_dir ]
-    liftIO $ filterM checkFileAndDirPerms dot_files
-  mdot_cfgs <- liftIO $ mapM canonicalizePath' dot_cfgs
+  processedCfgs <- if ignore_dot_ghci
+    then pure []
+    else do
+      userCfgs <- do
+        paths <- catMaybes <$> sequence [ app_user_dir, home_dir ]
+        checkedPaths <- liftIO $ filterM checkFileAndDirPerms paths
+        liftIO . fmap (nub . catMaybes) $ mapM canonicalizePath' checkedPaths
+
+      localCfg <- do
+        let path = ".ghci"
+        ok <- liftIO $ checkFileAndDirPerms path
+        if ok then liftIO $ canonicalizePath' path else pure Nothing
+
+      mapM_ sourceConfigFile userCfgs
+        -- Process the global and user .ghci
+        -- (but not $CWD/.ghci or CLI args, yet)
+
+      behaviour <- localConfig <$> getGHCiState
+
+      processedLocalCfg <- case localCfg of
+        Just path | path `notElem` userCfgs ->
+          -- don't read .ghci twice if CWD is $HOME
+          case behaviour of
+            SourceLocalConfig -> localCfg <$ sourceConfigFile path
+            IgnoreLocalConfig -> pure Nothing
+        _ -> pure Nothing
+
+      pure $ maybe id (:) processedLocalCfg userCfgs
 
   let arg_cfgs = reverse $ ghciScripts dflags
     -- -ghci-script are collected in reverse order
     -- We don't require that a script explicitly added by -ghci-script
     -- is owned by the current user. (#6017)
-  mapM_ sourceConfigFile $ nub $ (catMaybes mdot_cfgs) ++ arg_cfgs
-    -- nub, because we don't want to read .ghci twice if the CWD is $HOME.
+
+  mapM_ sourceConfigFile $ nub arg_cfgs \\ processedCfgs
+    -- Dedup, and remove any configs we already processed.
+    -- Importantly, if $PWD/.ghci was ignored due to configuration,
+    -- explicitly specifying it does cause it to be processed.
 
   -- Perform a :load for files given on the GHCi command line
   -- When in -e mode, if the load fails then we want to stop
@@ -657,7 +687,7 @@ runGHCi paths maybe_exprs = do
                                    $ topHandler e
                                    -- this used to be topHandlerFastExit, see #2228
             runInputTWithPrefs defaultPrefs defaultSettings $ do
-                -- make `ghc -e` exit nonzero on invalid input, see Trac #7962
+                -- make `ghc -e` exit nonzero on invalid input, see #7962
                 _ <- runCommands' hdle
                      (Just $ hdle (toException $ ExitFailure 1) >> return ())
                      (return Nothing)
@@ -1589,8 +1619,11 @@ chooseEditFile =
 -- :def
 
 defineMacro :: GhciMonad m => Bool{-overwrite-} -> String -> m ()
-defineMacro _ (':':_) =
-  liftIO $ putStrLn "macro name cannot start with a colon"
+defineMacro _ (':':_) = liftIO $ putStrLn
+                          "macro name cannot start with a colon"
+defineMacro _ ('!':_) = liftIO $ putStrLn
+                          "macro name cannot start with an exclamation mark"
+                          -- little code duplication allows to grep error msg
 defineMacro overwrite s = do
   let (macro_name, definition) = break isSpace s
   macros <- ghci_macros <$> getGHCiState
@@ -1600,33 +1633,38 @@ defineMacro overwrite s = do
                 then liftIO $ putStrLn "no macros defined"
                 else liftIO $ putStr ("the following macros are defined:\n" ++
                                       unlines defined)
-        else do
-  if (not overwrite && macro_name `elem` defined)
-        then throwGhcException (CmdLineError
-                ("macro '" ++ macro_name ++ "' is already defined"))
-        else do
+  else do
+    isCommand <- isJust <$> lookupCommand' macro_name
+    let check_newname
+          | macro_name `elem` defined = throwGhcException (CmdLineError
+            ("macro '" ++ macro_name ++ "' is already defined. " ++ hint))
+          | isCommand = throwGhcException (CmdLineError
+            ("macro '" ++ macro_name ++ "' overwrites builtin command. " ++ hint))
+          | otherwise = return ()
+        hint = " Use ':def!' to overwrite."
 
-  -- compile the expression
-  handleSourceError GHC.printException $ do
-    step <- getGhciStepIO
-    expr <- GHC.parseExpr definition
-    -- > ghciStepIO . definition :: String -> IO String
-    let stringTy = nlHsTyVar stringTy_RDR
-        ioM = nlHsTyVar (getRdrName ioTyConName) `nlHsAppTy` stringTy
-        body = nlHsVar compose_RDR `mkHsApp` (nlHsPar step)
-                                   `mkHsApp` (nlHsPar expr)
-        tySig = mkLHsSigWcType (stringTy `nlHsFunTy` ioM)
-        new_expr = L (getLoc expr) $ ExprWithTySig noExt body tySig
-    hv <- GHC.compileParsedExprRemote new_expr
+    unless overwrite check_newname
+    -- compile the expression
+    handleSourceError GHC.printException $ do
+      step <- getGhciStepIO
+      expr <- GHC.parseExpr definition
+      -- > ghciStepIO . definition :: String -> IO String
+      let stringTy = nlHsTyVar stringTy_RDR
+          ioM = nlHsTyVar (getRdrName ioTyConName) `nlHsAppTy` stringTy
+          body = nlHsVar compose_RDR `mkHsApp` (nlHsPar step)
+                                     `mkHsApp` (nlHsPar expr)
+          tySig = mkLHsSigWcType (stringTy `nlHsFunTy` ioM)
+          new_expr = L (getLoc expr) $ ExprWithTySig noExt body tySig
+      hv <- GHC.compileParsedExprRemote new_expr
 
-    let newCmd = Command { cmdName = macro_name
-                         , cmdAction = lift . runMacro hv
-                         , cmdHidden = False
-                         , cmdCompletionFunc = noCompletion
-                         }
+      let newCmd = Command { cmdName = macro_name
+                           , cmdAction = lift . runMacro hv
+                           , cmdHidden = False
+                           , cmdCompletionFunc = noCompletion
+                           }
 
-    -- later defined macros have precedence
-    modifyGHCiState $ \s ->
+      -- later defined macros have precedence
+      modifyGHCiState $ \s ->
         let filtered = [ cmd | cmd <- macros, cmdName cmd /= macro_name ]
         in s { ghci_macros = newCmd : filtered }
 
@@ -2117,7 +2155,9 @@ parseSpanArg s = do
 
     let fs    = mkFastString fp
         span' = mkRealSrcSpan (mkRealSrcLoc fs sl sc)
-                              (mkRealSrcLoc fs el ec)
+                              -- End column of RealSrcSpan is the column
+                              -- after the end of the span.
+                              (mkRealSrcLoc fs el (ec + 1))
 
     return (span',trailer)
   where
@@ -2163,7 +2203,9 @@ showRealSrcSpan spn = concat [ fp, ":(", show sl, ",", show sc
     sl = srcSpanStartLine spn
     sc = srcSpanStartCol  spn
     el = srcSpanEndLine   spn
-    ec = srcSpanEndCol    spn
+    -- The end column is the column after the end of the span see the
+    -- RealSrcSpan module
+    ec = let ec' = srcSpanEndCol    spn in if ec' == 0 then 0 else ec' - 1
 
 -----------------------------------------------------------------------------
 -- | @:kind@ command
@@ -2616,7 +2658,7 @@ iiSubsumes (IIModule m1) (IIModule m2) = m1==m2
 iiSubsumes (IIDecl d1) (IIDecl d2)      -- A bit crude
   =  unLoc (ideclName d1) == unLoc (ideclName d2)
      && ideclAs d1 == ideclAs d2
-     && (not (ideclQualified d1) || ideclQualified d2)
+     && (not (isImportDeclQualified (ideclQualified d1)) || isImportDeclQualified (ideclQualified d2))
      && (ideclHiding d1 `hidingSubsumes` ideclHiding d2)
   where
      _                    `hidingSubsumes` Just (False,L _ []) = True
@@ -2663,6 +2705,8 @@ setCmd str
 
     Right ("editor",  rest) -> setEditor  $ dropWhile isSpace rest
     Right ("stop",    rest) -> setStop    $ dropWhile isSpace rest
+    Right ("local-config", rest) ->
+        setLocalConfigBehaviour $ dropWhile isSpace rest
     _ -> case toArgs str of
          Left err -> liftIO (hPutStrLn stderr err)
          Right wds -> setOptions wds
@@ -2728,6 +2772,7 @@ showDynFlags show_all dflags = do
 
 setArgs, setOptions :: GhciMonad m => [String] -> m ()
 setProg, setEditor, setStop :: GhciMonad m => String -> m ()
+setLocalConfigBehaviour :: GhciMonad m => String -> m ()
 
 setArgs args = do
   st <- getGHCiState
@@ -2740,6 +2785,14 @@ setProg prog = do
   setGHCiState st { progname = prog, evalWrapper = wrapper }
 
 setEditor cmd = modifyGHCiState (\st -> st { editor = cmd })
+
+setLocalConfigBehaviour s
+  | s == "source" =
+      modifyGHCiState (\st -> st { localConfig = SourceLocalConfig })
+  | s == "ignore" =
+      modifyGHCiState (\st -> st { localConfig = IgnoreLocalConfig })
+  | otherwise = throwGhcException
+      (CmdLineError "syntax:  :set local-config { source | ignore }")
 
 setStop str@(c:_) | isDigit c
   = do let (nm_str,rest) = break (not.isDigit) str
@@ -2946,6 +2999,7 @@ showCmd "-a" = showOptions True
 showCmd str = do
     st <- getGHCiState
     dflags <- getDynFlags
+    hsc_env <- GHC.getSession
 
     let lookupCmd :: String -> Maybe (m ())
         lookupCmd name = lookup name $ map (\(_,b,c) -> (b,c)) cmds
@@ -2965,7 +3019,7 @@ showCmd str = do
             , action "imports"    $ showImports
             , action "modules"    $ showModules
             , action "bindings"   $ showBindings
-            , action "linker"     $ getDynFlags >>= liftIO . showLinkerState
+            , action "linker"     $ getDynFlags >>= liftIO . (showLinkerState (hsc_dynLinker hsc_env))
             , action "breaks"     $ showBkptTable
             , action "context"    $ showContext
             , action "packages"   $ showPackages
@@ -3068,16 +3122,16 @@ internally generated by GHC, eg:
     $tcFoo :: GHC.Types.TyCon = _
     $trModule :: GHC.Types.Module = _ .
 
-The filter was introduced as a fix for Trac #12525 [1]. Comment:1 [2] to this
+The filter was introduced as a fix for #12525 [1]. Comment:1 [2] to this
 ticket contains an analysis of the situation and suggests the solution
 implemented above.
 
-The same filter was also implemented to fix Trac #11051 [3]. See the
+The same filter was also implemented to fix #11051 [3]. See the
 Note [What to show to users] in compiler/main/InteractiveEval.hs
 
-[1] https://ghc.haskell.org/trac/ghc/ticket/12525
-[2] https://ghc.haskell.org/trac/ghc/ticket/12525#comment:1
-[3] https://ghc.haskell.org/trac/ghc/ticket/11051
+[1] https://gitlab.haskell.org/ghc/ghc/issues/12525
+[2] https://gitlab.haskell.org/ghc/ghc/issues/12525#note_123489
+[3] https://gitlab.haskell.org/ghc/ghc/issues/11051
 -}
 
 

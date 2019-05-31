@@ -87,7 +87,6 @@ Library
     GHC-Options: -Wall
                  -Wno-name-shadowing
                  -Wnoncanonical-monad-instances
-                 -Wnoncanonical-monadfail-instances
                  -Wnoncanonical-monoid-instances
 
     if flag(ghci)
@@ -273,7 +272,10 @@ Library
         CmmType
         CmmUtils
         CmmLayoutStack
+        CliOption
         EnumSet
+        GhcNameVersion
+        FileSettings
         MkGraph
         PprBase
         PprC
@@ -396,6 +398,7 @@ Library
         Plugins
         TcPluginM
         PprTyThing
+        Settings
         StaticPtrTable
         SysTools
         SysTools.BaseDir
@@ -419,6 +422,7 @@ Library
         PrelNames
         PrelRules
         PrimOp
+        ToolSettings
         TysPrim
         TysWiredIn
         CostCentre
@@ -559,6 +563,7 @@ Library
         Outputable
         Pair
         Panic
+        PlainPanic
         PprColour
         Pretty
         State
@@ -652,6 +657,7 @@ Library
             ByteCodeItbls
             ByteCodeLink
             Debugger
+            LinkerTypes
             Linker
             RtClosureInspect
             GHCi

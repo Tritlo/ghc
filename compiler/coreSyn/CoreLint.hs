@@ -159,7 +159,7 @@ find an occurrence of an Id, we fetch it from the in-scope set.
 
 Note [Bad unsafe coercion]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-For discussion see https://ghc.haskell.org/trac/ghc/wiki/BadUnsafeCoercions
+For discussion see https://gitlab.haskell.org/ghc/ghc/wikis/bad-unsafe-coercions
 Linter introduces additional rules that checks improper coercion between
 different types, called bad coercions. Following coercions are forbidden:
 
@@ -373,7 +373,7 @@ interactiveInScope :: HscEnv -> [Var]
 -- When we are not in GHCi, the interactive context (hsc_IC hsc_env) is empty
 -- so this is a (cheap) no-op.
 --
--- See Trac #8215 for an example
+-- See #8215 for an example
 interactiveInScope hsc_env
   = tyvars ++ ids
   where
@@ -570,15 +570,9 @@ lintSingleBinding top_lvl_flag rec_flag (binder,rhs)
               (addWarnL (text "INLINE binder is (non-rule) loop breaker:" <+> ppr binder))
               -- Only non-rule loop breakers inhibit inlining
 
-      -- Check whether arity and demand type are consistent (only if demand analysis
-      -- already happened)
-      --
-      -- Note (Apr 2014): this is actually ok.  See Note [Demand analysis for trivial right-hand sides]
-      --                  in DmdAnal.  After eta-expansion in CorePrep the rhs is no longer trivial.
-      --       ; let dmdTy = idStrictness binder
-      --       ; checkL (case dmdTy of
-      --                  StrictSig dmd_ty -> idArity binder >= dmdTypeDepth dmd_ty || exprIsTrivial rhs)
-      --           (mkArityMsg binder)
+       -- We used to check that the dmdTypeDepth of a demand signature never
+       -- exceeds idArity, but that is an unnecessary complication, see
+       -- Note [idArity varies independently of dmdTypeDepth] in DmdAnal
 
        -- Check that the binder's arity is within the bounds imposed by
        -- the type and the strictness signature. See Note [exprArity invariant]
@@ -806,7 +800,7 @@ lintCoreExpr e@(Case scrut var alt_ty alts) =
      ; checkL (not $ isFloatingTy scrut_ty && any isLitPat alts)
          (ptext (sLit $ "Lint warning: Scrutinising floating-point " ++
                         "expression with literal pattern in case " ++
-                        "analysis (see Trac #9238).")
+                        "analysis (see #9238).")
           $$ text "scrut" <+> ppr scrut)
 
      ; case tyConAppTyCon_maybe (idType var) of
@@ -927,7 +921,7 @@ checkJoinOcc var n_args
 Note [No alternatives lint check]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Case expressions with no alternatives are odd beasts, and it would seem
-like they would worth be looking at in the linter (cf Trac #10180). We
+like they would worth be looking at in the linter (cf #10180). We
 used to check two things:
 
 * exprIsHNF is false: it would *seem* to be terribly wrong if
@@ -937,7 +931,7 @@ used to check two things:
   scrutinee is diverging for sure.
 
 It was already known that the second test was not entirely reliable.
-Unfortunately (Trac #13990), the first test turned out not to be reliable
+Unfortunately (#13990), the first test turned out not to be reliable
 either. Getting the checks right turns out to be somewhat complicated.
 
 For example, suppose we have (comment 8)
@@ -1395,7 +1389,7 @@ lintType (CoercionTy co)
 
 {- Note [Stupid type synonyms]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Consider (Trac #14939)
+Consider (#14939)
    type Alg cls ob = ob
    f :: forall (cls :: * -> Constraint) (b :: Alg cls *). b
 
@@ -1572,18 +1566,18 @@ lintCoreRule fun fun_ty rule@(Rule { ru_name = name, ru_bndrs = bndrs
 It's very bad if simplifying a rule means that one of the template
 variables (ru_bndrs) that /is/ mentioned on the RHS becomes
 not-mentioned in the LHS (ru_args).  How can that happen?  Well, in
-Trac #10602, SpecConstr stupidly constructed a rule like
+#10602, SpecConstr stupidly constructed a rule like
 
   forall x,c1,c2.
      f (x |> c1 |> c2) = ....
 
 But simplExpr collapses those coercions into one.  (Indeed in
-Trac #10602, it collapsed to the identity and was removed altogether.)
+#10602, it collapsed to the identity and was removed altogether.)
 
 We don't have a great story for what to do here, but at least
 this check will nail it.
 
-NB (Trac #11643): it's possible that a variable listed in the
+NB (#11643): it's possible that a variable listed in the
 binders becomes not-mentioned on both LHS and RHS.  Here's a silly
 example:
    RULE forall x y. f (g x y) = g (x+1) (y-1)
@@ -2080,7 +2074,7 @@ defaultLintFlags = LF { lf_check_global_ids = False
 newtype LintM a =
    LintM { unLintM ::
             LintEnv ->
-            WarnsAndErrs ->           -- Error and warning messages so far
+            WarnsAndErrs ->           -- Warning and error messages so far
             (Maybe a, WarnsAndErrs) } -- Result and messages (if any)
 
 type WarnsAndErrs = (Bag MsgDoc, Bag MsgDoc)
@@ -2088,7 +2082,7 @@ type WarnsAndErrs = (Bag MsgDoc, Bag MsgDoc)
 {- Note [Checking for global Ids]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Before CoreTidy, all locally-bound Ids must be LocalIds, even
-top-level ones. See Note [Exported LocalIds] and Trac #9857.
+top-level ones. See Note [Exported LocalIds] and #9857.
 
 Note [Checking StaticPtrs]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2124,7 +2118,7 @@ Note [Linting type synonym applications]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When linting a type-synonym, or type-family, application
   S ty1 .. tyn
-we behave as follows (Trac #15057, #T15664):
+we behave as follows (#15057, #T15664):
 
 * If lf_report_unsat_syns = True, and S has arity < n,
   complain about an unsaturated type synonym or type family
@@ -2189,10 +2183,13 @@ data LintLocInfo
   | InCo   Coercion     -- Inside a coercion
 
 initL :: DynFlags -> LintFlags -> InScopeSet
-       -> LintM a -> WarnsAndErrs    -- Errors and warnings
+       -> LintM a -> WarnsAndErrs    -- Warnings and errors
 initL dflags flags in_scope m
   = case unLintM m env (emptyBag, emptyBag) of
-      (_, errs) -> errs
+      (Just _, errs) -> errs
+      (Nothing, errs@(_, e)) | not (isEmptyBag e) -> errs
+                             | otherwise -> pprPanic ("Bug in Lint: a failure occurred " ++
+                                                      "without reporting an error message") empty
   where
     env = LE { le_flags = flags
              , le_subst = mkEmptyTCvSubst in_scope
@@ -2562,20 +2559,6 @@ mkKindErrMsg tyvar arg_ty
           hang (text "Arg type:")
                  4 (ppr arg_ty <+> dcolon <+> ppr (typeKind arg_ty))]
 
-{- Not needed now
-mkArityMsg :: Id -> MsgDoc
-mkArityMsg binder
-  = vcat [hsep [text "Demand type has",
-                ppr (dmdTypeDepth dmd_ty),
-                text "arguments, rhs has",
-                ppr (idArity binder),
-                text "arguments,",
-                ppr binder],
-              hsep [text "Binder's strictness signature:", ppr dmd_ty]
-
-         ]
-           where (StrictSig dmd_ty) = idStrictness binder
--}
 mkCastErr :: CoreExpr -> Coercion -> Type -> Type -> MsgDoc
 mkCastErr expr = mk_cast_err "expression" "type" (ppr expr)
 

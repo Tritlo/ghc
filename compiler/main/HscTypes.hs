@@ -13,7 +13,7 @@ module HscTypes (
         -- * compilation state
         HscEnv(..), hscEPS,
         FinderCache, FindResult(..), InstalledFindResult(..),
-        Target(..), TargetId(..), pprTarget, pprTargetId,
+        Target(..), TargetId(..), InputFileBuffer, pprTarget, pprTargetId,
         HscStatus(..),
         IServ(..),
 
@@ -30,6 +30,7 @@ module HscTypes (
         ModGuts(..), CgGuts(..), ForeignStubs(..), appendStubC,
         ImportedMods, ImportedBy(..), importedByUser, ImportedModsVal(..), SptEntry(..),
         ForeignSrcLang(..),
+        phaseForeignLanguage,
 
         ModSummary(..), ms_imps, ms_installed_mod, ms_mod_name, showModMsg, isBootSummary,
         msHsFilePath, msHiFilePath, msObjFilePath,
@@ -180,8 +181,10 @@ import TysWiredIn
 import Packages hiding  ( Version(..) )
 import CmdLineParser
 import DynFlags
+import LinkerTypes      ( DynLinker, Linkable(..), Unlinked(..), SptEntry(..) )
 import DriverPhases     ( Phase, HscSource(..), hscSourceString
                         , isHsBootOrSig, isHsigFile )
+import qualified DriverPhases as Phase
 import BasicTypes
 import IfaceSyn
 import Maybes
@@ -373,8 +376,10 @@ shouldPrintWarning _ _
 
 -- | HscEnv is like 'Session', except that some of the fields are immutable.
 -- An HscEnv is used to compile a single module from plain Haskell source
--- code (after preprocessing) to either C, assembly or C--.  Things like
--- the module graph don't change during a single compilation.
+-- code (after preprocessing) to either C, assembly or C--. It's also used
+-- to store the dynamic linker state to allow for multiple linkers in the
+-- same address space.
+-- Things like the module graph don't change during a single compilation.
 --
 -- Historical note: \"hsc\" used to be the name of the compiler binary,
 -- when there was a separate driver and compiler.  To compile a single
@@ -436,6 +441,10 @@ data HscEnv
         , hsc_iserv :: MVar (Maybe IServ)
                 -- ^ interactive server process.  Created the first
                 -- time it is needed.
+
+        , hsc_dynLinker :: DynLinker
+                -- ^ dynamic linker. 
+
  }
 
 -- Note [hsc_type_env_var hack]
@@ -502,8 +511,17 @@ data Target
   = Target {
       targetId           :: TargetId, -- ^ module or filename
       targetAllowObjCode :: Bool,     -- ^ object code allowed?
-      targetContents     :: Maybe (StringBuffer,UTCTime)
-                                        -- ^ in-memory text buffer?
+      targetContents     :: Maybe (InputFileBuffer, UTCTime)
+      -- ^ Optional in-memory buffer containing the source code GHC should
+      -- use for this target instead of reading it from disk.
+      --
+      -- Since GHC version 8.10 modules which require preprocessors such as
+      -- Literate Haskell or CPP to run are also supported.
+      --
+      -- If a corresponding source file does not exist on disk this will
+      -- result in a 'SourceError' exception if @targetId = TargetModule _@
+      -- is used. However together with @targetId = TargetFile _@ GHC will
+      -- not complain about the file missing.
     }
 
 data TargetId
@@ -515,6 +533,8 @@ data TargetId
         -- (which phase to start from).  Nothing indicates the starting phase
         -- should be determined from the suffix of the filename.
   deriving Eq
+
+type InputFileBuffer = StringBuffer
 
 pprTarget :: Target -> SDoc
 pprTarget (Target id obj _) =
@@ -703,7 +723,7 @@ hptSomeThingsBelowUs extract include_hi_boot hsc_env deps
                     Nothing -> pprTrace "WARNING in hptSomeThingsBelowUs" msg []
           msg = vcat [text "missing module" <+> ppr mod,
                       text "Probable cause: out-of-date interface files"]
-                        -- This really shouldn't happen, but see Trac #962
+                        -- This really shouldn't happen, but see #962
 
         -- And get its dfuns
     , thing <- things ]
@@ -1386,13 +1406,6 @@ appendStubC :: ForeignStubs -> SDoc -> ForeignStubs
 appendStubC NoStubs            c_code = ForeignStubs empty c_code
 appendStubC (ForeignStubs h c) c_code = ForeignStubs h (c $$ c_code)
 
--- | An entry to be inserted into a module's static pointer table.
--- See Note [Grand plan for static forms] in StaticPtrTable.
-data SptEntry = SptEntry Id Fingerprint
-
-instance Outputable SptEntry where
-  ppr (SptEntry id fpr) = ppr id <> colon <+> ppr fpr
-
 {-
 ************************************************************************
 *                                                                      *
@@ -1535,7 +1548,7 @@ e.g.    Prelude> data T = A | B
         Prelude> instance Eq T where ...
         Prelude> instance Eq T where ...   -- This one overrides
 
-It's exactly the same for type-family instances.  See Trac #7102
+It's exactly the same for type-family instances.  See #7102
 -}
 
 -- | Interactive context, recording information about the state of the
@@ -1658,7 +1671,7 @@ extendInteractiveContext :: InteractiveContext
 extendInteractiveContext ictxt new_tythings new_cls_insts new_fam_insts defaults fix_env
   = ictxt { ic_mod_index  = ic_mod_index ictxt + 1
                             -- Always bump this; even instances should create
-                            -- a new mod_index (Trac #9426)
+                            -- a new mod_index (#9426)
           , ic_tythings   = new_tythings ++ old_tythings
           , ic_rn_gbl_env = ic_rn_gbl_env ictxt `icExtendGblRdrEnv` new_tythings
           , ic_instances  = ( new_cls_insts ++ old_cls_insts
@@ -1726,7 +1739,7 @@ icExtendGblRdrEnv env tythings
     -- are not implicit-ids, and must appear in the TypeEnv.  But they
     -- will also be brought into scope by the corresponding (ATyCon
     -- tc).  And we want the latter, because that has the correct
-    -- parent (Trac #10520)
+    -- parent (#10520)
     is_sub_bndr (AnId f) = case idDetails f of
                              RecSelId {}  -> True
                              ClassOpId {} -> True
@@ -2404,7 +2417,7 @@ noDependencies :: Dependencies
 noDependencies = Deps [] [] [] [] []
 
 -- | Records modules for which changes may force recompilation of this module
--- See wiki: http://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/RecompilationAvoidance
+-- See wiki: https://gitlab.haskell.org/ghc/ghc/wikis/commentary/compiler/recompilation-avoidance
 --
 -- This differs from Dependencies.  A module X may be in the dep_mods of this
 -- module (via an import chain) but if we don't use anything from X it won't
@@ -2803,6 +2816,9 @@ msHsFilePath  ms = expectJust "msHsFilePath" (ml_hs_file  (ms_location ms))
 msHiFilePath  ms = ml_hi_file  (ms_location ms)
 msObjFilePath ms = ml_obj_file (ms_location ms)
 
+msDynObjFilePath :: ModSummary -> DynFlags -> FilePath
+msDynObjFilePath ms dflags = dynamicOutputFile dflags (msObjFilePath ms)
+
 -- | Did this 'ModSummary' originate from a hs-boot file?
 isBootSummary :: ModSummary -> Bool
 isBootSummary ms = ms_hsc_src ms == HsBootFile
@@ -2822,20 +2838,26 @@ showModMsg :: DynFlags -> HscTarget -> Bool -> ModSummary -> String
 showModMsg dflags target recomp mod_summary = showSDoc dflags $
    if gopt Opt_HideSourcePaths dflags
       then text mod_str
-      else hsep
+      else hsep $
          [ text (mod_str ++ replicate (max 0 (16 - length mod_str)) ' ')
          , char '('
          , text (op $ msHsFilePath mod_summary) <> char ','
-         , case target of
-              HscInterpreted | recomp -> text "interpreted"
-              HscNothing              -> text "nothing"
-              _                       -> text (op $ msObjFilePath mod_summary)
-         , char ')'
-         ]
+         ] ++
+         if gopt Opt_BuildDynamicToo dflags
+            then [ text obj_file <> char ','
+                 , text dyn_file
+                 , char ')'
+                 ]
+            else [ text obj_file, char ')' ]
   where
-    op      = normalise
-    mod     = moduleName (ms_mod mod_summary)
-    mod_str = showPpr dflags mod ++ hscSourceString (ms_hsc_src mod_summary)
+    op       = normalise
+    mod      = moduleName (ms_mod mod_summary)
+    mod_str  = showPpr dflags mod ++ hscSourceString (ms_hsc_src mod_summary)
+    dyn_file = op $ msDynObjFilePath mod_summary dflags
+    obj_file = case target of
+                HscInterpreted | recomp -> "interpreted"
+                HscNothing              -> "nothing"
+                _                       -> (op $ msObjFilePath mod_summary)
 
 {-
 ************************************************************************
@@ -2981,22 +3003,6 @@ This stuff is in here, rather than (say) in Linker.hs, because the Linker.hs
 stuff is the *dynamic* linker, and isn't present in a stage-1 compiler
 -}
 
--- | Information we can use to dynamically link modules into the compiler
-data Linkable = LM {
-  linkableTime     :: UTCTime,          -- ^ Time at which this linkable was built
-                                        -- (i.e. when the bytecodes were produced,
-                                        --       or the mod date on the files)
-  linkableModule   :: Module,           -- ^ The linkable module itself
-  linkableUnlinked :: [Unlinked]
-    -- ^ Those files and chunks of code we have yet to link.
-    --
-    -- INVARIANT: A valid linkable always has at least one 'Unlinked' item.
-    -- If this list is empty, the Linkable represents a fake linkable, which
-    -- is generated in HscNothing mode to avoid recompiling modules.
-    --
-    -- ToDo: Do items get removed from this list when they get linked?
- }
-
 isObjectLinkable :: Linkable -> Bool
 isObjectLinkable l = not (null unlinked) && all isObject unlinked
   where unlinked = linkableUnlinked l
@@ -3008,30 +3014,7 @@ isObjectLinkable l = not (null unlinked) && all isObject unlinked
 linkableObjs :: Linkable -> [FilePath]
 linkableObjs l = [ f | DotO f <- linkableUnlinked l ]
 
-instance Outputable Linkable where
-   ppr (LM when_made mod unlinkeds)
-      = (text "LinkableM" <+> parens (text (show when_made)) <+> ppr mod)
-        $$ nest 3 (ppr unlinkeds)
-
 -------------------------------------------
-
--- | Objects which have yet to be linked by the compiler
-data Unlinked
-   = DotO FilePath      -- ^ An object file (.o)
-   | DotA FilePath      -- ^ Static archive file (.a)
-   | DotDLL FilePath    -- ^ Dynamically linked library file (.so, .dll, .dylib)
-   | BCOs CompiledByteCode
-          [SptEntry]    -- ^ A byte-code object, lives only in memory. Also
-                        -- carries some static pointer table entries which
-                        -- should be loaded along with the BCOs.
-                        -- See Note [Grant plan for static forms] in
-                        -- StaticPtrTable.
-
-instance Outputable Unlinked where
-   ppr (DotO path)   = text "DotO" <+> text path
-   ppr (DotA path)   = text "DotA" <+> text path
-   ppr (DotDLL path) = text "DotDLL" <+> text path
-   ppr (BCOs bcos spt) = text "BCOs" <+> ppr bcos <+> ppr spt
 
 -- | Is this an actual file on disk we can link in somehow?
 isObject :: Unlinked -> Bool
@@ -3136,3 +3119,15 @@ Also see Note [Typechecking Complete Matches] in TcBinds for a more detailed
 explanation for how GHC ensures that all the conlikes in a COMPLETE set are
 consistent.
 -}
+
+-- | Foreign language of the phase if the phase deals with a foreign code
+phaseForeignLanguage :: Phase -> Maybe ForeignSrcLang
+phaseForeignLanguage phase = case phase of
+  Phase.Cc           -> Just LangC
+  Phase.Ccxx         -> Just LangCxx
+  Phase.Cobjc        -> Just LangObjc
+  Phase.Cobjcxx      -> Just LangObjcxx
+  Phase.HCc          -> Just LangC
+  Phase.As _         -> Just LangAsm
+  Phase.MergeForeign -> Just RawObject
+  _                  -> Nothing

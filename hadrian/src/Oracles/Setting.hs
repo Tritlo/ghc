@@ -3,7 +3,9 @@ module Oracles.Setting (
     getSettingList,  anyTargetPlatform, anyTargetOs, anyTargetArch, anyHostOs,
     ghcWithInterpreter, ghcEnableTablesNextToCode, useLibFFIForAdjustors,
     ghcCanonVersion, cmdLineLengthLimit, iosHost, osxHost, windowsHost,
-    hostSupportsRPaths, topDirectory, libsuf
+    hostSupportsRPaths, topDirectory, libsuf, ghcVersionStage,
+    SettingsFileSetting (..),
+    settingsFileSetting
     ) where
 
 import Hadrian.Expression
@@ -75,6 +77,31 @@ data SettingList = ConfCcArgs Stage
                  | ConfLdLinkerArgs Stage
                  | HsCppArgs
 
+-- TODO compute solely in Hadrian, removing these variables' definitions
+-- from aclocal.m4 whenever they can be calculated from other variables
+-- already fed into Hadrian.
+
+-- | Each 'SettingsFileSetting' is defined by 'FP_SETTINGS' in aclocal.m4.
+-- Eventually much of that local can probably be computed just in Hadrian.
+data SettingsFileSetting
+    = SettingsFileSetting_CCompilerCommand
+    | SettingsFileSetting_HaskellCPPCommand
+    | SettingsFileSetting_HaskellCPPFlags
+    | SettingsFileSetting_CCompilerFlags
+    | SettingsFileSetting_CCompilerLinkFlags
+    | SettingsFileSetting_CCompilerSupportsNoPie
+    | SettingsFileSetting_LdCommand
+    | SettingsFileSetting_LdFlags
+    | SettingsFileSetting_ArCommand
+    | SettingsFileSetting_RanlibCommand
+    | SettingsFileSetting_DllWrapCommand
+    | SettingsFileSetting_WindresCommand
+    | SettingsFileSetting_LibtoolCommand
+    | SettingsFileSetting_TouchCommand
+    | SettingsFileSetting_ClangCommand
+    | SettingsFileSetting_LlcCommand
+    | SettingsFileSetting_OptCommand
+
 -- | Look up the value of a 'Setting' in @cfg/system.config@, tracking the
 -- result.
 setting :: Setting -> Action String
@@ -126,6 +153,28 @@ settingList key = fmap words $ lookupValueOrError configFile $ case key of
     ConfGccLinkerArgs stage -> "conf-gcc-linker-args-" ++ stageString stage
     ConfLdLinkerArgs  stage -> "conf-ld-linker-args-"  ++ stageString stage
     HsCppArgs               -> "hs-cpp-args"
+
+-- | Look up the value of a 'SettingList' in @cfg/system.config@, tracking the
+-- result.
+settingsFileSetting :: SettingsFileSetting -> Action String
+settingsFileSetting key = lookupValueOrError configFile $ case key of
+    SettingsFileSetting_CCompilerCommand -> "settings-c-compiler-command"
+    SettingsFileSetting_HaskellCPPCommand -> "settings-haskell-cpp-command"
+    SettingsFileSetting_HaskellCPPFlags -> "settings-haskell-cpp-flags"
+    SettingsFileSetting_CCompilerFlags -> "settings-c-compiler-flags"
+    SettingsFileSetting_CCompilerLinkFlags -> "settings-c-compiler-link-flags"
+    SettingsFileSetting_CCompilerSupportsNoPie -> "settings-c-compiler-supports-no-pie"
+    SettingsFileSetting_LdCommand -> "settings-ld-command"
+    SettingsFileSetting_LdFlags -> "settings-ld-flags"
+    SettingsFileSetting_ArCommand -> "settings-ar-command"
+    SettingsFileSetting_RanlibCommand -> "settings-ranlib-command"
+    SettingsFileSetting_DllWrapCommand -> "settings-dll-wrap-command"
+    SettingsFileSetting_WindresCommand -> "settings-windres-command"
+    SettingsFileSetting_LibtoolCommand -> "settings-libtool-command"
+    SettingsFileSetting_TouchCommand -> "settings-touch-command"
+    SettingsFileSetting_ClangCommand -> "settings-clang-command"
+    SettingsFileSetting_LlcCommand -> "settings-llc-command"
+    SettingsFileSetting_OptCommand -> "settings-opt-command"
 
 -- | An expression that looks up the value of a 'Setting' in @cfg/system.config@,
 -- tracking the result.
@@ -189,7 +238,7 @@ ghcWithInterpreter = do
     return $ goodOs && goodArch
 
 -- | Check whether the target architecture supports placing info tables next to
--- code. See: https://ghc.haskell.org/trac/ghc/wiki/Commentary/Rts/Storage/HeapObjects#TABLES_NEXT_TO_CODE.
+-- code. See: https://gitlab.haskell.org/ghc/ghc/wikis/commentary/rts/storage/heap-objects#tables_next_to_code.
 ghcEnableTablesNextToCode :: Action Bool
 ghcEnableTablesNextToCode = notM $ anyTargetArch ["ia64", "powerpc64", "powerpc64le"]
 
@@ -210,6 +259,10 @@ ghcCanonVersion = do
 topDirectory :: Action FilePath
 topDirectory = fixAbsolutePathOnWindows =<< setting GhcSourcePath
 
+ghcVersionStage :: Stage -> Action String
+ghcVersionStage Stage0 = setting GhcVersion
+ghcVersionStage _      = setting ProjectVersion
+
 -- | The file suffix used for libraries of a given build 'Way'. For example,
 -- @_p.a@ corresponds to a static profiled library, and @-ghc7.11.20141222.so@
 -- is a dynamic vanilly library. Why do we need GHC version number in the
@@ -219,11 +272,11 @@ topDirectory = fixAbsolutePathOnWindows =<< setting GhcSourcePath
 -- live in their own per-package directory and hence do not need a unique
 -- filename. We also need to respect the system's dynamic extension, e.g. @.dll@
 -- or @.so@.
-libsuf :: Way -> Action String
-libsuf way
+libsuf :: Stage -> Way -> Action String
+libsuf st way
     | not (wayUnit Dynamic way) = return (waySuffix way ++ ".a") -- e.g., _p.a
     | otherwise = do
         extension <- setting DynamicExtension -- e.g., .dll or .so
-        version   <- setting ProjectVersion   -- e.g., 7.11.20141222
+        version   <- ghcVersionStage st -- e.g. 8.4.4 or 8.9.xxxx
         let suffix = waySuffix (removeWayUnit Dynamic way)
         return (suffix ++ "-ghc" ++ version ++ extension)

@@ -309,8 +309,14 @@ toIfaceAppArgsX fr kind ty_args
         t'  = toIfaceTypeX fr t
         ts' = go (extendTCvSubst env tv t) res ts
 
-    go env (FunTy { ft_res = res }) (t:ts) -- No type-class args in tycon apps
-      = IA_Arg (toIfaceTypeX fr t) Required (go env res ts)
+    go env (FunTy { ft_af = af, ft_res = res }) (t:ts)
+      = IA_Arg (toIfaceTypeX fr t) argf (go env res ts)
+      where
+        argf = case af of
+                 VisArg   -> Required
+                 InvisArg -> Inferred
+                   -- It's rare for a kind to have a constraint argument, but
+                   -- it can happen. See Note [AnonTCB InvisArg] in TyCon.
 
     go env ty ts@(t1:ts1)
       | not (isEmptyTCvSubst env)
@@ -322,7 +328,7 @@ toIfaceAppArgsX fr kind ty_args
         -- e.g. kind = k, ty_args = [Int]
         -- This is probably a compiler bug, so we print a trace and
         -- carry on as if it were FunTy.  Without the test for
-        -- isEmptyTCvSubst we'd get an infinite loop (Trac #15473)
+        -- isEmptyTCvSubst we'd get an infinite loop (#15473)
         WARN( True, ppr kind $$ ppr ty_args )
         IA_Arg (toIfaceTypeX fr t1) Required (go env ty ts1)
 
@@ -522,7 +528,7 @@ toIfaceTickish (HpcTick modl ix)       = Just (IfaceHpcTick modl ix)
 toIfaceTickish (SourceNote src names)  = Just (IfaceSource src names)
 toIfaceTickish (Breakpoint {})         = Nothing
    -- Ignore breakpoints, since they are relevant only to GHCi, and
-   -- should not be serialised (Trac #8333)
+   -- should not be serialised (#8333)
 
 ---------------------
 toIfaceBind :: Bind Id -> IfaceBinding
@@ -581,7 +587,7 @@ toIfaceVar v
 
 {- Note [Inlining and hs-boot files]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Consider this example (Trac #10083, #12789):
+Consider this example (#10083, #12789):
 
     ---------- RSR.hs-boot ------------
     module RSR where
@@ -643,7 +649,7 @@ But how do we arrange for this to happen?  There are two ingredients:
 Here is a solution that doesn't work: when compiling RSR,
 add a NOINLINE pragma to every function exported by the boot-file
 for RSR (if it exists).  Doing so makes the bootstrapped GHC itself
-slower by 8% overall (on Trac #9872a-d, and T1969: the reason
+slower by 8% overall (on #9872a-d, and T1969: the reason
 is that these NOINLINE'd functions now can't be profitably inlined
 outside of the hs-boot loop.
 

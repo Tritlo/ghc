@@ -102,6 +102,16 @@ pprBasicBlock info_env (BasicBlock blockid instrs)
 
 
 pprDatas :: CmmStatics -> SDoc
+-- See note [emit-time elimination of static indirections] in CLabel.
+pprDatas (Statics alias [CmmStaticLit (CmmLabel lbl), CmmStaticLit ind, _, _])
+  | lbl == mkIndStaticInfoLabel
+  , let labelInd (CmmLabelOff l _) = Just l
+        labelInd (CmmLabel l) = Just l
+        labelInd _ = Nothing
+  , Just ind' <- labelInd ind
+  , alias `mayRedirectTo` ind'
+  = pprGloblDecl alias
+    $$ text ".equiv" <+> ppr alias <> comma <> ppr (CmmLabel ind')
 pprDatas (Statics lbl dats) = vcat (pprLabel lbl : map pprData dats)
 
 pprData :: CmmStatic -> SDoc
@@ -143,7 +153,7 @@ pprReg reg
                 VirtualRegHi  u -> text "%vHi_"  <> pprUniqueAlways u
                 VirtualRegF   u -> text "%vF_"   <> pprUniqueAlways u
                 VirtualRegD   u -> text "%vD_"   <> pprUniqueAlways u
-                VirtualRegSSE u -> text "%vSSE_" <> pprUniqueAlways u
+
 
         RegReal rr
          -> case rr of
@@ -211,8 +221,7 @@ pprFormat x
         II32    -> sLit ""
         II64    -> sLit "d"
         FF32    -> sLit ""
-        FF64    -> sLit "d"
-        _       -> panic "SPARC.Ppr.pprFormat: no match")
+        FF64    -> sLit "d")
 
 
 -- | Pretty print a format for an instruction suffix.
@@ -226,8 +235,8 @@ pprStFormat x
         II32  -> sLit ""
         II64  -> sLit "x"
         FF32  -> sLit ""
-        FF64  -> sLit "d"
-        _       -> panic "SPARC.Ppr.pprFormat: no match")
+        FF64  -> sLit "d")
+
 
 
 -- | Pretty print a condition code.
@@ -635,4 +644,3 @@ pp_comma_lbracket = text ",["
 
 pp_comma_a :: SDoc
 pp_comma_a        = text ",a"
-

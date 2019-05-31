@@ -4,8 +4,6 @@ import Hadrian.Utilities
 import System.Environment
 
 import CommandLine
-import Flavour
-import Oracles.Setting (setting)
 import Oracles.TestSettings
 import Packages
 import Settings.Builders.Common
@@ -46,7 +44,7 @@ runTestGhcFlags = do
         , ifMinGhcVer "711" "-fshow-warning-groups"
         , ifMinGhcVer "801" "-fdiagnostics-color=never"
         , ifMinGhcVer "801" "-fno-diagnostics-show-caret"
-        , pure "-Werror=compat" -- See Trac #15278
+        , pure "-Werror=compat" -- See #15278
         , pure "-dno-debug-output"
         ]
 
@@ -70,8 +68,13 @@ runTestBuilderArgs = builder RunTest ? do
     withInterpreter     <- getBooleanSetting TestGhcWithInterpreter
     unregisterised      <- getBooleanSetting TestGhcUnregisterised
     withSMP             <- getBooleanSetting TestGhcWithSMP
-    debugged            <- read <$> getTestSetting TestGhcDebugged
+    debugged            <- readBool <$> getTestSetting TestGhcDebugged
     keepFiles           <- expr (testKeepFiles <$> userSetting defaultTestArgs)
+
+    accept <- expr (testAccept <$> userSetting defaultTestArgs)
+    (acceptPlatform, acceptOS) <- expr . liftIO $
+        (,) <$> (maybe False (=="YES") <$> lookupEnv "PLATFORM")
+            <*> (maybe False (=="YES") <$> lookupEnv "OS")
 
     windows     <- expr windowsHost
     darwin      <- expr osxHost
@@ -82,7 +85,13 @@ runTestBuilderArgs = builder RunTest ? do
     wordsize    <- getTestSetting TestWORDSIZE
     top         <- expr $ topDirectory
     ghcFlags    <- expr runTestGhcFlags
-    timeoutProg <- expr buildRoot <&> (-/- timeoutPath)
+    cmdrootdirs <- expr (testRootDirs <$> userSetting defaultTestArgs)
+    let defaultRootdirs = ("testsuite" -/- "tests") : libTests
+        rootdirs | null cmdrootdirs = defaultRootdirs
+                 | otherwise        = cmdrootdirs
+    root        <- expr buildRoot
+    let timeoutProg = root -/- timeoutPath
+    statsFilesDir <- expr haddockStatsFilesDir
 
     -- See #16087
     let ghcBuiltByLlvm = False -- TODO: Implement this check
@@ -91,15 +100,17 @@ runTestBuilderArgs = builder RunTest ? do
 
     -- TODO: set CABAL_MINIMAL_BUILD/CABAL_PLUGIN_BUILD
     mconcat [ arg $ "testsuite/driver/runtests.py"
-            , arg $ "--rootdir=" ++ ("testsuite" -/- "tests")
-            , pure ["--rootdir=" ++ test | test <- libTests]
+            , pure [ "--rootdir=" ++ testdir | testdir <- rootdirs ]
             , arg "-e", arg $ "windows=" ++ show windows
             , arg "-e", arg $ "darwin=" ++ show darwin
             , arg "-e", arg $ "config.local=False"
             , arg "-e", arg $ "config.cleanup=" ++ show (not keepFiles)
+            , arg "-e", arg $ "config.accept=" ++ show accept
+            , arg "-e", arg $ "config.accept_platform=" ++ show acceptPlatform
+            , arg "-e", arg $ "config.accept_os=" ++ show acceptOS
             , arg "-e", arg $ "config.exeext=" ++ quote exe
-            , arg "-e", arg $ "config.compiler_debugged=" ++ quote (yesNo debugged)
-            , arg "-e", arg $ "ghc_debugged=" ++ quote (yesNo debugged)
+            , arg "-e", arg $ "config.compiler_debugged=" ++
+              show debugged
             , arg "-e", arg $ asZeroOne "ghc_with_native_codegen=" withNativeCodeGen
 
             , arg "-e", arg $ "config.have_interp=" ++ show withInterpreter
@@ -126,9 +137,12 @@ runTestBuilderArgs = builder RunTest ? do
 
             , arg "--config", arg $ "gs=gs"                           -- Use the default value as in test.mk
             , arg "--config", arg $ "timeout_prog=" ++ show (top -/- timeoutProg)
+            , arg "--config", arg $ "stats_files_dir=" ++ statsFilesDir
             , arg $ "--threads=" ++ show threads
             , getTestArgs -- User-provided arguments from command line.
             ]
+
+    where readBool x = read x :: Bool
 
 -- | Command line arguments for running GHC's test script.
 getTestArgs :: Args
@@ -139,6 +153,7 @@ getTestArgs = do
     bindir          <- expr $ getBinaryDirectory (testCompiler args)
     compiler        <- expr $ getCompilerPath (testCompiler args)
     globalVerbosity <- shakeVerbosity <$> expr getShakeOptions
+    haveDocs        <- areDocsPresent
     let configFileArg= ["--config-file=" ++ (testConfigFile args)]
         testOnlyArg  =  map ("--only=" ++) (testOnly args ++ testEnvTargets)
         onlyPerfArg  = if testOnlyPerf args
@@ -161,7 +176,9 @@ getTestArgs = do
         wayArgs      = map ("--way=" ++) (testWays args)
         compilerArg  = ["--config", "compiler=" ++ show (compiler)]
         ghcPkgArg    = ["--config", "ghc_pkg=" ++ show (bindir -/- "ghc-pkg")]
-        haddockArg   = ["--config", "haddock=" ++ show (bindir -/- "haddock")]
+        haddockArg   = if haveDocs
+          then [ "--config", "haddock=" ++ show (bindir -/- "haddock") ]
+          else [ "--config", "haddock=" ]
         hp2psArg     = ["--config", "hp2ps=" ++ show (bindir -/- "hp2ps")]
         hpcArg       = ["--config", "hpc=" ++ show (bindir -/- "hpc")]
         inTreeArg    = [ "-e", "config.in_tree_compiler=" ++
@@ -172,6 +189,17 @@ getTestArgs = do
                       , junitArg, verbosityArg  ]
          ++ configArgs ++ wayArgs ++  compilerArg ++ ghcPkgArg
          ++ haddockArg ++ hp2psArg ++ hpcArg ++ inTreeArg
+
+  where areDocsPresent = expr $ do
+          root <- buildRoot
+          and <$> traverse doesFileExist (docFiles root)
+
+        docFiles root =
+          [ root -/- "docs" -/- "html" -/- "libraries" -/- p -/- (p ++ ".haddock")
+          -- list of packages from
+          -- utils/haddock/haddock-test/src/Test/Haddock/Config.hs
+          | p <- [ "array", "base", "ghc-prim", "process", "template-haskell" ]
+          ]
 
 -- | Set speed for test
 setTestSpeed :: TestSpeed -> String

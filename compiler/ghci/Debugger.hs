@@ -77,8 +77,7 @@ pprintClosureCommand bindThings force str = do
        let id' = id `setIdType` substTy subst (idType id)
        term_    <- GHC.obtainTermFromId maxBound force id'
        term     <- tidyTermTyVars term_
-       term'    <- if bindThings &&
-                      (not (isUnliftedType (termType term)))
+       term'    <- if bindThings
                      then bindSuspensions term
                      else return term
      -- Before leaving, we compare the type obtained to see if it's more specific
@@ -124,7 +123,8 @@ bindSuspensions t = do
       let ids = [ mkVanillaGlobal name ty
                 | (name,ty) <- zip names tys]
           new_ic = extendInteractiveContextWithIds ictxt ids
-      liftIO $ extendLinkEnv (zip names fhvs)
+          dl = hsc_dynLinker hsc_env
+      liftIO $ extendLinkEnv dl (zip names fhvs)
       setSession hsc_env {hsc_IC = new_ic }
       return t'
      where
@@ -178,8 +178,10 @@ showTerm term = do
                expr = "Prelude.return (Prelude.show " ++
                          showPpr dflags bname ++
                       ") :: Prelude.IO Prelude.String"
+               dl   = hsc_dynLinker hsc_env
            _ <- GHC.setSessionDynFlags dflags{log_action=noop_log}
-           txt_ <- withExtendedLinkEnv [(bname, fhv)]
+           txt_ <- withExtendedLinkEnv dl
+                                       [(bname, fhv)]
                                        (GHC.compileExprRemote expr)
            let myprec = 10 -- application precedence. TODO Infix constructors
            txt <- liftIO $ evalString hsc_env txt_

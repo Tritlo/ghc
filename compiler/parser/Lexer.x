@@ -13,7 +13,7 @@
 -- References:
 -- [1] https://www.haskell.org/onlinereport/haskell2010/haskellch2.html
 -- [2] http://www.haskell.org/alex/
--- [3] https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/Parser
+-- [3] https://gitlab.haskell.org/ghc/ghc/wikis/commentary/compiler/parser
 --
 -----------------------------------------------------------------------------
 
@@ -50,16 +50,16 @@
 module Lexer (
    Token(..), lexer, pragState, mkPState, mkPStatePure, PState(..),
    P(..), ParseResult(..), mkParserFlags, mkParserFlags', ParserFlags,
+   MonadP(..),
    getRealSrcLoc, getPState, withThisPackage,
    failLocMsgP, srcParseFail,
    getErrorMessages, getMessages,
    popContext, pushModuleContext, setLastToken, setSrcLoc,
    activeContext, nextIsEOF,
    getLexState, popLexState, pushLexState,
-   ExtBits(..), getBit,
-   addWarning, addError, addFatalError,
+   ExtBits(..),
    lexTokenStream,
-   addAnnotation,AddAnn,addAnnsAt,mkParensApiAnn,
+   AddAnn,mkParensApiAnn,
    commentToAnnotation
   ) where
 
@@ -1884,7 +1884,7 @@ lex_quasiquote start s = do
 
     -- NB: The string "|]" terminates the quasiquote,
     -- with absolutely no escaping. See the extensive
-    -- discussion on Trac #5348 for why there is no
+    -- discussion on #5348 for why there is no
     -- escape handling.
     Just ('|',i)
         | Just (']',i) <- alexGetChar' i
@@ -2276,11 +2276,6 @@ setAlrExpectingOCurly b = P $ \s -> POk (s {alr_expecting_ocurly = b}) ()
 -- stored in a @Word64@.
 type ExtsBitmap = Word64
 
--- | Check if a given flag is currently set in the bitmap.
-getBit :: ExtBits -> P Bool
-getBit ext = P $ \s -> let b =  ext `xtest` pExtsBitmap (options s)
-                       in b `seq` POk s b
-
 xbit :: ExtBits -> ExtsBitmap
 xbit = bit . fromEnum
 
@@ -2334,6 +2329,7 @@ data ExtBits
   | DoAndIfThenElseBit
   | MultiWayIfBit
   | GadtSyntaxBit
+  | ImportQualifiedPostBit
 
   -- Flags that are updated once parsing starts
   | InRulePragBit
@@ -2420,6 +2416,7 @@ mkParserFlags' warningFlags extensionFlags thisPackage
       .|. DoAndIfThenElseBit          `xoptBit` LangExt.DoAndIfThenElse
       .|. MultiWayIfBit               `xoptBit` LangExt.MultiWayIf
       .|. GadtSyntaxBit               `xoptBit` LangExt.GADTSyntax
+      .|. ImportQualifiedPostBit      `xoptBit` LangExt.ImportQualifiedPost
     optBits =
           HaddockBit        `setBitIf` isHaddock
       .|. RawTokenStreamBit `setBitIf` rawTokStream
@@ -2474,48 +2471,72 @@ mkPStatePure options buf loc =
       annotations_comments = []
     }
 
--- | Add a non-fatal error. Use this when the parser can produce a result
---   despite the error.
+-- | An mtl-style class for monads that support parsing-related operations.
+-- For example, sometimes we make a second pass over the parsing results to validate,
+-- disambiguate, or rearrange them, and we do so in the PV monad which cannot consume
+-- input but can report parsing errors, check for extension bits, and accumulate
+-- parsing annotations. Both P and PV are instances of MonadP.
 --
---   For example, when GHC encounters a @forall@ in a type,
---   but @-XExplicitForAll@ is disabled, the parser constructs @ForAllTy@
---   as if @-XExplicitForAll@ was enabled, adding a non-fatal error to
---   the accumulator.
+-- MonadP grants us convenient overloading. The other option is to have separate operations
+-- for each monad: addErrorP vs addErrorPV, getBitP vs getBitPV, and so on.
 --
---   Control flow wise, non-fatal errors act like warnings: they are added
---   to the accumulator and parsing continues. This allows GHC to report
---   more than one parse error per file.
---
-addError :: SrcSpan -> SDoc -> P ()
-addError srcspan msg
- = P $ \s@PState{messages=m} ->
-       let
-           m' d =
-               let (ws, es) = m d
-                   errormsg = mkErrMsg d srcspan alwaysQualify msg
-                   es' = es `snocBag` errormsg
-               in (ws, es')
-       in POk s{messages=m'} ()
+class Monad m => MonadP m where
+  -- | Add a non-fatal error. Use this when the parser can produce a result
+  --   despite the error.
+  --
+  --   For example, when GHC encounters a @forall@ in a type,
+  --   but @-XExplicitForAll@ is disabled, the parser constructs @ForAllTy@
+  --   as if @-XExplicitForAll@ was enabled, adding a non-fatal error to
+  --   the accumulator.
+  --
+  --   Control flow wise, non-fatal errors act like warnings: they are added
+  --   to the accumulator and parsing continues. This allows GHC to report
+  --   more than one parse error per file.
+  --
+  addError :: SrcSpan -> SDoc -> m ()
+  -- | Add a warning to the accumulator.
+  --   Use 'getMessages' to get the accumulated warnings.
+  addWarning :: WarningFlag -> SrcSpan -> SDoc -> m ()
+  -- | Add a fatal error. This will be the last error reported by the parser, and
+  --   the parser will not produce any result, ending in a 'PFailed' state.
+  addFatalError :: SrcSpan -> SDoc -> m a
+  -- | Check if a given flag is currently set in the bitmap.
+  getBit :: ExtBits -> m Bool
+  -- | Given a location and a list of AddAnn, apply them all to the location.
+  addAnnsAt :: SrcSpan -> [AddAnn] -> m ()
+  addAnnotation :: SrcSpan          -- SrcSpan of enclosing AST construct
+                -> AnnKeywordId     -- The first two parameters are the key
+                -> SrcSpan          -- The location of the keyword itself
+                -> m ()
 
--- | Add a fatal error. This will be the last error reported by the parser, and
---   the parser will not produce any result, ending in a 'PFailed' state.
-addFatalError :: SrcSpan -> SDoc -> P a
-addFatalError span msg =
-  addError span msg >> P PFailed
-
--- | Add a warning to the accumulator.
---   Use 'getMessages' to get the accumulated warnings.
-addWarning :: WarningFlag -> SrcSpan -> SDoc -> P ()
-addWarning option srcspan warning
- = P $ \s@PState{messages=m, options=o} ->
-       let
-           m' d =
-               let (ws, es) = m d
-                   warning' = makeIntoWarning (Reason option) $
-                      mkWarnMsg d srcspan alwaysQualify warning
-                   ws' = if warnopt option o then ws `snocBag` warning' else ws
-               in (ws', es)
-       in POk s{messages=m'} ()
+instance MonadP P where
+  addError srcspan msg
+   = P $ \s@PState{messages=m} ->
+         let
+             m' d =
+                 let (ws, es) = m d
+                     errormsg = mkErrMsg d srcspan alwaysQualify msg
+                     es' = es `snocBag` errormsg
+                 in (ws, es')
+         in POk s{messages=m'} ()
+  addWarning option srcspan warning
+   = P $ \s@PState{messages=m, options=o} ->
+         let
+             m' d =
+                 let (ws, es) = m d
+                     warning' = makeIntoWarning (Reason option) $
+                        mkWarnMsg d srcspan alwaysQualify warning
+                     ws' = if warnopt option o then ws `snocBag` warning' else ws
+                 in (ws', es)
+         in POk s{messages=m'} ()
+  addFatalError span msg =
+    addError span msg >> P PFailed
+  getBit ext = P $ \s -> let b =  ext `xtest` pExtsBitmap (options s)
+                         in b `seq` POk s b
+  addAnnsAt loc anns = mapM_ (\a -> a loc) anns
+  addAnnotation l a v = do
+    addAnnotationOnly l a v
+    allocateComments l
 
 addTabWarning :: RealSrcSpan -> P ()
 addTabWarning srcspan
@@ -3042,22 +3063,10 @@ clean_pragma prag = canon_ws (map toLower (unprefix prag))
 --   function, and then it can be discharged using the 'ams' function.
 type AddAnn = SrcSpan -> P ()
 
-addAnnotation :: SrcSpan          -- SrcSpan of enclosing AST construct
-              -> AnnKeywordId     -- The first two parameters are the key
-              -> SrcSpan          -- The location of the keyword itself
-              -> P ()
-addAnnotation l a v = do
-  addAnnotationOnly l a v
-  allocateComments l
-
 addAnnotationOnly :: SrcSpan -> AnnKeywordId -> SrcSpan -> P ()
 addAnnotationOnly l a v = P $ \s -> POk s {
   annotations = ((l,a), [v]) : annotations s
   } ()
-
--- |Given a location and a list of AddAnn, apply them all to the location.
-addAnnsAt :: SrcSpan -> [AddAnn] -> P ()
-addAnnsAt loc anns = mapM_ (\a -> a loc) anns
 
 -- |Given a 'SrcSpan' that surrounds a 'HsPar' or 'HsParTy', generate
 -- 'AddAnn' values for the opening and closing bordering on the start

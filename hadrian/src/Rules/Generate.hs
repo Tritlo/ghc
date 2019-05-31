@@ -5,8 +5,10 @@ module Rules.Generate (
     ) where
 
 import Base
+import qualified Context
 import Expression
 import Flavour
+import Hadrian.Oracles.TextFile (lookupValueOrError)
 import Oracles.Flag
 import Oracles.ModuleFiles
 import Oracles.Setting
@@ -53,7 +55,7 @@ compilerDependencies = do
     rtsPath <- expr (rtsBuildPath stage)
     mconcat [ return ((root -/-) <$> derivedConstantsDependencies)
             , notStage0 ? isGmp ? return [gmpPath -/- gmpLibraryH]
-            , notStage0 ? return ((rtsPath -/-) <$> libffiDependencies)
+            , notStage0 ? return ((rtsPath -/-) <$> libffiHeaderFiles)
             , return $ fmap (ghcPath -/-)
                   [ "primop-can-fail.hs-incl"
                   , "primop-code-size.hs-incl"
@@ -79,7 +81,7 @@ generatedDependencies = do
     includes <- expr includesDependencies
     mconcat [ package compiler ? compilerDependencies
             , package ghcPrim  ? ghcPrimDependencies
-            , package rts      ? return (fmap (rtsPath -/-) libffiDependencies
+            , package rts      ? return (fmap (rtsPath -/-) libffiHeaderFiles
                 ++ includes
                 ++ fmap (root -/-) derivedConstantsDependencies)
             , stage0 ? return includes ]
@@ -161,7 +163,6 @@ copyRules = do
         prefix -/- "llvm-targets"      <~ return "."
         prefix -/- "llvm-passes"       <~ return "."
         prefix -/- "platformConstants" <~ (buildRoot <&> (-/- generatedDir))
-        prefix -/- "settings"          <~ return "."
         prefix -/- "template-hsc.h"    <~ return (pkgPath hsc2hs)
 
         prefix -/- "html//*"           <~ return "utils/haddock/haddock-api/resources"
@@ -170,9 +171,17 @@ copyRules = do
 generateRules :: Rules ()
 generateRules = do
     root <- buildRootRules
+
+    (root -/- "ghc-stage1") <~ ghcWrapper Stage1
+    (root -/- "ghc-stage2") <~ ghcWrapper Stage2
+
     priority 2.0 $ (root -/- generatedDir -/- "ghcautoconf.h") <~ generateGhcAutoconfH
     priority 2.0 $ (root -/- generatedDir -/- "ghcplatform.h") <~ generateGhcPlatformH
     priority 2.0 $ (root -/- generatedDir -/-  "ghcversion.h") <~ generateGhcVersionH
+    forM_ [Stage0 ..] $ \stage -> do
+        let prefix = root -/- stageString stage -/- "lib"
+            go gen file = generate file (semiEmptyTarget stage) gen
+        priority 2.0 $ (prefix -/- "settings") %> go generateSettings
 
     -- TODO: simplify, get rid of fake rts context
     root -/- generatedDir ++ "//*" %> \file -> do
@@ -184,11 +193,26 @@ generateRules = do
 -- TODO: Use the Types, Luke! (drop partial function)
 -- We sometimes need to evaluate expressions that do not require knowing all
 -- information about the context. In this case, we don't want to know anything.
+semiEmptyTarget :: Stage -> Context
+semiEmptyTarget stage = vanillaContext stage
+  (error "Rules.Generate.emptyTarget: unknown package")
+
 emptyTarget :: Context
 emptyTarget = vanillaContext (error "Rules.Generate.emptyTarget: unknown stage")
                              (error "Rules.Generate.emptyTarget: unknown package")
 
 -- Generators
+
+-- | GHC wrapper scripts used for passing the path to the right package database
+-- when invoking in-tree GHC executables.
+ghcWrapper :: Stage -> Expr String
+ghcWrapper Stage0 = error "Stage0 GHC does not require a wrapper script to run."
+ghcWrapper stage  = do
+    dbPath  <- expr $ packageDbPath stage
+    ghcPath <- expr $ programPath (vanillaContext (pred stage) ghc)
+    return $ unwords $ map show $ [ ghcPath ]
+                               ++ [ "-package-db " ++ dbPath | stage == Stage1 ]
+                               ++ [ "$@" ]
 
 -- | Given a 'String' replace charaters '.' and '-' by underscores ('_') so that
 -- the resulting 'String' is a valid C preprocessor identifier.
@@ -246,6 +270,67 @@ generateGhcPlatformH = do
         ++
         [ "\n#endif /* __GHCPLATFORM_H__ */" ]
 
+generateSettings :: Expr String
+generateSettings = do
+    ctx <- getContext
+    settings <- traverse sequence $
+        [ ("GCC extra via C opts", expr $ lookupValueOrError configFile "gcc-extra-via-c-opts")
+        , ("C compiler command", expr $ settingsFileSetting SettingsFileSetting_CCompilerCommand)
+        , ("C compiler flags", expr $ settingsFileSetting SettingsFileSetting_CCompilerFlags)
+        , ("C compiler link flags", expr $ settingsFileSetting SettingsFileSetting_CCompilerLinkFlags)
+        , ("C compiler supports -no-pie", expr $ settingsFileSetting SettingsFileSetting_CCompilerSupportsNoPie)
+        , ("Haskell CPP command", expr $ settingsFileSetting SettingsFileSetting_HaskellCPPCommand)
+        , ("Haskell CPP flags", expr $ settingsFileSetting SettingsFileSetting_HaskellCPPFlags)
+        , ("ld command", expr $ settingsFileSetting SettingsFileSetting_LdCommand)
+        , ("ld flags", expr $ settingsFileSetting SettingsFileSetting_LdFlags)
+        , ("ld supports compact unwind", expr $ lookupValueOrError configFile "ld-has-no-compact-unwind")
+        , ("ld supports build-id", expr $ lookupValueOrError configFile "ld-has-build-id")
+        , ("ld supports filelist", expr $ lookupValueOrError configFile "ld-has-filelist")
+        , ("ld is GNU ld", expr $ lookupValueOrError configFile "ld-is-gnu-ld")
+        , ("ar command", expr $ settingsFileSetting SettingsFileSetting_ArCommand)
+        , ("ar flags", expr $ lookupValueOrError configFile "ar-args")
+        , ("ar supports at file", expr $ yesNo <$> flag ArSupportsAtFile)
+        , ("ranlib command", expr $ settingsFileSetting SettingsFileSetting_RanlibCommand)
+        , ("touch command", expr $ settingsFileSetting SettingsFileSetting_TouchCommand)
+        , ("dllwrap command", expr $ settingsFileSetting SettingsFileSetting_DllWrapCommand)
+        , ("windres command", expr $ settingsFileSetting SettingsFileSetting_WindresCommand)
+        , ("libtool command", expr $ settingsFileSetting SettingsFileSetting_LibtoolCommand)
+        , ("unlit command", ("$topdir/bin/" <>) <$> expr (programName (ctx { Context.package = unlit })))
+        , ("cross compiling", expr $ yesNo <$> flag CrossCompiling)
+        , ("target platform string", getSetting TargetPlatform)
+        , ("target os", expr $ lookupValueOrError configFile "haskell-target-os")
+        , ("target arch", expr $ lookupValueOrError configFile "haskell-target-arch")
+        , ("target word size", expr $ lookupValueOrError configFile "target-word-size")
+        , ("target has GNU nonexec stack", expr $ lookupValueOrError configFile "haskell-have-gnu-nonexec-stack")
+        , ("target has .ident directive", expr $ lookupValueOrError configFile "haskell-have-ident-directive")
+        , ("target has subsections via symbols", expr $ lookupValueOrError configFile "haskell-have-subsections-via-symbols")
+        , ("target has RTS linker", expr $ lookupValueOrError configFile "haskell-have-rts-linker")
+        , ("Unregisterised", expr $ yesNo <$> flag GhcUnregisterised)
+        , ("LLVM llc command", expr $ settingsFileSetting SettingsFileSetting_LlcCommand)
+        , ("LLVM opt command", expr $ settingsFileSetting SettingsFileSetting_OptCommand)
+        , ("LLVM clang command", expr $ settingsFileSetting SettingsFileSetting_ClangCommand)
+
+        , ("integer library", pkgName <$> getIntegerPackage)
+        , ("Use interpreter", expr $ yesNo <$> ghcWithInterpreter)
+        , ("Use native code generator", expr $ yesNo <$> ghcWithNativeCodeGen)
+        , ("Support SMP", expr $ yesNo <$> ghcWithSMP)
+        , ("RTS ways", unwords . map show <$> getRtsWays)
+        , ("Tables next to code", expr $ yesNo <$> ghcEnableTablesNextToCode)
+        , ("Leading underscore", expr $ yesNo <$> flag LeadingUnderscore)
+        , ("Use LibFFI", expr $ yesNo <$> useLibFFIForAdjustors)
+        , ("Use Threads", yesNo . any (wayUnit Threaded) <$> getRtsWays)
+        , ("Use Debugging", expr $ yesNo . ghcDebugged <$> flavour)
+        , ("RTS expects libdw", yesNo <$> getFlag WithLibdw)
+        ]
+    let showTuple (k, v) = "(" ++ show k ++ ", " ++ show v ++ ")"
+    pure $ case settings of
+        [] -> "[]"
+        s : ss -> unlines $
+            ("[" ++ showTuple s)
+            : ((\s' -> "," ++ showTuple s') <$> ss)
+            ++ ["]"]
+
+
 -- | Generate @Config.hs@ files.
 generateConfigHs :: Expr String
 generateConfigHs = do
@@ -258,22 +343,6 @@ generateConfigHs = do
     cProjectPatchLevel1 <- getSetting ProjectPatchLevel1
     cProjectPatchLevel2 <- getSetting ProjectPatchLevel2
     cBooterVersion      <- getSetting GhcVersion
-    intLib              <- getIntegerPackage
-    debugged            <- ghcDebugged    <$> expr flavour
-    let cIntegerLibraryType
-            | intLib == integerGmp    = "IntegerGMP"
-            | intLib == integerSimple = "IntegerSimple"
-            | otherwise = error $ "Unknown integer library: " ++ pkgName intLib
-    cGhcWithInterpreter        <- expr $ yesNo <$> ghcWithInterpreter
-    cGhcWithNativeCodeGen      <- expr $ yesNo <$> ghcWithNativeCodeGen
-    cGhcWithSMP                <- expr $ yesNo <$> ghcWithSMP
-    cGhcEnableTablesNextToCode <- expr $ yesNo <$> ghcEnableTablesNextToCode
-    cLeadingUnderscore         <- expr $ yesNo <$> flag LeadingUnderscore
-    cGHC_UNLIT_PGM             <- fmap takeFileName $ getBuilderPath Unlit
-    cLibFFI                    <- expr useLibFFIForAdjustors
-    rtsWays                    <- getRtsWays
-    cGhcRtsWithLibdw           <- getFlag WithLibdw
-    let cGhcRTSWays = unwords $ map show rtsWays
     return $ unlines
         [ "{-# LANGUAGE CPP #-}"
         , "module Config where"
@@ -282,16 +351,10 @@ generateConfigHs = do
         , ""
         , "#include \"ghc_boot_platform.h\""
         , ""
-        , "data IntegerLibrary = IntegerGMP"
-        , "                    | IntegerSimple"
-        , "                    deriving Eq"
-        , ""
         , "cBuildPlatformString :: String"
         , "cBuildPlatformString = BuildPlatform_NAME"
         , "cHostPlatformString :: String"
         , "cHostPlatformString = HostPlatform_NAME"
-        , "cTargetPlatformString :: String"
-        , "cTargetPlatformString = TargetPlatform_NAME"
         , ""
         , "cProjectName          :: String"
         , "cProjectName          = " ++ show cProjectName
@@ -311,32 +374,7 @@ generateConfigHs = do
         , "cBooterVersion        = " ++ show cBooterVersion
         , "cStage                :: String"
         , "cStage                = show (STAGE :: Int)"
-        , "cIntegerLibrary       :: String"
-        , "cIntegerLibrary       = " ++ show (pkgName intLib)
-        , "cIntegerLibraryType   :: IntegerLibrary"
-        , "cIntegerLibraryType   = " ++ cIntegerLibraryType
-        , "cGhcWithInterpreter   :: String"
-        , "cGhcWithInterpreter   = " ++ show cGhcWithInterpreter
-        , "cGhcWithNativeCodeGen :: String"
-        , "cGhcWithNativeCodeGen = " ++ show cGhcWithNativeCodeGen
-        , "cGhcWithSMP           :: String"
-        , "cGhcWithSMP           = " ++ show cGhcWithSMP
-        , "cGhcRTSWays           :: String"
-        , "cGhcRTSWays           = " ++ show cGhcRTSWays
-        , "cGhcEnableTablesNextToCode :: String"
-        , "cGhcEnableTablesNextToCode = " ++ show cGhcEnableTablesNextToCode
-        , "cLeadingUnderscore    :: String"
-        , "cLeadingUnderscore    = " ++ show cLeadingUnderscore
-        , "cGHC_UNLIT_PGM        :: String"
-        , "cGHC_UNLIT_PGM        = " ++ show cGHC_UNLIT_PGM
-        , "cLibFFI               :: Bool"
-        , "cLibFFI               = " ++ show cLibFFI
-        , "cGhcThreaded :: Bool"
-        , "cGhcThreaded = " ++ show (any (wayUnit Threaded) rtsWays)
-        , "cGhcDebugged :: Bool"
-        , "cGhcDebugged = " ++ show debugged
-        , "cGhcRtsWithLibdw :: Bool"
-        , "cGhcRtsWithLibdw = " ++ show cGhcRtsWithLibdw ]
+        ]
 
 -- | Generate @ghcautoconf.h@ header.
 generateGhcAutoconfH :: Expr String
@@ -389,7 +427,6 @@ generateGhcBootPlatformH = do
         , ""
         , "#define BuildPlatform_NAME  " ++ show buildPlatform
         , "#define HostPlatform_NAME   " ++ show hostPlatform
-        , "#define TargetPlatform_NAME " ++ show targetPlatform
         , ""
         , "#define " ++ cppify buildPlatform  ++ "_BUILD 1"
         , "#define " ++ cppify hostPlatform   ++ "_HOST 1"

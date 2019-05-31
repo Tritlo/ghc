@@ -22,7 +22,7 @@ module Demand (
 
         DmdType(..), dmdTypeDepth, lubDmdType, bothDmdType,
         nopDmdType, botDmdType, mkDmdType,
-        addDemand, removeDmdTyArgs,
+        addDemand, ensureArgs,
         BothDmdArg, mkBothDmdArg, toBothDmdArg,
 
         DmdEnv, emptyDmdEnv,
@@ -34,7 +34,7 @@ module Demand (
         vanillaCprProdRes, cprSumRes,
         appIsBottom, isBottomingSig, pprIfaceStrictSig,
         trimCPRInfo, returnsCPR_maybe,
-        StrictSig(..), mkStrictSig, mkClosedStrictSig,
+        StrictSig(..), mkStrictSigForArity, mkClosedStrictSig,
         nopSig, botSig, cprProdSig,
         isTopSig, hasDemandEnvSig,
         splitStrictSig, strictSigDmdEnv,
@@ -47,10 +47,10 @@ module Demand (
         deferAfterIO,
         postProcessUnsat, postProcessDmdType,
 
-        splitProdDmd_maybe, peelCallDmd, peelManyCalls, mkCallDmd,
+        splitProdDmd_maybe, peelCallDmd, peelManyCalls, mkCallDmd, mkCallDmds,
         mkWorkerDemand, dmdTransformSig, dmdTransformDataConSig,
         dmdTransformDictSelSig, argOneShots, argsOneShots, saturatedByOneShots,
-        trimToType, TypeShape(..),
+        TypeShape(..), peelTsFuns, trimToType,
 
         useCount, isUsedOnce, reuseEnv,
         killUsageDemand, killUsageSig, zapUsageDemand, zapUsageEnvSig,
@@ -124,7 +124,7 @@ mkJointDmds ss as = zipWithEqual "mkJointDmds" mkJointDmd ss as
 Note [Exceptions and strictness]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 We used to smart about catching exceptions, but we aren't anymore.
-See Trac #14998 for the way it's resolved at the moment.
+See #14998 for the way it's resolved at the moment.
 
 Here's a historic breakdown:
 
@@ -138,17 +138,17 @@ their argument, which is useful information for usage analysis. Still with a
 
 In 7c0fff4 (July 15), Simon argued that giving `catch#` et al. a
 'strictApply1Dmd' leads to substantial performance gains. That was at the cost
-of correctness, as Trac #10712 proved. So, back to 'lazyApply1Dmd' in
+of correctness, as #10712 proved. So, back to 'lazyApply1Dmd' in
 28638dfe79e (Dec 15).
 
-Motivated to reproduce the gains of 7c0fff4 without the breakage of Trac #10712,
-Ben opened Trac #11222. Simon made the demand analyser "understand catch" in
+Motivated to reproduce the gains of 7c0fff4 without the breakage of #10712,
+Ben opened #11222. Simon made the demand analyser "understand catch" in
 9915b656 (Jan 16) by adding a new 'catchArgDmd', which basically said to call
 its argument strictly, but also swallow any thrown exceptions in
 'postProcessDmdResult'. This was realized by extending the 'Str' constructor of
 'ArgStr' with a 'ExnStr' field, indicating that it catches the exception, and
 adding a 'ThrowsExn' constructor to the 'Termination' lattice as an element
-between 'Dunno' and 'Diverges'. Then along came Trac #11555 and finally #13330,
+between 'Dunno' and 'Diverges'. Then along came #11555 and finally #13330,
 so we had to revert to 'lazyApply1Dmd' again in 701256df88c (Mar 17).
 
 This left the other variants like 'catchRetry#' having 'catchArgDmd', which is
@@ -159,10 +159,10 @@ there was none. We removed the last usages of 'catchArgDmd' in 00b8ecb7
 removed in ef6b283 (Jan 19): We got rid of 'ThrowsExn' and 'ExnStr' again and
 removed any code that was dealing with the peculiarities.
 
-Where did the speed-ups vanish to? In Trac #14998, item 3 established that
+Where did the speed-ups vanish to? In #14998, item 3 established that
 turning 'catch#' strict in its first argument didn't bring back any of the
 alleged performance benefits. Item 2 of that ticket finally found out that it
-was entirely due to 'catchException's new (since Trac #11555) definition, which
+was entirely due to 'catchException's new (since #11555) definition, which
 was simply
 
     catchException !io handler = catch io handler
@@ -312,7 +312,7 @@ splitStrProdDmd n (SProd ds) = WARN( not (ds `lengthIs` n),
                                Just ds
 splitStrProdDmd _ (SCall {}) = Nothing
       -- This can happen when the programmer uses unsafeCoerce,
-      -- and we don't then want to crash the compiler (Trac #9208)
+      -- and we don't then want to crash the compiler (#9208)
 
 {-
 ************************************************************************
@@ -482,7 +482,7 @@ addCaseBndrDmd (JD { sd = ms, ud = mu }) alt_dmds
 The demand on a binder in a case alternative comes
   (a) From the demand on the binder itself
   (b) From the demand on the case binder
-Forgetting (b) led directly to Trac #10148.
+Forgetting (b) led directly to #10148.
 
 Example. Source code:
   f x@(p,_) = if p then foo x else True
@@ -500,7 +500,7 @@ After strictness analysis:
         True -> foo wild_X7 }
 
 It's true that ds_dnz is *itself* absent, but the use of wild_X7 means
-that it is very much alive and demanded.  See Trac #10148 for how the
+that it is very much alive and demanded.  See #10148 for how the
 consequences play out.
 
 This is needed even for non-product types, in case the case-binder
@@ -603,7 +603,7 @@ splitUseProdDmd n (UProd ds)  = WARN( not (ds `lengthIs` n),
                                 Just ds
 splitUseProdDmd _ (UCall _ _) = Nothing
       -- This can happen when the programmer uses unsafeCoerce,
-      -- and we don't then want to crash the compiler (Trac #9208)
+      -- and we don't then want to crash the compiler (#9208)
 
 useCount :: Use u -> Count
 useCount Abs         = One
@@ -627,7 +627,7 @@ isStrictDmd returns true only of demands that are
    both strict
    and  used
 In particular, it is False for <HyperStr, Abs>, which can and does
-arise in, say (Trac #7319)
+arise in, say (#7319)
    f x = raise# <some exception>
 Then 'x' is not used, so f gets strictness <HyperStr,Abs> -> .
 Now the w/w generates
@@ -637,7 +637,7 @@ At this point we really don't want to convert to
    fx = case absentError "unused" of x -> raise <some exception>
 Since the program is going to diverge, this swaps one error for another,
 but it's really a bad idea to *ever* evaluate an absent argument.
-In Trac #7319 we get
+In #7319 we get
    T7319.exe: Oops!  Entered absent arg w_s1Hd{v} [lid] [base:GHC.Base.String{tc 36u}]
 
 Note [Dealing with call demands]
@@ -675,9 +675,14 @@ mkProdDmd dx
   = JD { sd = mkSProd $ map getStrDmd dx
        , ud = mkUProd $ map getUseDmd dx }
 
+-- | Wraps the 'CleanDemand' with a one-shot call demand: @d@ -> @C1(d)@.
 mkCallDmd :: CleanDemand -> CleanDemand
 mkCallDmd (JD {sd = d, ud = u})
   = JD { sd = mkSCall d, ud = mkUCall One u }
+
+-- | @mkCallDmds n d@ returns @C1(C1...(C1 d))@ where there are @n@ @C1@'s.
+mkCallDmds :: Arity -> CleanDemand -> CleanDemand
+mkCallDmds arity cd = iterate mkCallDmd cd !! arity
 
 -- See Note [Demand on the worker] in WorkWrap
 mkWorkerDemand :: Int -> Demand
@@ -804,6 +809,13 @@ instance Outputable TypeShape where
   ppr (TsFun ts)   = text "TsFun" <> parens (ppr ts)
   ppr (TsProd tss) = parens (hsep $ punctuate comma $ map ppr tss)
 
+-- | @peelTsFuns n ts@ tries to peel off @n@ 'TsFun' constructors from @ts@ and
+-- returns 'Just' the wrapped 'TypeShape' on success, and 'Nothing' otherwise.
+peelTsFuns :: Arity -> TypeShape -> Maybe TypeShape
+peelTsFuns 0 ts         = Just ts
+peelTsFuns n (TsFun ts) = peelTsFuns (n-1) ts
+peelTsFuns _ _          = Nothing
+
 trimToType :: Demand -> TypeShape -> Demand
 -- See Note [Trimming a demand to a type]
 trimToType (JD { sd = ms, ud = mu }) ts
@@ -844,7 +856,7 @@ Consider this:
 where A,B are the constructors of a GADT.  We'll get a U(U,U) demand
 on x from the A branch, but that's a stupid demand for x itself, which
 has type 'a'. Indeed we get ASSERTs going off (notably in
-splitUseProdDmd, Trac #8569).
+splitUseProdDmd, #8569).
 
 Bottom line: we really don't want to have a binder whose demand is more
 deeply-nested than its type.  There are various ways to tackle this.
@@ -1207,12 +1219,8 @@ mkDmdType fv ds res = DmdType fv ds res
 dmdTypeDepth :: DmdType -> Arity
 dmdTypeDepth (DmdType _ ds _) = length ds
 
--- Remove any demand on arguments. This is used in dmdAnalRhs on the body
-removeDmdTyArgs :: DmdType -> DmdType
-removeDmdTyArgs = ensureArgs 0
-
--- This makes sure we can use the demand type with n arguments,
--- It extends the argument list with the correct resTypeArgDmd
+-- | This makes sure we can use the demand type with n arguments.
+-- It extends the argument list with the correct resTypeArgDmd.
 -- It also adjusts the DmdResult: Divergence survives additional arguments,
 -- CPR information does not (and definite converge also would not).
 ensureArgs :: Arity -> DmdType -> DmdType
@@ -1501,7 +1509,7 @@ There are several wrinkles:
 
 * In a previous incarnation of GHC we needed to be extra careful in the
   case of an *unlifted type*, because unlifted values are evaluated
-  even if they are not used.  Example (see Trac #9254):
+  even if they are not used.  Example (see #9254):
      f :: (() -> (# Int#, () #)) -> ()
           -- Strictness signature is
           --    <C(S(LS)), 1*C1(U(A,1*U()))>
@@ -1567,8 +1575,56 @@ and <L,U(U,U)> on the second, then returning a constructor.
 
 If this same function is applied to one arg, all we can say is that it
 uses x with <L,U>, and its arg with demand <L,U>.
+
+Note [Understanding DmdType and StrictSig]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Demand types are sound approximations of an expression's semantics relative to
+the incoming demand we put the expression under. Consider the following
+expression:
+
+    \x y -> x `seq` (y, 2*x)
+
+Here is a table with demand types resulting from different incoming demands we
+put that expression under. Note the monotonicity; a stronger incoming demand
+yields a more precise demand type:
+
+    incoming demand                  |  demand type
+    ----------------------------------------------------
+    <S           ,HU              >  |  <L,U><L,U>{}
+    <C(C(S     )),C1(C1(U       ))>  |  <S,U><L,U>{}
+    <C(C(S(S,L))),C1(C1(U(1*U,A)))>  |  <S,1*HU><S,1*U>{}
+
+Note that in the first example, the depth of the demand type was *higher* than
+the arity of the incoming call demand due to the anonymous lambda.
+The converse is also possible and happens when we unleash demand signatures.
+In @f x y@, the incoming call demand on f has arity 2. But if all we have is a
+demand signature with depth 1 for @f@ (which we can safely unleash, see below),
+the demand type of @f@ under a call demand of arity 2 has a *lower* depth of 1.
+
+So: Demand types are elicited by putting an expression under an incoming (call)
+demand, the arity of which can be lower or higher than the depth of the
+resulting demand type.
+In contrast, a demand signature summarises a function's semantics *without*
+immediately specifying the incoming demand it was produced under. Despite StrSig
+being a newtype wrapper around DmdType, it actually encodes two things:
+
+  * The threshold (i.e., minimum arity) to unleash the signature
+  * A demand type that is sound to unleash when the minimum arity requirement is
+    met.
+
+Here comes the subtle part: The threshold is encoded in the wrapped demand
+type's depth! So in mkStrictSigForArity we make sure to trim the list of
+argument demands to the given threshold arity. Call sites will make sure that
+this corresponds to the arity of the call demand that elicited the wrapped
+demand type. See also Note [What are demand signatures?] in DmdAnal.
+
+Besides trimming argument demands, mkStrictSigForArity will also trim CPR
+information if necessary.
 -}
 
+-- | The depth of the wrapped 'DmdType' encodes the arity at which it is safe
+-- to unleash. Better construct this through 'mkStrictSigForArity'.
+-- See Note [Understanding DmdType and StrictSig]
 newtype StrictSig = StrictSig DmdType
                   deriving( Eq )
 
@@ -1580,34 +1636,43 @@ pprIfaceStrictSig :: StrictSig -> SDoc
 pprIfaceStrictSig (StrictSig (DmdType _ dmds res))
   = hcat (map ppr dmds) <> ppr res
 
-mkStrictSig :: DmdType -> StrictSig
-mkStrictSig dmd_ty = StrictSig dmd_ty
+-- | Turns a 'DmdType' computed for the particular 'Arity' into a 'StrictSig'
+-- unleashable at that arity. See Note [Understanding DmdType and StrictSig]
+mkStrictSigForArity :: Arity -> DmdType -> StrictSig
+mkStrictSigForArity arity dmd_ty = StrictSig (ensureArgs arity dmd_ty)
 
 mkClosedStrictSig :: [Demand] -> DmdResult -> StrictSig
-mkClosedStrictSig ds res = mkStrictSig (DmdType emptyDmdEnv ds res)
+mkClosedStrictSig ds res = mkStrictSigForArity (length ds) (DmdType emptyDmdEnv ds res)
 
 splitStrictSig :: StrictSig -> ([Demand], DmdResult)
 splitStrictSig (StrictSig (DmdType _ dmds res)) = (dmds, res)
 
 increaseStrictSigArity :: Int -> StrictSig -> StrictSig
--- Add extra arguments to a strictness signature
+-- ^ Add extra arguments to a strictness signature.
+-- In contrast to 'etaExpandStrictSig', this /prepends/ additional argument
+-- demands and leaves CPR info intact.
 increaseStrictSigArity arity_increase sig@(StrictSig dmd_ty@(DmdType env dmds res))
   | isTopDmdType dmd_ty = sig
-  | arity_increase <= 0 = sig
+  | arity_increase == 0 = sig
+  | arity_increase < 0  = WARN( True, text "increaseStrictSigArity:"
+                                  <+> text "negative arity increase"
+                                  <+> ppr arity_increase )
+                          nopSig
   | otherwise           = StrictSig (DmdType env dmds' res)
   where
     dmds' = replicate arity_increase topDmd ++ dmds
 
 etaExpandStrictSig :: Arity -> StrictSig -> StrictSig
--- We are expanding (\x y. e) to (\x y z. e z)
--- Add exta demands to the /end/ of the arg demands if necessary
-etaExpandStrictSig arity sig@(StrictSig dmd_ty@(DmdType env dmds res))
-  | isTopDmdType dmd_ty = sig
-  | arity_increase <= 0 = sig
-  | otherwise           = StrictSig (DmdType env dmds' res)
-  where
-    arity_increase = arity - length dmds
-    dmds' = dmds ++ replicate arity_increase topDmd
+-- ^ We are expanding (\x y. e) to (\x y z. e z).
+-- In contrast to 'increaseStrictSigArity', this /appends/ extra arg demands if
+-- necessary, potentially destroying the signature's CPR property.
+etaExpandStrictSig arity (StrictSig dmd_ty)
+  | arity < dmdTypeDepth dmd_ty
+  -- an arity decrease must zap the whole signature, because it was possibly
+  -- computed for a higher incoming call demand.
+  = nopSig
+  | otherwise
+  = StrictSig $ ensureArgs arity dmd_ty
 
 isTopSig :: StrictSig -> Bool
 isTopSig (StrictSig ty) = isTopDmdType ty
@@ -1696,7 +1761,7 @@ That's fine: if we are doing strictness analysis we are also doing inlining,
 so we'll have inlined 'op' into a cast.  So we can bale out in a conservative
 way, returning nopDmdType.
 
-It is (just.. Trac #8329) possible to be running strictness analysis *without*
+It is (just.. #8329) possible to be running strictness analysis *without*
 having inlined class ops from single-method classes.  Suppose you are using
 ghc --make; and the first module has a local -O0 flag.  So you may load a class
 without interface pragmas, ie (currently) without an unfolding for the class

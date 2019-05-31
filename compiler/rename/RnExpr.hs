@@ -140,6 +140,9 @@ rnExpr (HsVar _ (L l v))
 rnExpr (HsIPVar x v)
   = return (HsIPVar x v, emptyFVs)
 
+rnExpr (HsUnboundVar x v)
+  = return (HsUnboundVar x v, emptyFVs)
+
 rnExpr (HsOverLabel x _ v)
   = do { rebindable_on <- xoptM LangExt.RebindableSyntax
        ; if rebindable_on
@@ -346,24 +349,6 @@ rnExpr (ArithSeq x _ seq)
             return (ArithSeq x Nothing new_seq, fvs) }
 
 {-
-These three are pattern syntax appearing in expressions.
-Since all the symbols are reservedops we can simply reject them.
-We return a (bogus) EWildPat in each case.
--}
-
-rnExpr (EWildPat _)  = return (hsHoleExpr, emptyFVs)   -- "_" is just a hole
-rnExpr e@(EAsPat {})
-  = do { opt_TypeApplications <- xoptM LangExt.TypeApplications
-       ; let msg | opt_TypeApplications
-                    = "Type application syntax requires a space before '@'"
-                 | otherwise
-                    = "Did you mean to enable TypeApplications?"
-       ; patSynErr e (text msg)
-       }
-rnExpr e@(EViewPat {}) = patSynErr e empty
-rnExpr e@(ELazyPat {}) = patSynErr e empty
-
-{-
 ************************************************************************
 *                                                                      *
         Static values
@@ -414,9 +399,6 @@ rnExpr (HsProc x pat body)
 
 rnExpr other = pprPanic "rnExpr: unexpected expression" (ppr other)
         -- HsWrap
-
-hsHoleExpr :: HsExpr (GhcPass id)
-hsHoleExpr = HsUnboundVar noExt (TrueExprHole (mkVarOcc "_"))
 
 ----------------------
 -- See Note [Parsing sections] in Parser.y
@@ -826,7 +808,7 @@ rnStmt ctxt rnBody (L loc (LastStmt _ body noret _)) thing_inside
                             -- The 'return' in a LastStmt is used only
                             -- for MonadComp; and we don't want to report
                             -- "non in scope: return" in other cases
-                            -- Trac #15607
+                            -- #15607
 
         ; (thing,  fvs3) <- thing_inside []
         ; return (([(L loc (LastStmt noExt body' noret ret_op), fv_expr)]
@@ -1305,7 +1287,7 @@ Note [Segmenting mdo]
 ~~~~~~~~~~~~~~~~~~~~~
 NB. June 7 2012: We only glom segments that appear in an explicit mdo;
 and leave those found in "do rec"'s intact.  See
-http://ghc.haskell.org/trac/ghc/ticket/4148 for the discussion
+https://gitlab.haskell.org/ghc/ghc/issues/4148 for the discussion
 leading to this design choice.  Hence the test in segmentRecStmts.
 
 Note [Glomming segments]
@@ -2087,23 +2069,12 @@ sectionErr expr
   = hang (text "A section must be enclosed in parentheses")
        2 (text "thus:" <+> (parens (ppr expr)))
 
-patSynErr :: HsExpr GhcPs -> SDoc -> RnM (HsExpr GhcRn, FreeVars)
-patSynErr e explanation = do { addErr (sep [text "Pattern syntax in expression context:",
-                                nest 4 (ppr e)] $$
-                                  explanation)
-                 ; return (EWildPat noExt, emptyFVs) }
-
 badIpBinds :: Outputable a => SDoc -> a -> SDoc
 badIpBinds what binds
   = hang (text "Implicit-parameter bindings illegal in" <+> what)
          2 (ppr binds)
 
 ---------
-
-lookupSyntaxMonadFailOpName :: Bool -> RnM (SyntaxExpr GhcRn, FreeVars)
-lookupSyntaxMonadFailOpName monadFailEnabled
-  | monadFailEnabled = lookupSyntaxName failMName
-  | otherwise        = lookupSyntaxName failMName_preMFP
 
 monadFailOp :: LPat GhcPs
             -> HsStmtContext Name
@@ -2146,14 +2117,14 @@ So, in this case, we synthesize the function
 -}
 getMonadFailOp :: RnM (SyntaxExpr GhcRn, FreeVars) -- Syntax expr fail op
 getMonadFailOp
- = do { xMonadFailEnabled <- fmap (xopt LangExt.MonadFailDesugaring) getDynFlags
-      ; xOverloadedStrings <- fmap (xopt LangExt.OverloadedStrings) getDynFlags
+ = do { xOverloadedStrings <- fmap (xopt LangExt.OverloadedStrings) getDynFlags
       ; xRebindableSyntax <- fmap (xopt LangExt.RebindableSyntax) getDynFlags
-      ; reallyGetMonadFailOp xRebindableSyntax xOverloadedStrings xMonadFailEnabled }
+      ; reallyGetMonadFailOp xRebindableSyntax xOverloadedStrings
+      }
   where
-    reallyGetMonadFailOp rebindableSyntax overloadedStrings monadFailEnabled
+    reallyGetMonadFailOp rebindableSyntax overloadedStrings
       | rebindableSyntax && overloadedStrings = do
-        (failExpr, failFvs) <- lookupSyntaxMonadFailOpName monadFailEnabled
+        (failExpr, failFvs) <- lookupSyntaxName failMName
         (fromStringExpr, fromStringFvs) <- lookupSyntaxName fromStringName
         let arg_lit = fsLit "arg"
             arg_name = mkSystemVarName (mkVarOccUnique arg_lit) arg_lit
@@ -2167,4 +2138,4 @@ getMonadFailOp
         let failAfterFromStringSynExpr :: SyntaxExpr GhcRn =
               mkSyntaxExpr failAfterFromStringExpr
         return (failAfterFromStringSynExpr, failFvs `plusFV` fromStringFvs)
-      | otherwise = lookupSyntaxMonadFailOpName monadFailEnabled
+      | otherwise = lookupSyntaxName failMName

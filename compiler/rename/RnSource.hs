@@ -43,7 +43,6 @@ import Module
 import HscTypes         ( Warnings(..), plusWarns )
 import PrelNames        ( applicativeClassName, pureAName, thenAName
                         , monadClassName, returnMName, thenMName
-                        , monadFailClassName, failMName, failMName_preMFP
                         , semigroupClassName, sappendName
                         , monoidClassName, mappendName
                         )
@@ -127,7 +126,7 @@ rnSrcDecls group@(HsGroup { hs_valds   = val_decls,
 
    -- (D1) Bring pattern synonyms into scope.
    --      Need to do this before (D2) because rnTopBindsLHS
-   --      looks up those pattern synonyms (Trac #9889)
+   --      looks up those pattern synonyms (#9889)
 
    extendPatSynEnv val_decls local_fix_env $ \pat_syn_bndrs -> do {
 
@@ -425,11 +424,11 @@ patchCCallTarget unitId callTarget =
 
 rnSrcInstDecl :: InstDecl GhcPs -> RnM (InstDecl GhcRn, FreeVars)
 rnSrcInstDecl (TyFamInstD { tfid_inst = tfi })
-  = do { (tfi', fvs) <- rnTyFamInstDecl Nothing tfi
+  = do { (tfi', fvs) <- rnTyFamInstDecl NonAssocTyFamEqn tfi
        ; return (TyFamInstD { tfid_ext = noExt, tfid_inst = tfi' }, fvs) }
 
 rnSrcInstDecl (DataFamInstD { dfid_inst = dfi })
-  = do { (dfi', fvs) <- rnDataFamInstDecl Nothing dfi
+  = do { (dfi', fvs) <- rnDataFamInstDecl NonAssocTyFamEqn dfi
        ; return (DataFamInstD { dfid_ext = noExt, dfid_inst = dfi' }, fvs) }
 
 rnSrcInstDecl (ClsInstD { cid_inst = cid })
@@ -456,9 +455,6 @@ checkCanonicalInstances :: Name -> LHsSigType GhcRn -> LHsBinds GhcRn -> RnM ()
 checkCanonicalInstances cls poly_ty mbinds = do
     whenWOptM Opt_WarnNonCanonicalMonadInstances
         checkCanonicalMonadInstances
-
-    whenWOptM Opt_WarnNonCanonicalMonadFailInstances
-        checkCanonicalMonadFailInstances
 
     whenWOptM Opt_WarnNonCanonicalMonoidInstances
         checkCanonicalMonoidInstances
@@ -506,45 +502,6 @@ checkCanonicalInstances cls poly_ty mbinds = do
                       -> addWarnNonCanonicalMethod2
                             Opt_WarnNonCanonicalMonadInstances "(>>)" "(*>)"
 
-                  _ -> return ()
-
-      | otherwise = return ()
-
-    -- | Warn about unsound/non-canonical 'Monad'/'MonadFail' instance
-    -- declarations. Specifically, the following conditions are verified:
-    --
-    -- In 'Monad' instances declarations:
-    --
-    --  * If 'fail' is overridden it must be canonical
-    --    (i.e. @fail = Control.Monad.Fail.fail@)
-    --
-    -- In 'MonadFail' instance declarations:
-    --
-    --  * Warn if 'fail' is defined backwards
-    --    (i.e. @fail = Control.Monad.fail@).
-    --
-    checkCanonicalMonadFailInstances
-      | cls == monadFailClassName  = do
-          forM_ (bagToList mbinds) $ \(dL->L loc mbind) -> setSrcSpan loc $ do
-              case mbind of
-                  FunBind { fun_id = (dL->L _ name)
-                          , fun_matches = mg }
-                      | name == failMName, isAliasMG mg == Just failMName_preMFP
-                      -> addWarnNonCanonicalMethod1
-                            Opt_WarnNonCanonicalMonadFailInstances "fail"
-                            "Control.Monad.fail"
-
-                  _ -> return ()
-
-      | cls == monadClassName  = do
-          forM_ (bagToList mbinds) $ \(dL->L loc mbind) -> setSrcSpan loc $ do
-              case mbind of
-                  FunBind { fun_id      = (dL->L _ name)
-                          , fun_matches = mg }
-                      | name == failMName_preMFP, isAliasMG mg /= Just failMName
-                      -> addWarnNonCanonicalMethod2
-                            Opt_WarnNonCanonicalMonadFailInstances "fail"
-                            "Control.Monad.Fail.fail"
                   _ -> return ()
 
       | otherwise = return ()
@@ -660,7 +617,7 @@ rnClsInstDecl (ClsInstDecl { cid_poly_ty = inst_ty, cid_binds = mbinds
                -- we report an error and continue for as long as we can.
                -- Importantly, this error should be thrown before we reach the
                -- typechecker, lest we encounter different errors that are
-               -- hopelessly confusing (such as the one in Trac #16114).
+               -- hopelessly confusing (such as the one in #16114).
                addErrAt (getLoc (hsSigType inst_ty)) $
                  hang (text "Illegal class instance:" <+> quotes (ppr inst_ty))
                     2 (vcat [ text "Class instances must be of the form"
@@ -709,21 +666,22 @@ rnClsInstDecl (ClsInstDecl { cid_poly_ty = inst_ty, cid_binds = mbinds
 rnClsInstDecl (XClsInstDecl _) = panic "rnClsInstDecl"
 
 rnFamInstEqn :: HsDocContext
-             -> Maybe (Name, [Name]) -- Nothing => not associated
-                                     -- Just (cls,tvs) => associated,
-                                     --   and gives class and tyvars of the
-                                     --   parent instance decl
+             -> AssocTyFamInfo
              -> [Located RdrName]    -- Kind variables from the equation's RHS
              -> FamInstEqn GhcPs rhs
              -> (HsDocContext -> rhs -> RnM (rhs', FreeVars))
              -> RnM (FamInstEqn GhcRn rhs', FreeVars)
-rnFamInstEqn doc mb_cls rhs_kvars
+rnFamInstEqn doc atfi rhs_kvars
     (HsIB { hsib_body = FamEqn { feqn_tycon  = tycon
                                , feqn_bndrs  = mb_bndrs
                                , feqn_pats   = pats
                                , feqn_fixity = fixity
                                , feqn_rhs    = payload }}) rn_payload
-  = do { tycon'   <- lookupFamInstName (fmap fst mb_cls) tycon
+  = do { let mb_cls = case atfi of
+                        NonAssocTyFamEqn     -> Nothing
+                        AssocTyFamDeflt cls  -> Just cls
+                        AssocTyFamInst cls _ -> Just cls
+       ; tycon'   <- lookupFamInstName mb_cls tycon
        ; let pat_kity_vars_with_dups = extractHsTyArgRdrKiTyVarsDup pats
              -- Use the "...Dups" form because it's needed
              -- below to report unsed binder on the LHS
@@ -773,9 +731,10 @@ rnFamInstEqn doc mb_cls rhs_kvars
                           --     Note [Unused type variables in family instances]
                     ; let nms_used = extendNameSetList rhs_fvs $
                                         inst_tvs ++ nms_dups
-                          inst_tvs = case mb_cls of
-                                       Nothing            -> []
-                                       Just (_, inst_tvs) -> inst_tvs
+                          inst_tvs = case atfi of
+                                       NonAssocTyFamEqn          -> []
+                                       AssocTyFamDeflt _         -> []
+                                       AssocTyFamInst _ inst_tvs -> inst_tvs
                           all_nms = all_imp_var_names ++ hsLTyVarNames bndrs'
                     ; warnUnusedTypePatterns all_nms nms_used
 
@@ -796,14 +755,26 @@ rnFamInstEqn doc mb_cls rhs_kvars
 rnFamInstEqn _ _ _ (HsIB _ (XFamEqn _)) _ = panic "rnFamInstEqn"
 rnFamInstEqn _ _ _ (XHsImplicitBndrs _) _ = panic "rnFamInstEqn"
 
-rnTyFamInstDecl :: Maybe (Name, [Name]) -- Just (cls,tvs) => associated,
-                                        --   and gives class and tyvars of
-                                        --   the parent instance decl
+rnTyFamInstDecl :: AssocTyFamInfo
                 -> TyFamInstDecl GhcPs
                 -> RnM (TyFamInstDecl GhcRn, FreeVars)
-rnTyFamInstDecl mb_cls (TyFamInstDecl { tfid_eqn = eqn })
-  = do { (eqn', fvs) <- rnTyFamInstEqn mb_cls NotClosedTyFam eqn
+rnTyFamInstDecl atfi (TyFamInstDecl { tfid_eqn = eqn })
+  = do { (eqn', fvs) <- rnTyFamInstEqn atfi NotClosedTyFam eqn
        ; return (TyFamInstDecl { tfid_eqn = eqn' }, fvs) }
+
+-- | Tracks whether we are renaming:
+--
+-- 1. A type family equation that is not associated
+--    with a parent type class ('NonAssocTyFamEqn')
+--
+-- 2. An associated type family default delcaration ('AssocTyFamDeflt')
+--
+-- 3. An associated type family instance declaration ('AssocTyFamInst')
+data AssocTyFamInfo
+  = NonAssocTyFamEqn
+  | AssocTyFamDeflt Name   -- Name of the parent class
+  | AssocTyFamInst  Name   -- Name of the parent class
+                    [Name] -- Names of the tyvars of the parent instance decl
 
 -- | Tracks whether we are renaming an equation in a closed type family
 -- equation ('ClosedTyFam') or not ('NotClosedTyFam').
@@ -812,17 +783,17 @@ data ClosedTyFamInfo
   | ClosedTyFam (Located RdrName) Name
                 -- The names (RdrName and Name) of the closed type family
 
-rnTyFamInstEqn :: Maybe (Name, [Name])
+rnTyFamInstEqn :: AssocTyFamInfo
                -> ClosedTyFamInfo
                -> TyFamInstEqn GhcPs
                -> RnM (TyFamInstEqn GhcRn, FreeVars)
-rnTyFamInstEqn mb_cls ctf_info
+rnTyFamInstEqn atfi ctf_info
     eqn@(HsIB { hsib_body = FamEqn { feqn_tycon = tycon
                                    , feqn_rhs   = rhs }})
   = do { let rhs_kvs = extractHsTyRdrTyVarsKindVars rhs
        ; (eqn'@(HsIB { hsib_body =
                        FamEqn { feqn_tycon = dL -> L _ tycon' }}), fvs)
-           <- rnFamInstEqn (TySynCtx tycon) mb_cls rhs_kvs eqn rnTySyn
+           <- rnFamInstEqn (TySynCtx tycon) atfi rhs_kvs eqn rnTySyn
        ; case ctf_info of
            NotClosedTyFam -> pure ()
            ClosedTyFam fam_rdr_name fam_name ->
@@ -833,38 +804,20 @@ rnTyFamInstEqn mb_cls ctf_info
 rnTyFamInstEqn _ _ (HsIB _ (XFamEqn _)) = panic "rnTyFamInstEqn"
 rnTyFamInstEqn _ _ (XHsImplicitBndrs _) = panic "rnTyFamInstEqn"
 
-rnTyFamDefltEqn :: Name
-                -> TyFamDefltEqn GhcPs
-                -> RnM (TyFamDefltEqn GhcRn, FreeVars)
-rnTyFamDefltEqn cls (FamEqn { feqn_tycon  = tycon
-                            , feqn_bndrs  = bndrs
-                            , feqn_pats   = tyvars
-                            , feqn_fixity = fixity
-                            , feqn_rhs    = rhs })
-  = do { let kvs = extractHsTyRdrTyVarsKindVars rhs
-       ; bindHsQTyVars ctx Nothing (Just cls) kvs tyvars $ \ tyvars' _ ->
-    do { tycon'      <- lookupFamInstName (Just cls) tycon
-       ; (rhs', fvs) <- rnLHsType ctx rhs
-       ; return (FamEqn { feqn_ext    = noExt
-                        , feqn_tycon  = tycon'
-                        , feqn_bndrs  = ASSERT( isNothing bndrs )
-                                        Nothing
-                        , feqn_pats   = tyvars'
-                        , feqn_fixity = fixity
-                        , feqn_rhs    = rhs' }, fvs) } }
-  where
-    ctx = TyFamilyCtx tycon
-rnTyFamDefltEqn _ (XFamEqn _) = panic "rnTyFamDefltEqn"
+rnTyFamDefltDecl :: Name
+                 -> TyFamDefltDecl GhcPs
+                 -> RnM (TyFamDefltDecl GhcRn, FreeVars)
+rnTyFamDefltDecl cls = rnTyFamInstDecl (AssocTyFamDeflt cls)
 
-rnDataFamInstDecl :: Maybe (Name, [Name])
+rnDataFamInstDecl :: AssocTyFamInfo
                   -> DataFamInstDecl GhcPs
                   -> RnM (DataFamInstDecl GhcRn, FreeVars)
-rnDataFamInstDecl mb_cls (DataFamInstDecl { dfid_eqn = eqn@(HsIB { hsib_body =
-                           FamEqn { feqn_tycon = tycon
-                                  , feqn_rhs   = rhs }})})
+rnDataFamInstDecl atfi (DataFamInstDecl { dfid_eqn = eqn@(HsIB { hsib_body =
+                         FamEqn { feqn_tycon = tycon
+                                , feqn_rhs   = rhs }})})
   = do { let rhs_kvs = extractDataDefnKindVars rhs
        ; (eqn', fvs) <-
-           rnFamInstEqn (TyDataCtx tycon) mb_cls rhs_kvs eqn rnDataDefn
+           rnFamInstEqn (TyDataCtx tycon) atfi rhs_kvs eqn rnDataDefn
        ; return (DataFamInstDecl { dfid_eqn = eqn' }, fvs) }
 rnDataFamInstDecl _ (DataFamInstDecl (HsIB _ (XFamEqn _)))
   = panic "rnDataFamInstDecl"
@@ -880,8 +833,8 @@ rnATDecls :: Name      -- Class
 rnATDecls cls at_decls
   = rnList (rnFamDecl (Just cls)) at_decls
 
-rnATInstDecls :: (Maybe (Name, [Name]) -> -- The function that renames
-                  decl GhcPs ->            -- an instance. rnTyFamInstDecl
+rnATInstDecls :: (AssocTyFamInfo ->           -- The function that renames
+                  decl GhcPs ->               -- an instance. rnTyFamInstDecl
                   RnM (decl GhcRn, FreeVars)) -- or rnDataFamInstDecl
               -> Name      -- Class
               -> [Name]
@@ -893,7 +846,7 @@ rnATInstDecls :: (Maybe (Name, [Name]) -> -- The function that renames
 -- NB: We allow duplicate associated-type decls;
 --     See Note [Associated type instances] in TcInstDcls
 rnATInstDecls rnFun cls tv_ns at_insts
-  = rnList (rnFun (Just (cls, tv_ns))) at_insts
+  = rnList (rnFun (AssocTyFamInst cls tv_ns)) at_insts
     -- See Note [Renaming associated types]
 
 {- Note [Wildcards in family instances]
@@ -955,7 +908,7 @@ bound on the LHS.  For example, this is not ok
       type F a x :: *
    instance C (p,q) r where
       type F (p,q) x = (x, r)   -- BAD: mentions 'r'
-c.f. Trac #5515
+c.f. #5515
 
 Kind variables, on the other hand, are allowed to be implicitly or explicitly
 bound. As examples, this (#9574) is acceptable:
@@ -980,7 +933,7 @@ So for parity with type synonyms, we also allow:
 
 All this applies only for *instance* declarations.  In *class*
 declarations there is no RHS to worry about, and the class variables
-can all be in scope (Trac #5862):
+can all be in scope (#5862):
     class Category (x :: k -> k -> *) where
       type Ob x :: k -> Constraint
       id :: Ob x a => x a a
@@ -997,7 +950,7 @@ by a forall. For instance, the following is acceptable:
      type forall b. T (Maybe a) b = Either a b
 
 Even though `a` is not bound by the forall, this is still accepted because `a`
-was previously bound by the `instance C (Maybe a)` part. (see Trac #16116).
+was previously bound by the `instance C (Maybe a)` part. (see #16116).
 
 In each case, the function which detects improperly bound variables on the RHS
 is TcValidity.checkValidFamPats.
@@ -1225,7 +1178,7 @@ reasons:
   This has a kind error, but the error message is better if you
   check T first, (fixing its kind) and *then* S.  If you do kind
   inference together, you might get an error reported in S, which
-  is jolly confusing.  See Trac #4875
+  is jolly confusing.  See #4875
 
 
 * Increase kind polymorphism.  See TcTyClsDecls
@@ -1233,7 +1186,7 @@ reasons:
 
 Why do the instance declarations participate?  At least two reasons
 
-* Consider (Trac #11348)
+* Consider (#11348)
 
      type family F a
      type instance F Int = Bool
@@ -1246,7 +1199,7 @@ Why do the instance declarations participate?  At least two reasons
   know that unless we've looked at the type instance declaration for F
   before kind-checking Foo.
 
-* Another example is this (Trac #3990).
+* Another example is this (#3990).
 
      data family Complex a
      data instance Complex Double = CD {-# UNPACK #-} !Double
@@ -1595,7 +1548,8 @@ rnTyClDecl (DataDecl { tcdLName = tycon, tcdTyVars = tyvars,
        ; bindHsQTyVars doc Nothing Nothing kvs tyvars $ \ tyvars' no_rhs_kvs ->
     do { (defn', fvs) <- rnDataDefn doc defn
           -- See Note [Complete user-supplied kind signatures] in HsDecls
-       ; let cusk = hsTvbAllKinded tyvars' && no_rhs_kvs
+       ; cusks_enabled <- xoptM LangExt.CUSKs
+       ; let cusk = cusks_enabled && hsTvbAllKinded tyvars' && no_rhs_kvs
              rn_info = DataDeclRn { tcdDataCusk = cusk
                                   , tcdFVs      = fvs }
        ; traceRn "rndata" (ppr tycon <+> ppr cusk <+> ppr no_rhs_kvs)
@@ -1627,7 +1581,7 @@ rnTyClDecl (ClassDecl { tcdCtxt = context, tcdLName = lcls,
                          fv_ats
              ; return ((tyvars', context', fds', ats'), fvs) }
 
-        ; (at_defs', fv_at_defs) <- rnList (rnTyFamDefltEqn cls') at_defs
+        ; (at_defs', fv_at_defs) <- rnList (rnTyFamDefltDecl cls') at_defs
 
         -- No need to check for duplicate associated type decls
         -- since that is done by RnNames.extendGlobalRdrEnvRn
@@ -1926,7 +1880,7 @@ rnFamDecl mb_cls (FamilyDecl { fdLName = tycon, fdTyVars = tyvars
              -> FamilyInfo GhcPs -> RnM (FamilyInfo GhcRn, FreeVars)
      rn_info (dL->L _ fam_name) (ClosedTypeFamily (Just eqns))
        = do { (eqns', fvs)
-                <- rnList (rnTyFamInstEqn Nothing (ClosedTyFam tycon fam_name))
+                <- rnList (rnTyFamInstEqn NonAssocTyFamEqn (ClosedTyFam tycon fam_name))
                                           -- no class context
                           eqns
             ; return (ClosedTypeFamily (Just eqns'), fvs) }
@@ -2064,7 +2018,7 @@ rnInjectivityAnn _ _ (dL->L srcSpan (InjectivityAnn injFrom injTo)) =
 {-
 Note [Stupid theta]
 ~~~~~~~~~~~~~~~~~~~
-Trac #3850 complains about a regression wrt 6.10 for
+#3850 complains about a regression wrt 6.10 for
      data Show a => T a
 There is no reason not to allow the stupid theta if there are no data
 constructors.  It's still stupid, but does no harm, and I don't want
@@ -2142,7 +2096,7 @@ rnConDecl decl@(ConDeclGADT { con_names   = names
           -- order of their appearance in the constructor type.
           -- That order governs the order the implicitly-quantified type
           -- variable, and hence the order needed for visible type application
-          -- See Trac #14808.
+          -- See #14808.
               free_tkvs = extractHsTvBndrs explicit_tkvs $
                           extractHsTysRdrTyVarsDups (theta ++ arg_tys ++ [res_ty])
 
@@ -2325,7 +2279,7 @@ add gp loc (SpliceD _ splice@(SpliceDecl _ _ flag)) ds
                      -- The compiler should suggest the above, and not using
                      -- TemplateHaskell since the former suggestion is more
                      -- relevant to the larger base of users.
-                     -- See Trac #12146 for discussion.
+                     -- See #12146 for discussion.
 
 -- Class declarations: pull out the fixity signatures to the top
 add gp@(HsGroup {hs_tyclds = ts, hs_fixds = fs}) l (TyClD _ d) ds

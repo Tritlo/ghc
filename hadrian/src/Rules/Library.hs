@@ -1,20 +1,17 @@
-module Rules.Library (libraryRules) where
+module Rules.Library (libraryRules, needLibrary, libraryTargets) where
 
 import Hadrian.BuildPath
 import Hadrian.Haskell.Cabal
 import Hadrian.Haskell.Cabal.Type
-import qualified System.Directory as IO
 import qualified Text.Parsec      as Parsec
 
 import Base
 import Context
 import Expression hiding (way, package)
-import Flavour
 import Oracles.ModuleFiles
 import Packages
 import Rules.Gmp
-import Rules.Libffi (libffiDependencies)
-import Settings
+import Rules.Rts (needRtsLibffiTargets)
 import Target
 import Utilities
 
@@ -27,10 +24,26 @@ libraryRules = do
     root -/- "//libHS*-*.so"          %> buildDynamicLibUnix root "so"
     root -/- "//*.a"                  %> buildStaticLib      root
     priority 2 $ do
-        root -/- "//HS*-*.o" %> buildGhciLibO root
+        root -/- "stage*/lib//libHS*-*.dylib" %> registerDynamicLibUnix root "dylib"
+        root -/- "stage*/lib//libHS*-*.so"    %> registerDynamicLibUnix root "so"
+        root -/- "stage*/lib//*.a"            %> registerStaticLib  root
+        root -/- "//HS*-*.o"   %> buildGhciLibO root
         root -/- "//HS*-*.p_o" %> buildGhciLibO root
 
 -- * 'Action's for building libraries
+
+-- | Register (with ghc-pkg) a static library ('LibA') under the given build
+-- root, whose path is the second argument.
+registerStaticLib :: FilePath -> FilePath -> Action ()
+registerStaticLib root archivePath = do
+    -- Simply need the ghc-pkg database .conf file.
+    GhcPkgPath _ stage _ (LibA name version _)
+        <- parsePath (parseGhcPkgLibA root)
+                    "<.a library (register) path parser>"
+                    archivePath
+    need [ root -/- relativePackageDbPath stage
+                -/- (pkgId name version) ++ ".conf"
+         ]
 
 -- | Build a static library ('LibA') under the given build root, whose path is
 -- the second argument.
@@ -49,6 +62,21 @@ buildStaticLib root archivePath = do
         (quote pkgname ++ " (" ++ show stage ++ ", way " ++ show way ++ ").")
         archivePath synopsis
 
+-- | Register (with ghc-pkg) a dynamic library ('LibDyn') under the given build
+-- root, with the given suffix (@.so@ or @.dylib@, @.dll@ in the future), where
+-- the complete path of the registered dynamic library is given as the third
+-- argument.
+registerDynamicLibUnix :: FilePath -> String -> FilePath -> Action ()
+registerDynamicLibUnix root suffix dynlibpath = do
+    -- Simply need the ghc-pkg database .conf file.
+    (GhcPkgPath _ stage _ (LibDyn name version _ _))
+        <- parsePath (parseGhcPkgLibDyn root suffix)
+                            "<dyn register lib parser>"
+                            dynlibpath
+    need [ root -/- relativePackageDbPath stage
+                -/- pkgId name version ++ ".conf"
+         ]
+
 -- | Build a dynamic library ('LibDyn') under the given build root, with the
 -- given suffix (@.so@ or @.dylib@, @.dll@ in the future), where the complete
 -- path of the archive to build is given as the third argument.
@@ -57,15 +85,7 @@ buildDynamicLibUnix root suffix dynlibpath = do
     dynlib <- parsePath (parseBuildLibDyn root suffix) "<dyn lib parser>" dynlibpath
     let context = libDynContext dynlib
     deps <- contextDependencies context
-    need =<< mapM pkgLibraryFile deps
-
-    -- TODO should this be somewhere else?
-    -- Custom build step to generate libffi.so* in the rts build directory.
-    when (package context == rts) . interpretInContext context $ do
-        stage   <- getStage
-        rtsPath <- expr (rtsBuildPath stage)
-        expr $ need ((rtsPath -/-) <$> libffiDependencies)
-
+    need =<< mapM pkgRegisteredLibraryFile deps
     objs <- libraryObjects context
     build $ target context (Ghc LinkHs $ Context.stage context) objs [dynlibpath]
 
@@ -124,6 +144,32 @@ libraryObjects context@Context{..} = do
     need $ noHsObjs ++ hsObjs
     return (noHsObjs ++ hsObjs)
 
+-- | Return extra library targets.
+extraTargets :: Context -> Action [FilePath]
+extraTargets context
+    | package context == rts  = needRtsLibffiTargets (Context.stage context)
+    | otherwise               = return []
+
+-- | Given a library 'Package' this action computes all of its targets. Needing
+-- all the targets should build the library such that it is ready to be
+-- registered into the package database.
+-- See 'packageTargets' for the explanation of the @includeGhciLib@ parameter.
+libraryTargets :: Bool -> Context -> Action [FilePath]
+libraryTargets includeGhciLib context@Context {..} = do
+    libFile  <- pkgLibraryFile     context
+    ghciLib  <- pkgGhciLibraryFile context
+    ghci     <- if includeGhciLib && not (wayUnit Dynamic way)
+                then interpretInContext context $ getContextData buildGhciLib
+                else return False
+    extra    <- extraTargets context
+    return $ [ libFile ]
+          ++ [ ghciLib | ghci ]
+          ++ extra
+
+-- | Coarse-grain 'need': make sure all given libraries are fully built.
+needLibrary :: [Context] -> Action ()
+needLibrary cs = need =<< concatMapM (libraryTargets True) cs
+
 -- * Library paths types and parsers
 
 -- | > libHS<pkg name>-<pkg version>[_<way suffix>].a
@@ -159,6 +205,16 @@ libDynContext (BuildPath _ stage pkgpath (LibDyn pkgname _ way _)) =
   where
     pkg = library pkgname pkgpath
 
+-- | Parse a path to a registered ghc-pkg static library to be built, making
+-- sure the path starts with the given build root.
+parseGhcPkgLibA :: FilePath -> Parsec.Parsec String () (GhcPkgPath LibA)
+parseGhcPkgLibA root
+    = parseGhcPkgPath root
+        (do -- Skip past pkgId directory.
+            _ <- Parsec.manyTill Parsec.anyChar (Parsec.try $ Parsec.string "/")
+            parseLibAFilename)
+        Parsec.<?> "ghc-pkg path for a static library"
+
 -- | Parse a path to a static library to be built, making sure the path starts
 -- with the given build root.
 parseBuildLibA :: FilePath -> Parsec.Parsec String () (BuildPath LibA)
@@ -176,6 +232,12 @@ parseBuildLibGhci root = parseBuildPath root parseLibGhciFilename
 parseBuildLibDyn :: FilePath -> String -> Parsec.Parsec String () (BuildPath LibDyn)
 parseBuildLibDyn root ext = parseBuildPath root (parseLibDynFilename ext)
     Parsec.<?> ("build path for a dynamic library with extension " ++ ext)
+
+-- | Parse a path to a registered ghc-pkg dynamic library, making sure the path
+-- starts with the given package database root.
+parseGhcPkgLibDyn :: FilePath -> String -> Parsec.Parsec String () (GhcPkgPath LibDyn)
+parseGhcPkgLibDyn root ext = parseGhcPkgPath root (parseLibDynFilename ext)
+    Parsec.<?> ("ghc-pkg path for a dynamic library with extension " ++ ext)
 
 -- | Parse the filename of a static library to be built into a 'LibA' value.
 parseLibAFilename :: Parsec.Parsec String () LibA
@@ -205,3 +267,7 @@ parseLibDynFilename ext = do
     _ <- optional $ Parsec.string "-ghc" *> parsePkgVersion
     _ <- Parsec.string ("." ++ ext)
     return (LibDyn pkgname pkgver way $ if ext == "so" then So else Dylib)
+
+-- | Get the package identifier given the package name and version.
+pkgId :: String -> [Integer] -> String
+pkgId name version = name ++ "-" ++ intercalate "." (map show version)

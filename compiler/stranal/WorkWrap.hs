@@ -9,6 +9,7 @@ module WorkWrap ( wwTopBinds ) where
 
 import GhcPrelude
 
+import CoreArity        ( manifestArity )
 import CoreSyn
 import CoreUnfold       ( certainlyWillInline, mkWwInlineRule, mkWorkerUnfolding )
 import CoreUtils        ( exprType, exprIsHNF )
@@ -185,7 +186,7 @@ f.  But that would make a new unfolding which would overwrite the old
 one! So the function would no longer be INLNABLE, and in particular
 will not be specialised at call sites in other modules.
 
-This comes in practice (Trac #6056).
+This comes in practice (#6056).
 
 Solution: do the w/w for strictness analysis, but transfer the Stable
 unfolding to the *worker*.  So we will get something like this:
@@ -240,9 +241,9 @@ will happen on every call of g. Disaster.
 Solution: do worker/wrapper even on NOINLINE things; but move the
 NOINLINE pragma to the worker.
 
-(See Trac #13143 for a real-world example.)
+(See #13143 for a real-world example.)
 
-It is crucial that we do this for *all* NOINLINE functions. Trac #10069
+It is crucial that we do this for *all* NOINLINE functions. #10069
 demonstrates what happens when we promise to w/w a (NOINLINE) leaf function, but
 fail to deliver:
 
@@ -388,7 +389,7 @@ When should the wrapper inlining be active?
    Note [Worker-wrapper for NOINLINE functions]
 
 3. For ordinary functions with no pragmas we want to inline the
-   wrapper as early as possible (Trac #15056).  Suppose another module
+   wrapper as early as possible (#15056).  Suppose another module
    defines    f x = g x x
    and suppose there is some RULE for (g True True).  Then if we have
    a call (f True), we'd expect to inline 'f' and the RULE will fire.
@@ -457,7 +458,7 @@ tryWW dflags fam_envs is_rec fn_id rhs
         -- See Note [Don't w/w INLINE things]
         -- See Note [Don't w/w inline small non-loop-breaker things]
 
-  | is_fun
+  | is_fun && is_eta_exp
   = splitFun dflags fam_envs new_fn_id fn_info wrap_dmds res_info rhs
 
   | is_thunk                                   -- See Note [Thunk splitting]
@@ -474,9 +475,11 @@ tryWW dflags fam_envs is_rec fn_id rhs
         -- See Note [Zapping DmdEnv after Demand Analyzer] and
         -- See Note [Zapping Used Once info in WorkWrap]
 
-    is_fun    = notNull wrap_dmds || isJoinId fn_id
-    is_thunk  = not is_fun && not (exprIsHNF rhs) && not (isJoinId fn_id)
-                           && not (isUnliftedType (idType fn_id))
+    is_fun     = notNull wrap_dmds || isJoinId fn_id
+    -- See Note [Don't eta expand in w/w]
+    is_eta_exp = length wrap_dmds == manifestArity rhs
+    is_thunk   = not is_fun && not (exprIsHNF rhs) && not (isJoinId fn_id)
+                            && not (isUnliftedType (idType fn_id))
 
 {-
 Note [Zapping DmdEnv after Demand Analyzer]
@@ -516,6 +519,36 @@ want to _keep_ the info for the code generator).
 
 We do not do it in the demand analyser for the same reasons outlined in
 Note [Zapping DmdEnv after Demand Analyzer] above.
+
+Note [Don't eta expand in w/w]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A binding where the manifestArity of the RHS is less than idArity of the binder
+means CoreArity didn't eta expand that binding. When this happens, it does so
+for a reason (see Note [exprArity invariant] in CoreArity) and we probably have
+a PAP, cast or trivial expression as RHS.
+
+Performing the worker/wrapper split will implicitly eta-expand the binding to
+idArity, overriding CoreArity's decision. Other than playing fast and loose with
+divergence, it's also broken for newtypes:
+
+  f = (\xy.blah) |> co
+    where
+      co :: (Int -> Int -> Char) ~ T
+
+Then idArity is 2 (despite the type T), and it can have a StrictSig based on a
+threshold of 2. But we can't w/w it without a type error.
+
+The situation is less grave for PAPs, but the implicit eta expansion caused a
+compiler allocation regression in T15164, where huge recursive instance method
+groups, mostly consisting of PAPs, got w/w'd. This caused great churn in the
+simplifier, when simply waiting for the PAPs to inline arrived at the same
+output program.
+
+Note there is the worry here that such PAPs and trivial RHSs might not *always*
+be inlined. That would lead to reboxing, because the analysis tacitly assumes
+that we W/W'd for idArity and will propagate analysis information under that
+assumption. So far, this doesn't seem to matter in practice.
+See https://gitlab.haskell.org/ghc/ghc/merge_requests/312#note_192064.
 -}
 
 

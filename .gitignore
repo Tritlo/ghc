@@ -50,6 +50,7 @@ stage0
 stage1
 stage2
 _build
+.hadrian_ghci
 
 # -----------------------------------------------------------------------------
 # Ignore any overlapped darcs repos and back up files
@@ -122,6 +123,7 @@ _darcs/
 /settings
 /ghc.spec
 /ghc/ghc-bin.cabal
+/includes/dist/
 /includes/ghcautoconf.h
 /includes/ghcplatform.h
 /includes/ghcversion.h
@@ -190,6 +192,7 @@ utils/unlit/fs.*
 rts/fs.*
 libraries/base/include/fs.h
 libraries/base/cbits/fs.c
+missing-win32-tarballs
 
 /extra-gcc-opts
 /sdistprep

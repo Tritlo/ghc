@@ -177,13 +177,14 @@ tcTypedBracket rn_expr brack@(TExpBr _ expr) res_ty
        ; (_tc_expr, expr_ty) <- setStage (Brack cur_stage (TcPending ps_ref lie_var)) $
                                 tcInferRhoNC expr
                                 -- NC for no context; tcBracket does that
+       ; let rep = getRuntimeRep expr_ty
 
        ; meta_ty <- tcTExpTy expr_ty
        ; ps' <- readMutVar ps_ref
        ; texpco <- tcLookupId unsafeTExpCoerceName
        ; tcWrapResultO (Shouldn'tHappenOrigin "TExpBr")
                        rn_expr
-                       (unLoc (mkHsApp (nlHsTyApp texpco [expr_ty])
+                       (unLoc (mkHsApp (nlHsTyApp texpco [rep, expr_ty])
                                       (noLoc (HsTcBracketOut noExt brack ps'))))
                        meta_ty res_ty }
 tcTypedBracket _ other_brack _
@@ -230,7 +231,8 @@ tcTExpTy exp_ty
   = do { unless (isTauTy exp_ty) $ addErr (err_msg exp_ty)
        ; q    <- tcLookupTyCon qTyConName
        ; texp <- tcLookupTyCon tExpTyConName
-       ; return (mkTyConApp q [mkTyConApp texp [exp_ty]]) }
+       ; let rep = getRuntimeRep exp_ty
+       ; return (mkTyConApp q [mkTyConApp texp [rep, exp_ty]]) }
   where
     err_msg ty
       = vcat [ text "Illegal polytype:" <+> ppr ty
@@ -469,12 +471,13 @@ tcNestedSplice :: ThStage -> PendingStuff -> Name
     -- A splice inside brackets
 tcNestedSplice pop_stage (TcPending ps_var lie_var) splice_name expr res_ty
   = do { res_ty <- expTypeToType res_ty
+       ; let rep = getRuntimeRep res_ty
        ; meta_exp_ty <- tcTExpTy res_ty
        ; expr' <- setStage pop_stage $
                   setConstraintVar lie_var $
                   tcMonoExpr expr (mkCheckExpType meta_exp_ty)
        ; untypeq <- tcLookupId unTypeQName
-       ; let expr'' = mkHsApp (nlHsTyApp untypeq [res_ty]) expr'
+       ; let expr'' = mkHsApp (nlHsTyApp untypeq [rep, res_ty]) expr'
        ; ps <- readMutVar ps_var
        ; writeMutVar ps_var (PendingTcSplice splice_name expr'' : ps)
 
@@ -572,7 +575,7 @@ tcTopSpliceExpr isTypedSplice tc_action
                    -- going to run this code, but we do an unsafe
                    -- coerce, so we get a seg-fault if, say we
                    -- splice a type into a place where an expression
-                   -- is expected (Trac #7276)
+                   -- is expected (#7276)
     setStage (Splice isTypedSplice) $
     do {    -- Typecheck the expression
          (expr', wanted) <- captureConstraints tc_action
@@ -753,7 +756,7 @@ runMeta' show_code ppr_hs run_and_convert expr
         -- recovered giving it type f :: forall a.a, it'd be very dodgy
         -- to carry ont.  Mind you, the staging restrictions mean we won't
         -- actually run f, but it still seems wrong. And, more concretely,
-        -- see Trac #5358 for an example that fell over when trying to
+        -- see #5358 for an example that fell over when trying to
         -- reify a function with a "?" kind in it.  (These don't occur
         -- in type-correct programs.
         ; failIfErrsM
@@ -888,7 +891,7 @@ like that.  Here's how it's processed:
 
  * 'qReport' forces the message to ensure any exception hidden in unevaluated
    thunk doesn't get into the bag of errors. Otherwise the following splice
-   will triger panic (Trac #8987):
+   will triger panic (#8987):
         $(fail undefined)
    See also Note [Concealed TH exceptions]
 
@@ -919,7 +922,7 @@ To call runQ in the Tc monad, we need to make TcM an instance of Quasi:
 
 instance TH.Quasi TcM where
   qNewName s = do { u <- newUnique
-                  ; let i = getKey u
+                  ; let i = toInteger (getKey u)
                   ; return (TH.mkNameU s i) }
 
   -- 'msg' is forced to ensure exceptions don't escape,
@@ -1270,11 +1273,11 @@ reifyInstances th_nm th_tys
         ; ty <- zonkTcTypeToType ty
                 -- Substitute out the meta type variables
                 -- In particular, the type might have kind
-                -- variables inside it (Trac #7477)
+                -- variables inside it (#7477)
 
         ; traceTc "reifyInstances" (ppr ty $$ ppr (tcTypeKind ty))
         ; case splitTyConApp_maybe ty of   -- This expands any type synonyms
-            Just (tc, tys)                 -- See Trac #7910
+            Just (tc, tys)                 -- See #7910
                | Just cls <- tyConClass_maybe tc
                -> do { inst_envs <- tcGetInstEnvs
                      ; let (matches, unifies, _) = lookupInstEnv False inst_envs cls tys
@@ -1790,7 +1793,7 @@ reifyFamilyInstance is_poly_tvs (FamInst { fi_flavor = flavor
 
       DataFamilyInst rep_tc ->
         do { let -- eta-expand lhs types, because sometimes data/newtype
-                 -- instances are eta-reduced; See Trac #9692
+                 -- instances are eta-reduced; See #9692
                  -- See Note [Eta reduction for data families] in FamInstEnv
                  (ee_tvs, ee_lhs, _) = etaExpandCoAxBranch branch
                  fam'     = reifyName fam
@@ -1944,8 +1947,9 @@ reify_tc_app tc tys
 ------------------------------
 reifyName :: NamedThing n => n -> TH.Name
 reifyName thing
-  | isExternalName name = mk_varg pkg_str mod_str occ_str
-  | otherwise           = TH.mkNameU occ_str (getKey (getUnique name))
+  | isExternalName name
+              = mk_varg pkg_str mod_str occ_str
+  | otherwise = TH.mkNameU occ_str (toInteger $ getKey (getUnique name))
         -- Many of the things we reify have local bindings, and
         -- NameL's aren't supposed to appear in binding positions, so
         -- we use NameU.  When/if we start to reify nested things, that

@@ -382,7 +382,10 @@ test('Naperian',
 
 test ('T9630',
       [ collect_compiler_stats('max_bytes_used',15), # Note [residency]
-      extra_clean(['T9630a.hi', 'T9630a.o'])
+      extra_clean(['T9630a.hi', 'T9630a.o']),
+
+      # Use `+RTS -G1` for more stable residency measurements. Note [residency].
+      extra_hc_opts('+RTS -G1 -RTS')
       ],
       multimod_compile,
       ['T9630', '-v0 -O'])
@@ -393,8 +396,16 @@ test ('T15164',
       compile,
       ['-v0 -O'])
 
-test('T16190',
-      [ collect_stats()
+# See https://gitlab.haskell.org/ghc/ghc/merge_requests/312#note_186960
+test ('WWRec',
+      [ collect_compiler_stats('bytes allocated',10)
       ],
+      compile,
+      ['-v0 -O'])
+
+test('T16190',
+      collect_stats(),
       multimod_compile,
       ['T16190.hs', '-v0'])
+
+test('T16473', normal, makefile_test, ['T16473'])

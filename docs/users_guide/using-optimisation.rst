@@ -88,6 +88,17 @@ So, for example, ``ghc -c Foo.hs``
     runtime or space *worse* if you're unlucky. They are normally turned
     on or off individually.
 
+.. ghc-flag:: -O⟨n⟩
+    :shortdesc: Any -On where n > 2 is the same as -O2.
+    :type: dynamic
+    :reverse: -O0
+    :category: optimization-levels
+
+    .. index::
+       single: optimise; aggressively
+
+    Any -On where n > 2 is the same as -O2.
+
 We don't use a ``-O*`` flag for day-to-day work. We use ``-O`` to get
 respectable speed; e.g., when we want to measure something. When we want
 to go for broke, we tend to use ``-O2`` (and we go for lots of coffee
@@ -305,7 +316,7 @@ by saying ``-fno-wombat``.
 
     Enables the common-sub-expression elimination optimisation on the STG
     intermediate language, where it is able to common up some subexpressions
-    that differ in their types, but not their represetation.
+    that differ in their types, but not their representation.
 
 .. ghc-flag:: -fdicts-cheap
     :shortdesc: Make dictionary-valued expressions seem cheap to the optimiser.
@@ -509,7 +520,7 @@ by saying ``-fno-wombat``.
     that were not visible earlier; and optimisations like
     :ghc-flag:`-fspec-constr` can create functions with unused arguments which
     are eliminated by late demand analysis. Improvements are modest, but
-    so is the cost. See notes on the :ghc-wiki:`Trac wiki page <LateDmd>`.
+    so is the cost. See notes on the :ghc-wiki:`wiki page <late-dmd>`.
 
 .. ghc-flag:: -fliberate-case
     :shortdesc: Turn on the liberate-case transformation. Implied by :ghc-flag:`-O2`.

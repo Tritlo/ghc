@@ -159,7 +159,7 @@ dnl May need to use gcc to find platform details.
 dnl --------------------------------------------------------------
 FPTOOLS_SET_HASKELL_PLATFORM_VARS
 
-dnl TargetWordSize for settings.in
+dnl TargetWordSize for settings file
 AC_CHECK_SIZEOF(void *, 4)
 if test "x$ac_cv_sizeof_void_p" = "x0"; then
     AC_MSG_ERROR([Failed to determine machine word size. Does your toolchain actually work?])
@@ -197,7 +197,7 @@ fi
 FP_SETTINGS
 
 #
-AC_CONFIG_FILES(settings mk/config.mk mk/install.mk)
+AC_CONFIG_FILES(mk/config.mk mk/install.mk)
 AC_OUTPUT
 
 # We get caught by

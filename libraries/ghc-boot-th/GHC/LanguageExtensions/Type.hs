@@ -139,4 +139,6 @@ data Extension
    | NumericUnderscores
    | QuantifiedConstraints
    | StarIsType
-   deriving (Eq, Enum, Show, Generic)
+   | ImportQualifiedPost
+   | CUSKs
+   deriving (Eq, Enum, Show, Generic, Bounded)

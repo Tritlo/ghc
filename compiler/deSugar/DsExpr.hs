@@ -122,7 +122,7 @@ ds_val_bind (NonRecursive, hsbinds) body
             -- f x = let p@(Ptr y) = ... in ...
             -- Here the binding for 'p' is polymorphic, but does
             -- not mix with an unlifted binding for 'y'.  You should
-            -- use a bang pattern.  Trac #6078.
+            -- use a bang pattern.  #6078.
 
     else do { when (looksLazyPatBind bind) $
               warnIfSetDs Opt_WarnUnbangedStrictPatterns (unlifted_must_be_bang bind)
@@ -622,7 +622,7 @@ ds_expr _ expr@(RecordUpd { rupd_expr = record_expr, rupd_flds = fields
       -- Clone the Id in the HsRecField, because its Name is that
       -- of the record selector, and we must not make that a local binder
       -- else we shadow other uses of the record selector
-      -- Hence 'lcl_id'.  Cf Trac #2735
+      -- Hence 'lcl_id'.  Cf #2735
     ds_field (dL->L _ rec_field)
       = do { rhs <- dsLExpr (hsRecFieldArg rec_field)
            ; let fld_id = unLoc (hsRecUpdFieldId rec_field)
@@ -752,10 +752,6 @@ ds_expr _ (HsTickPragma _ _ _ _ expr) = do
 
 -- HsSyn constructs that just shouldn't be here:
 ds_expr _ (HsBracket     {})  = panic "dsExpr:HsBracket"
-ds_expr _ (EWildPat      {})  = panic "dsExpr:EWildPat"
-ds_expr _ (EAsPat        {})  = panic "dsExpr:EAsPat"
-ds_expr _ (EViewPat      {})  = panic "dsExpr:EViewPat"
-ds_expr _ (ELazyPat      {})  = panic "dsExpr:ELazyPat"
 ds_expr _ (HsDo          {})  = panic "dsExpr:HsDo"
 ds_expr _ (HsRecFld      {})  = panic "dsExpr:HsRecFld"
 ds_expr _ (XExpr         {})  = panic "dsExpr: XExpr"

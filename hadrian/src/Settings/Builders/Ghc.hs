@@ -11,7 +11,18 @@ import qualified Context as Context
 import Rules.Libffi (libffiName)
 
 ghcBuilderArgs :: Args
-ghcBuilderArgs = mconcat [compileAndLinkHs, compileC, findHsDependencies]
+ghcBuilderArgs = mconcat [ compileAndLinkHs, compileC, findHsDependencies
+                         , toolArgs]
+
+toolArgs :: Args
+toolArgs = do
+  builder (Ghc ToolArgs) ? mconcat
+              [ packageGhcArgs
+              , includeGhcArgs
+              , map ("-optc" ++) <$> getStagedSettingList ConfCcArgs
+              , map ("-optP" ++) <$> getStagedSettingList ConfCppArgs
+              , map ("-optP" ++) <$> getContextData cppOpts
+              ]
 
 compileAndLinkHs :: Args
 compileAndLinkHs = (builder (Ghc CompileHs) ||^ builder (Ghc LinkHs)) ? do
@@ -53,18 +64,27 @@ ghcLinkArgs = builder (Ghc LinkHs) ? do
     originPath <- dropFileName <$> getOutput
     context <- getContext
     libPath' <- expr (libPath context)
-    distDir <- expr Context.distDir
+    st <- getStage
+    distDir <- expr (Context.distDir st)
 
     useSystemFfi <- expr (flag UseSystemFfi)
     buildPath <- getBuildPath
     libffiName' <- libffiName
+    debugged <- ghcDebugged <$> expr flavour
 
     let
         dynamic = Dynamic `wayUnit` way
         distPath = libPath' -/- distDir
         originToLibsDir = makeRelativeNoSysLink originPath distPath
-        rpath | darwin = "@loader_path" -/- originToLibsDir
-              | otherwise = "$ORIGIN" -/- originToLibsDir
+        rpath
+            -- Programs will end up in the bin dir ($ORIGIN) and will link to
+            -- libraries in the lib dir.
+            | isProgram pkg = metaOrigin -/- originToLibsDir
+            -- libraries will all end up in the lib dir, so just use $ORIGIN
+            | otherwise     = metaOrigin
+            where
+                metaOrigin | darwin    = "@loader_path"
+                           | otherwise = "$ORIGIN"
 
         -- TODO: an alternative would be to generalize by linking with extra
         -- bundled libraries, but currently the rts is the only use case. It is
@@ -77,12 +97,24 @@ ghcLinkArgs = builder (Ghc LinkHs) ? do
             , arg ("-l" ++ libffiName')
             ]
 
+        -- This is the -rpath argument that is required for the bindist scenario
+        -- to work. Indeed, when you install a bindist, the actual executables
+        -- end up nested somewhere under $libdir, with the wrapper scripts
+        -- taking their place in $bindir, and 'rpath' therefore doesn't seem
+        -- to give us the right paths for such a case.
+        -- TODO: Could we get away with just one rpath...?
+        bindistRpath = "$ORIGIN" -/- ".." -/- ".." -/- originToLibsDir
+
     mconcat [ dynamic ? mconcat
                 [ arg "-dynamic"
                 -- TODO what about windows?
                 , isLibrary pkg ? pure [ "-shared", "-dynload", "deploy" ]
-                , notStage0 ?
-                  hostSupportsRPaths ? arg ("-optl-Wl,-rpath," ++ rpath)
+                , hostSupportsRPaths ? mconcat
+                      [ arg ("-optl-Wl,-rpath," ++ rpath)
+                      , isProgram pkg ? arg ("-optl-Wl,-rpath," ++ bindistRpath)
+                      -- The darwin linker doesn't support/require the -zorigin option
+                      , not darwin ? arg "-optl-Wl,-zorigin"
+                      ]
                 ]
             , arg "-no-auto-link-packages"
             ,      nonHsMainPackage pkg  ? arg "-no-hs-main"
@@ -91,6 +123,9 @@ ghcLinkArgs = builder (Ghc LinkHs) ? do
             , pure [ "-L" ++ libDir | libDir <- libDirs ]
             , rtsFfiArg
             , darwin ? pure (concat [ ["-framework", fmwk] | fmwk <- fmwks ])
+            , debugged ? packageOneOf [ghc, iservProxy, iserv, remoteIserv] ?
+              arg "-debug"
+
             ]
 
 findHsDependencies :: Args

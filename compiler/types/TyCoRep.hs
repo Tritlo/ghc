@@ -371,7 +371,7 @@ about it!
 
 {- -----------------------
       Commented out until the pattern match
-      checker can handle it; see Trac #16185
+      checker can handle it; see #16185
 
       For now we use the CPP macro #define FunTy FFunTy _
       (see HsVersions.h) to allow pattern matching on a
@@ -1279,7 +1279,7 @@ have no coercion variables.
 Note [Generalized reflexive coercion]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-GRefl is a generalized reflexive coercion (see Trac #15192). It wraps a kind
+GRefl is a generalized reflexive coercion (see #15192). It wraps a kind
 coercion, which might be reflexive (MRefl) or any coercion (MCo co). The typing
 rules for GRefl:
 
@@ -1436,8 +1436,8 @@ See Simplify.simplCoercionF, which generates such selections.
 Note [Roles]
 ~~~~~~~~~~~~
 Roles are a solution to the GeneralizedNewtypeDeriving problem, articulated
-in Trac #1496. The full story is in docs/core-spec/core-spec.pdf. Also, see
-http://ghc.haskell.org/trac/ghc/wiki/RolesImplementation
+in #1496. The full story is in docs/core-spec/core-spec.pdf. Also, see
+https://gitlab.haskell.org/ghc/ghc/wikis/roles-implementation
 
 Here is one way to phrase the problem:
 
@@ -1587,7 +1587,7 @@ which makes the code complicated and inefficient.
 This only happens for NthCo. Caching the role solves the problem, and
 allows coercionKind and coercionRole to be simple.
 
-See Trac #11735
+See #11735
 
 Note [InstCo roles]
 ~~~~~~~~~~~~~~~~~~~
@@ -1756,7 +1756,7 @@ Note [CoercionHoles and coercion free variables]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Why does a CoercionHole contain a CoVar, as well as reference to
 fill in?  Because we want to treat that CoVar as a free variable of
-the coercion.  See Trac #14584, and Note [What prevents a
+the coercion.  See #14584, and Note [What prevents a
 constraint from floating] in TcSimplify, item (4):
 
         forall k. [W] co1 :: t1 ~# t2 |> co2
@@ -1849,14 +1849,14 @@ so we profiled several versions, exploring different implementation strategies.
    "in-scope set" filter found in the internals of FV, but without the
    determinism overhead.
 
-See Trac #14880.
+See #14880.
 
 Note [Closing over free variable kinds]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 tyCoVarsOfType and tyCoFVsOfType, while traversing a type, will also close over
 free variable kinds. In previous GHC versions, this happened naively: whenever
 we would encounter an occurrence of a free type variable, we would close over
-its kind. This, however is wrong for two reasons (see Trac #14880):
+its kind. This, however is wrong for two reasons (see #14880):
 
 1. Efficiency. If we have Proxy (a::k) -> Proxy (a::k) -> Proxy (a::k), then
    we don't want to have to traverse k more than once.
@@ -2182,7 +2182,7 @@ This is because FV includes the InterestingVarFun, which is useful here,
 because we can cleverly use it to restrict our calculations to CoVars - this
 is what getCoVarSet achieves.
 
-See Trac #14880.
+See #14880.
 
 -}
 
@@ -2963,39 +2963,29 @@ unionTCvSubst (TCvSubst in_scope1 tenv1 cenv1) (TCvSubst in_scope2 tenv2 cenv2)
 
 -- | Generates the in-scope set for the 'TCvSubst' from the types in the incoming
 -- environment. No CoVars, please!
-zipTvSubst :: [TyVar] -> [Type] -> TCvSubst
+zipTvSubst :: HasDebugCallStack => [TyVar] -> [Type] -> TCvSubst
 zipTvSubst tvs tys
-  | debugIsOn
-  , not (all isTyVar tvs) || neLength tvs tys
-  = pprTrace "zipTvSubst" (ppr tvs $$ ppr tys) emptyTCvSubst
-  | otherwise
   = mkTvSubst (mkInScopeSet (tyCoVarsOfTypes tys)) tenv
   where
     tenv = zipTyEnv tvs tys
 
 -- | Generates the in-scope set for the 'TCvSubst' from the types in the incoming
 -- environment.  No TyVars, please!
-zipCvSubst :: [CoVar] -> [Coercion] -> TCvSubst
+zipCvSubst :: HasDebugCallStack => [CoVar] -> [Coercion] -> TCvSubst
 zipCvSubst cvs cos
-  | debugIsOn
-  , not (all isCoVar cvs) || neLength cvs cos
-  = pprTrace "zipCvSubst" (ppr cvs $$ ppr cos) emptyTCvSubst
-  | otherwise
   = TCvSubst (mkInScopeSet (tyCoVarsOfCos cos)) emptyTvSubstEnv cenv
   where
     cenv = zipCoEnv cvs cos
 
-zipTCvSubst :: [TyCoVar] -> [Type] -> TCvSubst
+zipTCvSubst :: HasDebugCallStack => [TyCoVar] -> [Type] -> TCvSubst
 zipTCvSubst tcvs tys
-  | debugIsOn
-  , neLength tcvs tys
-  = pprTrace "zipTCvSubst" (ppr tcvs $$ ppr tys) emptyTCvSubst
-  | otherwise
   = zip_tcvsubst tcvs tys (mkEmptyTCvSubst $ mkInScopeSet (tyCoVarsOfTypes tys))
   where zip_tcvsubst :: [TyCoVar] -> [Type] -> TCvSubst -> TCvSubst
         zip_tcvsubst (tv:tvs) (ty:tys) subst
           = zip_tcvsubst tvs tys (extendTCvSubst subst tv ty)
-        zip_tcvsubst _ _ subst = subst -- empty case
+        zip_tcvsubst [] [] subst = subst -- empty case
+        zip_tcvsubst _  _  _     = pprPanic "zipTCvSubst: length mismatch"
+                                            (ppr tcvs <+> ppr tys)
 
 -- | Generates the in-scope set for the 'TCvSubst' from the types in the
 -- incoming environment. No CoVars, please!
@@ -3009,8 +2999,12 @@ mkTvSubstPrs prs =
           and [ isTyVar tv && not (isCoercionTy ty)
               | (tv, ty) <- prs ]
 
-zipTyEnv :: [TyVar] -> [Type] -> TvSubstEnv
+zipTyEnv :: HasDebugCallStack => [TyVar] -> [Type] -> TvSubstEnv
 zipTyEnv tyvars tys
+  | debugIsOn
+  , not (all isTyVar tyvars)
+  = pprPanic "zipTyEnv" (ppr tyvars <+> ppr tys)
+  | otherwise
   = ASSERT( all (not . isCoercionTy) tys )
     mkVarEnv (zipEqual "zipTyEnv" tyvars tys)
         -- There used to be a special case for when
@@ -3026,8 +3020,13 @@ zipTyEnv tyvars tys
         --
         -- Simplest fix is to nuke the "optimisation"
 
-zipCoEnv :: [CoVar] -> [Coercion] -> CvSubstEnv
-zipCoEnv cvs cos = mkVarEnv (zipEqual "zipCoEnv" cvs cos)
+zipCoEnv :: HasDebugCallStack => [CoVar] -> [Coercion] -> CvSubstEnv
+zipCoEnv cvs cos
+  | debugIsOn
+  , not (all isCoVar cvs)
+  = pprPanic "zipCoEnv" (ppr cvs <+> ppr cos)
+  | otherwise
+  = mkVarEnv (zipEqual "zipCoEnv" cvs cos)
 
 instance Outputable TCvSubst where
   ppr (TCvSubst ins tenv cenv)
@@ -3814,7 +3813,7 @@ Note [When to print foralls]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Mostly we want to print top-level foralls when (and only when) the user specifies
 -fprint-explicit-foralls.  But when kind polymorphism is at work, that suppresses
-too much information; see Trac #9018.
+too much information; see #9018.
 
 So I'm trying out this rule: print explicit foralls if
   a) User specifies -fprint-explicit-foralls, or
@@ -3844,7 +3843,7 @@ remember to parenthesise the operator, thus
 
    (~>) a b -> b
 
-See Trac #2766.
+See #2766.
 -}
 
 pprDataCons :: TyCon -> SDoc

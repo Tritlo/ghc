@@ -288,11 +288,31 @@ AC_DEFUN([FPTOOLS_SET_HASKELL_PLATFORM_VARS],
         esac
     }
 
+    dnl Note [autoconf assembler checks and -flto]
+    dnl ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    dnl
+    dnl Autoconf's AC_COMPILE_IFELSE macro is fragile in the case of checks
+    dnl which require that the assembler is run. Specifically, GCC does not run
+    dnl the assembler if invoked with `-c -flto`; it merely dumps its internal
+    dnl AST to the object file, to be compiled and assembled during the final
+    dnl link.
+    dnl
+    dnl This can cause configure checks like that for the
+    dnl .subsections_via_symbols directive to pass unexpected (see #16440),
+    dnl leading the build system to incorrectly conclude that the directive is
+    dnl supported.
+    dnl
+    dnl For this reason, it is important that configure checks that rely on the
+    dnl assembler failing use AC_LINK_IFELSE rather than AC_COMPILE_IFELSE,
+    dnl ensuring that the assembler sees the check.
+    dnl
+
     dnl ** check for Apple-style dead-stripping support
     dnl    (.subsections-via-symbols assembler directive)
 
     AC_MSG_CHECKING(for .subsections_via_symbols)
-    AC_COMPILE_IFELSE(
+    dnl See Note [autoconf assembler checks and -flto]
+    AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([], [__asm__ (".subsections_via_symbols");])],
         [AC_MSG_RESULT(yes)
          HaskellHaveSubsectionsViaSymbols=True
@@ -305,8 +325,9 @@ AC_DEFUN([FPTOOLS_SET_HASKELL_PLATFORM_VARS],
     dnl ** check for .ident assembler directive
 
     AC_MSG_CHECKING(whether your assembler supports .ident directive)
-    AC_COMPILE_IFELSE(
-        [AC_LANG_SOURCE([__asm__ (".ident \"GHC x.y.z\"");])],
+    dnl See Note [autoconf assembler checks and -flto]
+    AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM([__asm__ (".ident \"GHC x.y.z\"");], [])],
         [AC_MSG_RESULT(yes)
          HaskellHaveIdentDirective=True],
         [AC_MSG_RESULT(no)
@@ -330,8 +351,15 @@ AC_DEFUN([FPTOOLS_SET_HASKELL_PLATFORM_VARS],
         ;;
     esac
     AC_MSG_CHECKING(for GNU non-executable stack support)
-    AC_COMPILE_IFELSE(
-        [AC_LANG_PROGRAM([__asm__ (".section .note.GNU-stack,\"\",$progbits");], [0])],
+    dnl See Note [autoconf assembler checks and -flto]
+    AC_LINK_IFELSE(
+       dnl the `main` function is placed after the .note.GNU-stack directive
+       dnl so we need to ensure that the active segment is correctly set,
+       dnl otherwise `main` will be placed in the wrong segment.
+        [AC_LANG_PROGRAM([
+           __asm__ (".section .note.GNU-stack,\"\",$progbits");
+           __asm__ (".section .text");
+         ], [0])],
         [AC_MSG_RESULT(yes)
          HaskellHaveGnuNonexecStack=True],
         [AC_MSG_RESULT(no)
@@ -469,16 +497,16 @@ AC_DEFUN([FP_SETTINGS],
 [
     if test "$windows" = YES -a "$EnableDistroToolchain" = "NO"
     then
-        mingw_bin_prefix=mingw/bin/
-	SettingsCCompilerCommand="\$tooldir/${mingw_bin_prefix}gcc.exe"
-	SettingsHaskellCPPCommand="\$tooldir/${mingw_bin_prefix}gcc.exe"
+        mingw_bin_prefix='$$tooldir/mingw/bin/'
+        SettingsCCompilerCommand="${mingw_bin_prefix}gcc.exe"
+        SettingsHaskellCPPCommand="${mingw_bin_prefix}gcc.exe"
         SettingsHaskellCPPFlags="$HaskellCPPArgs"
-	SettingsLdCommand="\$tooldir/${mingw_bin_prefix}ld.exe"
-	SettingsArCommand="\$tooldir/${mingw_bin_prefix}ar.exe"
-	SettingsRanlibCommand="\$tooldir/${mingw_bin_prefix}ranlib.exe"
-	SettingsDllWrapCommand="\$tooldir/${mingw_bin_prefix}dllwrap.exe"
-	SettingsWindresCommand="\$tooldir/${mingw_bin_prefix}windres.exe"
-        SettingsTouchCommand='$topdir/bin/touchy.exe'
+        SettingsLdCommand="${mingw_bin_prefix}ld.exe"
+        SettingsArCommand="${mingw_bin_prefix}ar.exe"
+        SettingsRanlibCommand="${mingw_bin_prefix}ranlib.exe"
+        SettingsDllWrapCommand="${mingw_bin_prefix}dllwrap.exe"
+        SettingsWindresCommand="${mingw_bin_prefix}windres.exe"
+        SettingsTouchCommand='$$topdir/bin/touchy.exe'
     elif test "$EnableDistroToolchain" = "YES"
     then
         SettingsCCompilerCommand="$(basename $CC)"
@@ -489,7 +517,7 @@ AC_DEFUN([FP_SETTINGS],
         SettingsArCommand="$(basename $ArCmd)"
         SettingsDllWrapCommand="$(basename $DllWrapCmd)"
         SettingsWindresCommand="$(basename $WindresCmd)"
-        SettingsTouchCommand='$topdir/bin/touchy.exe'
+        SettingsTouchCommand='$$topdir/bin/touchy.exe'
     else
         SettingsCCompilerCommand="$CC"
         SettingsHaskellCPPCommand="$HaskellCPPCmd"
@@ -905,7 +933,7 @@ dnl 2. Find happy in path
 dnl 3. Check happy version
 dnl
 dnl If you increase the minimum version requirement, please also update:
-dnl https://ghc.haskell.org/trac/ghc/wiki/Building/Preparation/Tools
+dnl https://gitlab.haskell.org/ghc/ghc/wikis/building/preparation/tools
 dnl
 AC_DEFUN([FPTOOLS_HAPPY],
 [AC_PATH_PROG(HAPPY,[happy],)
@@ -923,8 +951,8 @@ changequote([, ])dnl
 ])
 if test ! -f compiler/parser/Parser.hs || test ! -f compiler/cmm/CmmParse.hs
 then
-    FP_COMPARE_VERSIONS([$fptools_cv_happy_version],[-lt],[1.19.4],
-      [AC_MSG_ERROR([Happy version 1.19.4 or later is required to compile GHC.])])[]
+    FP_COMPARE_VERSIONS([$fptools_cv_happy_version],[-lt],[1.19.10],
+      [AC_MSG_ERROR([Happy version 1.19.10 or later is required to compile GHC.])])[]
 fi
 HappyVersion=$fptools_cv_happy_version;
 AC_SUBST(HappyVersion)
@@ -938,7 +966,7 @@ dnl 2. Find alex in path
 dnl 3. Check alex version
 dnl
 dnl If you increase the minimum version requirement, please also update:
-dnl https://ghc.haskell.org/trac/ghc/wiki/Building/Preparation/Tools
+dnl https://gitlab.haskell.org/ghc/ghc/wikis/building/preparation/tools
 dnl
 AC_DEFUN([FPTOOLS_ALEX],
 [AC_PATH_PROG(ALEX,[alex],)
@@ -1483,7 +1511,7 @@ AC_SUBST([GhcPkgCmd])
 # to compile .hc code.
 #
 # -fwrapv is needed for gcc to emit well-behaved code in the presence of
-# integer wrap around. (Trac #952)
+# integer wrap around. (#952)
 #
 AC_DEFUN([FP_GCC_EXTRA_FLAGS],
 [AC_REQUIRE([FP_GCC_VERSION])

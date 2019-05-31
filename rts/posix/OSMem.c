@@ -242,7 +242,7 @@ my_mmap (void *addr, W_ size, int operation)
     if (ret == MAP_FAILED && errno == EPERM) {
         // Linux may return EPERM if it tried to give us
         // a chunk of address space below mmap_min_addr,
-        // See Trac #7500.
+        // See #7500.
         ret = linux_retry_mmap(operation, size, ret, addr, prot, flags);
     }
 # endif
@@ -546,10 +546,12 @@ void *osReserveHeapMemory(void *startAddressPtr, W_ *len)
 
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_SYS_TIME_H)
     struct rlimit limit;
+    /* rlim_t is signed on some platforms, including FreeBSD;
+     * explicitly cast to avoid sign compare error */
     if (!getrlimit(RLIMIT_AS, &limit)
         && limit.rlim_cur > 0
-        && *len > limit.rlim_cur) {
-        *len = limit.rlim_cur;
+        && *len > (W_) limit.rlim_cur) {
+        *len = (W_) limit.rlim_cur;
     }
 #endif
 

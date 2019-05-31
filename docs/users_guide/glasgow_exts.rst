@@ -679,7 +679,7 @@ View patterns
 
 View patterns are enabled by the language extension :extension:`ViewPatterns`. More
 information and examples of view patterns can be found on the
-:ghc-wiki:`Wiki page <ViewPatterns>`.
+:ghc-wiki:`Wiki page <view-patterns>`.
 
 View patterns are somewhat like pattern guards that can be nested inside
 of other patterns. They are a convenient way of pattern-matching against
@@ -2108,6 +2108,38 @@ In addition, with :extension:`PatternSynonyms` you can prefix the name of a
 data constructor in an import or export list with the keyword
 ``pattern``, to allow the import or export of a data constructor without
 its parent type constructor (see :ref:`patsyn-impexp`).
+
+.. _importqualifiedpost:
+
+Writing qualified in postpositive position
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. extension:: ImportQualifiedPost
+    :shortdesc: ``ImportQualifiedPost`` allows the syntax ``import M qualified``
+
+    :since: 8.10.1
+
+    ``ImportQualifiedPost`` allows the syntax ``import M qualified``, that is, to annotate a module as qualified by writing ``qualified`` after the module name.
+
+To import a qualified module usually you must specify ``qualified`` in prepositive position : ``import qualified M``. This often leads to a "hanging indent" (which is automatically inserted by some autoformatters and common in many code bases. For example:
+
+.. code-block::  none
+
+ import qualified A
+ import           B
+ import           C
+
+The ``ImportQualifiedPost`` extension allows ``qualified`` to appear in postpositive position : ``import M qualified``. With this extension enabled, one can write:
+
+.. code-block:: none
+
+   import A qualified
+   import B
+   import C
+
+It is an error if ``qualified`` appears in both pre and postpositive positions.
+
+The warning ``-Wprepositive-qualified-syntax`` (off by default) reports on any occurrences of imports annotated ``qualified`` using prepositive syntax.
 
 .. _block-arguments:
 
@@ -3787,7 +3819,7 @@ Haskell 98 allows the programmer to add a deriving clause to a data type
 declaration, to generate a standard instance declaration for specified class.
 GHC extends this mechanism along several axes:
 
-* The derivation mechanism can be used separtely from the data type
+* The derivation mechanism can be used separately from the data type
   declaration, using the `standalone deriving mechanism
   <#stand-alone-deriving>`__.
 
@@ -4459,7 +4491,7 @@ types containing a function type on the right-hand side.
 
 For a full specification of the algorithms used in :extension:`DeriveFunctor`,
 :extension:`DeriveFoldable`, and :extension:`DeriveTraversable`, see
-:ghc-wiki:`this wiki page <Commentary/Compiler/DeriveFunctor>`.
+:ghc-wiki:`this wiki page <commentary/compiler/derive-functor>`.
 
 .. _deriving-data:
 
@@ -4531,7 +4563,8 @@ Deriving ``Lift`` instances
 The class ``Lift``, unlike other derivable classes, lives in
 ``template-haskell`` instead of ``base``. Having a data type be an instance of
 ``Lift`` permits its values to be promoted to Template Haskell expressions (of
-type ``ExpQ``), which can then be spliced into Haskell source code.
+type ``ExpQ`` and ``TExpQ a``), which can then be spliced into Haskell source
+code.
 
 Here is an example of how one can derive ``Lift``:
 
@@ -4546,17 +4579,11 @@ Here is an example of how one can derive ``Lift``:
 
     {-
     instance (Lift a) => Lift (Foo a) where
-        lift (Foo a)
-        = appE
-            (conE
-                (mkNameG_d "package-name" "Bar" "Foo"))
-            (lift a)
-        lift (u :^: v)
-        = infixApp
-            (lift u)
-            (conE
-                (mkNameG_d "package-name" "Bar" ":^:"))
-            (lift v)
+        lift (Foo a) = [| Foo a |]
+        lift ((:^:) u v) = [| (:^:) u v |]
+
+        liftTyped (Foo a) = [|| Foo a ||]
+        liftTyped ((:^:) u v) = [|| (:^:) u v ||]
     -}
 
     -----
@@ -4572,8 +4599,9 @@ Here is an example of how one can derive ``Lift``:
     fooExp :: Lift a => Foo a -> Q Exp
     fooExp f = [| f |]
 
-:extension:`DeriveLift` also works for certain unboxed types (``Addr#``, ``Char#``,
-``Double#``, ``Float#``, ``Int#``, and ``Word#``):
+Note that the ``Lift`` typeclass takes advantage of :ref:`runtime-rep` in order
+to support instances involving unboxed types. This means :extension:`DeriveLift`
+also works for these types:
 
 ::
 
@@ -4587,12 +4615,8 @@ Here is an example of how one can derive ``Lift``:
 
     {-
     instance Lift IntHash where
-        lift (IntHash i)
-        = appE
-            (conE
-                (mkNameG_d "package-name" "Unboxed" "IntHash"))
-            (litE
-                (intPrimL (toInteger (I# i))))
+        lift (IntHash i) = [| IntHash i |]
+        liftTyped (IntHash i) = [|| IntHash i ||]
     -}
 
 
@@ -5333,7 +5357,7 @@ Pattern synonyms
 
 Pattern synonyms are enabled by the language extension :extension:`PatternSynonyms`, which is
 required for defining them, but *not* for using them. More information and
-examples of pattern synonyms can be found on the :ghc-wiki:`Wiki page <PatternSynonyms>`.
+examples of pattern synonyms can be found on the :ghc-wiki:`Wiki page <pattern-synonyms>`.
 
 Pattern synonyms enable giving names to parametrized pattern schemes.
 They can also be thought of as abstract constructors that don't have a
@@ -5535,7 +5559,7 @@ following subsections.
 There are also lots more details in the `paper
 <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/08/pattern-synonyms-Haskell16.pdf>`_.
 
-See the :ghc-wiki:`Wiki page <PatternSynonyms>` for more
+See the :ghc-wiki:`Wiki page <pattern-synonyms>` for more
 details.
 
 Syntax and scoping of pattern synonyms
@@ -5644,7 +5668,7 @@ incompatible with ``T``.
 A module which imports ``MyNum(..)`` from ``Example`` and then re-exports
 ``MyNum(..)`` will also export any pattern synonyms bundled with ``MyNum`` in
 ``Example``. A more complete specification can be found on the
-:ghc-wiki:`wiki. <PatternSynonyms/AssociatingSynonyms>`
+:ghc-wiki:`wiki. <pattern-synonyms/associating-synonyms>`
 
 
 .. _patsyn-typing:
@@ -5737,7 +5761,7 @@ Note also the following points
          pattern P x y v <- MkT True x y (v::a)
 
    Here the universal type variable `a` scopes over the definition of `P`,
-   but the existential `b` does not.  (c.f. discussion on Trac #14998.)
+   but the existential `b` does not.  (c.f. discussion on #14998.)
 
 -  For a bidirectional pattern synonym, a use of the pattern synonym as
    an expression has the type
@@ -7422,7 +7446,7 @@ But superclass constraints like these are sometimes useful, and the conservative
 check is annoying where no actual recursion is involved.
 
 Moreover genuninely-recursive superclasses are sometimes useful. Here's a real-life
-example (Trac #10318) ::
+example (#10318) ::
 
      class (Frac (Frac a) ~ Frac a,
             Fractional (Frac a),
@@ -8142,14 +8166,15 @@ Note the following points:
 -  A default declaration is not permitted for an associated *data* type.
 
 -  The default declaration must mention only type *variables* on the
-   left hand side, and the right hand side must mention only type
+   left hand side, and type variables may not be repeated on the left-hand
+   side. The right hand side must mention only type
    variables that are explicitly bound on the left hand side. This restriction
    is relaxed for *kind* variables, however, as the right hand side is allowed
    to mention kind variables that are implicitly bound on the left hand side.
 
-   Because of this, unlike :ref:`assoc-inst`, explicit binding of type/kind
-   variables in default declarations is not permitted by
-   :extension:`ExplicitForAll`.
+   Like with :ref:`assoc-inst`, it is possible to explicitly bind type and kind
+   variables in default declarations with a ``forall`` by using the
+   :extension:`ExplicitForAll` language extension.
 
 -  Unlike the associated type family declaration itself, the type variables of
    the default instance are independent of those of the parent class.
@@ -8168,25 +8193,50 @@ Here are some examples:
         type instance F2 c d = c->d  -- OK; you don't have to use 'a' in the type instance
 
         type F3 a
-        type F3 [b] = b              -- BAD; only type variables allowed on the LHS
+        type F3 [b] = b              -- BAD; only type variables allowed on the
+                                             LHS, and the argument to F3 is
+                                             instantiated to [b], which is not
+                                             a bare type variable
 
-        type F4 a
-        type F4 b = a                -- BAD; 'a' is not in scope  in the RHS
+        type F4 x y
+        type F4 x x = x              -- BAD; the type variable x is repeated on
+                                             the LHS
 
-        type F5 a :: [k]
-        type F5 a = ('[] :: [x])     -- OK; the kind variable x is implicitly
+        type F5 a
+        type F5 b = a                -- BAD; 'a' is not in scope  in the RHS
+
+        type F6 a :: [k]
+        type F6 a = ('[] :: [x])     -- OK; the kind variable x is implicitly
                                             bound by an invisible kind pattern
                                             on the LHS
 
-        type F6 a
-        type F6 a =
+        type F7 a
+        type F7 a =
           Proxy ('[] :: [x])         -- BAD; the kind variable x is not bound,
                                              even by an invisible kind pattern
 
-        type F7 (x :: a) :: [a]
-        type F7 x = ('[] :: [a])     -- OK; the kind variable a is implicitly
+        type F8 (x :: a) :: [a]
+        type F8 x = ('[] :: [a])     -- OK; the kind variable a is implicitly
                                             bound by the kind signature of the
                                             LHS type pattern
+
+        type F9 (a :: k)
+        type F9 a = Maybe a          -- BAD; the kind variable k is
+                                             instantiated to Type, which is not
+                                             a bare kind variable
+
+        type F10 (a :: j) (b :: k)
+        type F10 (a :: z) (b :: z)
+          = Proxy a                  -- BAD; the kind variable z is repeated,
+                                     -- as both j and k are instantiated to z
+
+        type F11 a b
+        type forall a b. F11 a b = a -- OK; LHS type variables can be
+                                        explicitly bound with 'forall'
+
+        type F12 (a :: k)
+        type F12 @k a = Proxy a      -- OK; visible kind application syntax is
+                                            permitted in default declarations
 
 .. _scoping-class-params:
 
@@ -8988,6 +9038,11 @@ do so.
 Complete user-supplied kind signatures and polymorphic recursion
 ----------------------------------------------------------------
 
+.. extension:: CUSKs
+    :shortdesc: Enable detection of complete user-supplied kind signatures.
+
+    :since: 8.10.1
+
 Just as in type inference, kind inference for recursive types can only
 use *monomorphic* recursion. Consider this (contrived) example: ::
 
@@ -9085,6 +9140,13 @@ example, consider ::
 
 According to the rules above ``X`` has a CUSK. Yet, the kind of ``k`` is undetermined.
 It is thus quantified over, giving ``X`` the kind ``forall k1 (k :: k1). Proxy k -> Type``.
+
+The detection of CUSKs is enabled by the :extension:`CUSKs` flag, which is
+switched on by default. When :extension:`CUSKs` is switched off, there is
+currently no way to enable polymorphic recursion in types. In the future, the
+notion of a CUSK will be replaced by top-level kind signatures
+(`GHC Proposal #36 <https://github.com/ghc-proposals/ghc-proposals/blob/master/proposals/0036-kind-signatures.rst>`__),
+then, after a transition period, this extension will be turned off by default, and eventually removed.
 
 Kind inference in closed type families
 --------------------------------------
@@ -9403,7 +9465,8 @@ Here is an example of a constrained kind: ::
 The declarations above are accepted. However, if we add ``MkOther :: T Int``,
 we get an error that the equality constraint is not satisfied; ``Int`` is
 not a type literal. Note that explicitly quantifying with ``forall a`` is
-not necessary here.
+necessary in order for ``T`` to typecheck
+(see :ref:`complete-kind-signatures`).
 
 The kind ``Type``
 -----------------
@@ -9632,7 +9695,17 @@ when printing, and printing ``TYPE 'LiftedRep`` as ``Type`` (or ``*`` when
 :extension:`StarIsType` is on).
 
 Should you wish to see levity polymorphism in your types, enable
-the flag :ghc-flag:`-fprint-explicit-runtime-reps`.
+the flag :ghc-flag:`-fprint-explicit-runtime-reps`. For example,
+
+    .. code-block:: none
+
+        ghci> :t ($)
+        ($) :: (a -> b) -> a -> b
+        ghci> :set -fprint-explicit-runtime-reps
+        ghci> :t ($)
+        ($)
+          :: forall (r :: GHC.Types.RuntimeRep) a (b :: TYPE r).
+             (a -> b) -> a -> b
 
 .. _type-level-literals:
 
@@ -10045,7 +10118,7 @@ Notes:
    instance (forall xx. c (Free c xx)) => Monad (Free c) where
        Free f >>= g = f g
 
-  See `Iceland Jack's summary <https://ghc.haskell.org/trac/ghc/ticket/14733#comment:6>`_.  The key point is that the bit to the right of the ``=>`` may be headed by a type *variable* (``c`` in this case), rather than a class.  It should not be one of the forall'd variables, though.
+  See `Iceland Jack's summary <https://gitlab.haskell.org/ghc/ghc/issues/14733#note_148352>`_.  The key point is that the bit to the right of the ``=>`` may be headed by a type *variable* (``c`` in this case), rather than a class.  It should not be one of the forall'd variables, though.
 
   (NB: this goes beyond what is described in `the paper <http://i.cs.hku.hk/~bruno//papers/hs2017.pdf>`_, but does not seem to introduce any new technical difficulties.)
 
@@ -10357,6 +10430,25 @@ However, even with ambiguity checking switched off, GHC will complain about a
 function that can *never* be called, such as this one: ::
 
       f :: (Int ~ Bool) => a -> a
+
+Sometimes :extension:`AllowAmbiguousTypes` does not mix well with :extension:`RankNTypes`.
+For example: ::
+
+      foo :: forall r. (forall i. (KnownNat i) => r) -> r
+      foo f = f @1
+
+      boo :: forall j. (KnownNat j) => Int
+      boo = ....
+
+      h :: Int
+      h = foo boo
+
+This program will be rejected as ambiguous because GHC will not unify
+the type variables `j` and `i`.
+
+Unlike the previous examples, it is not currently possible
+to resolve the ambiguity manually by using :extension:`TypeApplications`.
+
 
 .. note::
     *A historical note.* GHC used to impose some more restrictive and less
@@ -10872,7 +10964,7 @@ We say that the type variables in ``f`` are *specified*, while those in
 a type variable in the source program, it is *specified*; if not, it is
 *inferred*.
 
-Thus rule applies in datatype declarations, too. For example, if we have
+This rule applies in datatype declarations, too. For example, if we have
 ``data Proxy a = Proxy`` (and :extension:`PolyKinds` is enabled), then
 ``a`` will be assigned kind ``k``, where ``k`` is a fresh kind variable.
 Because ``k`` was not written by the user, it will be unavailable for
@@ -11498,7 +11590,7 @@ Notice here that the ``Maybe`` type is parameterised by the
 should be considered highly experimental, and certainly un-supported*.
 You are welcome to try it, but please don't rely on it working
 consistently, or working the same in subsequent releases. See
-:ghc-wiki:`this wiki page <ImpredicativePolymorphism>` for more details.
+:ghc-wiki:`this wiki page <impredicative-polymorphism>` for more details.
 
 If you want impredicative polymorphism, the main workaround is to use a
 newtype wrapper. The ``id runST`` example can be written using this
@@ -12504,7 +12596,7 @@ that we're interested in is ``main`` it can be useful to be able to
 ignore the problems in ``a``.
 
 For more motivation and details please refer to the
-:ghc-wiki:`Wiki <DeferErrorsToRuntime>` page or the `original
+:ghc-wiki:`Wiki <defer-errors-to-runtime>` page or the `original
 paper <http://dreixel.net/research/pdf/epdtecp.pdf>`__.
 
 Enabling deferring of type errors
@@ -12600,7 +12692,7 @@ In a few cases, even equality constraints cannot be deferred.  Specifically:
 
   This type signature contains a kind error which cannot be deferred.
 
-- Type equalities under a forall cannot be deferred (c.f. Trac #14605).
+- Type equalities under a forall cannot be deferred (c.f. #14605).
 
 .. _template-haskell:
 

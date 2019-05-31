@@ -247,7 +247,7 @@ When it calls RnEnv.unknownNameSuggestions to identify these alternatives, the
 typechecker must provide a GlobalRdrEnv.  If it provided the current one, which
 contains top-level declarations for the entire module, the error message would
 incorrectly suggest the out-of-scope `bar` and `bad` as possible alternatives
-for `bar` (see Trac #11680).  Instead, the typechecker must use the same
+for `bar` (see #11680).  Instead, the typechecker must use the same
 GlobalRdrEnv the renamer used when it determined that `bar` is out-of-scope.
 
 To obtain this GlobalRdrEnv, can the typechecker simply use the out-of-scope
@@ -625,32 +625,6 @@ data HsExpr p
      (LHsExpr p)
 
   ---------------------------------------
-  -- These constructors only appear temporarily in the parser.
-  -- The renamer translates them into the Right Thing.
-
-  | EWildPat (XEWildPat p)        -- wildcard
-
-  -- | - 'ApiAnnotation.AnnKeywordId' : 'ApiAnnotation.AnnAt'
-
-  -- For details on above see note [Api annotations] in ApiAnnotation
-  | EAsPat      (XEAsPat p)
-                (Located (IdP p)) -- as pattern
-                (LHsExpr p)
-
-  -- | - 'ApiAnnotation.AnnKeywordId' : 'ApiAnnotation.AnnRarrow'
-
-  -- For details on above see note [Api annotations] in ApiAnnotation
-  | EViewPat    (XEViewPat p)
-                (LHsExpr p) -- view pattern
-                (LHsExpr p)
-
-  -- | - 'ApiAnnotation.AnnKeywordId' : 'ApiAnnotation.AnnTilde'
-
-  -- For details on above see note [Api annotations] in ApiAnnotation
-  | ELazyPat    (XELazyPat p) (LHsExpr p) -- ~ pattern
-
-
-  ---------------------------------------
   -- Finally, HsWrap appears only in typechecker output
   -- The contained Expr is *NOT* itself an HsWrap.
   -- See Note [Detecting forced eta expansion] in DsExpr. This invariant
@@ -758,18 +732,9 @@ type instance XStatic        GhcPs = NoExt
 type instance XStatic        GhcRn = NameSet
 type instance XStatic        GhcTc = NameSet
 
-type instance XArrApp        GhcPs = NoExt
-type instance XArrApp        GhcRn = NoExt
-type instance XArrApp        GhcTc = Type
-
-type instance XArrForm       (GhcPass _) = NoExt
 type instance XTick          (GhcPass _) = NoExt
 type instance XBinTick       (GhcPass _) = NoExt
 type instance XTickPragma    (GhcPass _) = NoExt
-type instance XEWildPat      (GhcPass _) = NoExt
-type instance XEAsPat        (GhcPass _) = NoExt
-type instance XEViewPat      (GhcPass _) = NoExt
-type instance XELazyPat      (GhcPass _) = NoExt
 type instance XWrap          (GhcPass _) = NoExt
 type instance XXExpr         (GhcPass _) = NoExt
 
@@ -929,21 +894,12 @@ ppr_expr e@(HsApp {})        = ppr_apps e []
 ppr_expr e@(HsAppType {})    = ppr_apps e []
 
 ppr_expr (OpApp _ e1 op e2)
-  | Just pp_op <- should_print_infix (unLoc op)
+  | Just pp_op <- ppr_infix_expr (unLoc op)
   = pp_infixly pp_op
   | otherwise
   = pp_prefixly
 
   where
-    should_print_infix (HsVar _ (L _ v)) = Just (pprInfixOcc v)
-    should_print_infix (HsConLikeOut _ c)= Just (pprInfixOcc (conLikeName c))
-    should_print_infix (HsRecFld _ f)    = Just (pprInfixOcc f)
-    should_print_infix (HsUnboundVar _ h@TrueExprHole{})
-                                       = Just (pprInfixOcc (unboundVarOcc h))
-    should_print_infix (EWildPat _)    = Just (text "`_`")
-    should_print_infix (HsWrap _ _ e)  = should_print_infix e
-    should_print_infix _               = Nothing
-
     pp_e1 = pprDebugParendExpr opPrec e1   -- In debug mode, add parens
     pp_e2 = pprDebugParendExpr opPrec e2   -- to make precedence clear
 
@@ -956,36 +912,30 @@ ppr_expr (OpApp _ e1 op e2)
 ppr_expr (NegApp _ e _) = char '-' <+> pprDebugParendExpr appPrec e
 
 ppr_expr (SectionL _ expr op)
-  = case unLoc op of
-      HsVar _ (L _ v)  -> pp_infixly v
-      HsConLikeOut _ c -> pp_infixly (conLikeName c)
-      HsUnboundVar _ h@TrueExprHole{}
-                       -> pp_infixly (unboundVarOcc h)
-      _                -> pp_prefixly
+  | Just pp_op <- ppr_infix_expr (unLoc op)
+  = pp_infixly pp_op
+  | otherwise
+  = pp_prefixly
   where
     pp_expr = pprDebugParendExpr opPrec expr
 
     pp_prefixly = hang (hsep [text " \\ x_ ->", ppr op])
                        4 (hsep [pp_expr, text "x_ )"])
 
-    pp_infixly :: forall a. (OutputableBndr a) => a -> SDoc
-    pp_infixly v = (sep [pp_expr, pprInfixOcc v])
+    pp_infixly v = (sep [pp_expr, v])
 
 ppr_expr (SectionR _ op expr)
-  = case unLoc op of
-      HsVar _ (L _ v)  -> pp_infixly v
-      HsConLikeOut _ c -> pp_infixly (conLikeName c)
-      HsUnboundVar _ h@TrueExprHole{}
-                       -> pp_infixly (unboundVarOcc h)
-      _                -> pp_prefixly
+  | Just pp_op <- ppr_infix_expr (unLoc op)
+  = pp_infixly pp_op
+  | otherwise
+  = pp_prefixly
   where
     pp_expr = pprDebugParendExpr opPrec expr
 
     pp_prefixly = hang (hsep [text "( \\ x_ ->", ppr op, text "x_"])
                        4 (pp_expr <> rparen)
 
-    pp_infixly :: forall a. (OutputableBndr a) => a -> SDoc
-    pp_infixly v = sep [pprInfixOcc v, pp_expr]
+    pp_infixly v = sep [v, pp_expr]
 
 ppr_expr (ExplicitTuple _ exprs boxity)
   = tupleParens (boxityTupleSort boxity) (fcat (ppr_tup_args $ map unLoc exprs))
@@ -1062,11 +1012,6 @@ ppr_expr (ExprWithTySig _ expr sig)
 
 ppr_expr (ArithSeq _ _ info) = brackets (ppr info)
 
-ppr_expr (EWildPat _)     = char '_'
-ppr_expr (ELazyPat _ e)   = char '~' <> ppr e
-ppr_expr (EAsPat _ (L _ v) e) = pprPrefixOcc v <> char '@' <> ppr e
-ppr_expr (EViewPat _ p e) = ppr p <+> text "->" <+> ppr e
-
 ppr_expr (HsSCC _ st (StringLiteral stl lbl) expr)
   = sep [ pprWithSourceText st (text "{-# SCC")
          -- no doublequotes if stl empty, for the case where the SCC was written
@@ -1114,6 +1059,14 @@ ppr_expr (HsTickPragma _ _ externalSrcLoc _ exp)
 
 ppr_expr (HsRecFld _ f) = ppr f
 ppr_expr (XExpr x) = ppr x
+
+ppr_infix_expr :: (OutputableBndrId (GhcPass p)) => HsExpr (GhcPass p) -> Maybe SDoc
+ppr_infix_expr (HsVar _ (L _ v)) = Just (pprInfixOcc v)
+ppr_infix_expr (HsConLikeOut _ c)= Just (pprInfixOcc (conLikeName c))
+ppr_infix_expr (HsRecFld _ f)    = Just (pprInfixOcc f)
+ppr_infix_expr (HsUnboundVar _ h@TrueExprHole{}) = Just (pprInfixOcc (unboundVarOcc h))
+ppr_infix_expr (HsWrap _ _ e)    = ppr_infix_expr e
+ppr_infix_expr _                 = Nothing
 
 ppr_apps :: (OutputableBndrId (GhcPass p))
          => HsExpr (GhcPass p)
@@ -1201,10 +1154,6 @@ hsExprNeedsParens p = go
     go (RecordUpd{})                  = False
     go (ExprWithTySig{})              = p >= sigPrec
     go (ArithSeq{})                   = False
-    go (EWildPat{})                   = False
-    go (ELazyPat{})                   = False
-    go (EAsPat{})                     = False
-    go (EViewPat{})                   = True
     go (HsSCC{})                      = p >= appPrec
     go (HsWrap _ _ e)                 = go e
     go (HsSpliceE{})                  = False
@@ -2012,7 +1961,7 @@ Note [The type of bind in Stmts]
 Some Stmts, notably BindStmt, keep the (>>=) bind operator.
 We do NOT assume that it has type
     (>>=) :: m a -> (a -> m b) -> m b
-In some cases (see Trac #303, #1537) it might have a more
+In some cases (see #303, #1537) it might have a more
 exotic type, such as
     (>>=) :: m i j a -> (a -> m j k b) -> m i k b
 So we must be careful not to make assumptions about the type.
@@ -2306,7 +2255,7 @@ pprComp quals     -- Prints:  body | qual1, ..., qualn
        -- one, we simply treat it like a normal list. This does arise
        -- occasionally in code that GHC generates, e.g., in implementations of
        -- 'range' for derived 'Ix' instances for product datatypes with exactly
-       -- one constructor (e.g., see Trac #12583).
+       -- one constructor (e.g., see #12583).
        then ppr body
        else hang (ppr body <+> vbar) 2 (pprQuals initStmts)
   | otherwise

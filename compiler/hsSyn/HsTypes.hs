@@ -105,14 +105,22 @@ import Data.Data hiding ( Fixity, Prefix, Infix )
 type LBangType pass = Located (BangType pass)
 
 -- | Bang Type
+--
+-- In the parser, strictness and packedness annotations bind more tightly
+-- than docstrings. This means that when consuming a 'BangType' (and looking
+-- for 'HsBangTy') we must be ready to peer behind a potential layer of
+-- 'HsDocTy'. See #15206 for motivation and 'getBangType' for an example.
 type BangType pass  = HsType pass       -- Bangs are in the HsType data type
 
 getBangType :: LHsType a -> LHsType a
-getBangType (L _ (HsBangTy _ _ ty)) = ty
-getBangType ty                      = ty
+getBangType                 (L _ (HsBangTy _ _ lty))       = lty
+getBangType (L _ (HsDocTy x (L _ (HsBangTy _ _ lty)) lds)) =
+  addCLoc lty lds (HsDocTy x lty lds)
+getBangType lty                                            = lty
 
 getBangStrictness :: LHsType a -> HsSrcBang
-getBangStrictness (L _ (HsBangTy _ s _)) = s
+getBangStrictness                 (L _ (HsBangTy _ s _))     = s
+getBangStrictness (L _ (HsDocTy _ (L _ (HsBangTy _ s _)) _)) = s
 getBangStrictness _ = (HsSrcBang NoSourceText NoSrcUnpack NoSrcStrict)
 
 {-
@@ -213,7 +221,7 @@ Note carefully:
   Or even:
         f :: forall _a. _a -> _b
   Here _a is an ordinary forall'd binder, but (With NamedWildCards)
-  _b is a named wildcard.  (See the comments in Trac #10982)
+  _b is a named wildcard.  (See the comments in #10982)
 
 * Named wildcards are bound by the HsWildCardBndrs construct, which wraps
   types that are allowed to have wildcards. Unnamed wildcards however are left
@@ -757,7 +765,7 @@ After renaming
 Qualified currently behaves exactly as Implicit,
 but it is deprecated to use it for implicit quantification.
 In this case, GHC 7.10 gives a warning; see
-Note [Context quantification] in RnTypes, and Trac #4426.
+Note [Context quantification] in RnTypes, and #4426.
 In GHC 8.0, Qualified will no longer bind variables
 and this will become an error.
 
@@ -1065,7 +1073,7 @@ mkHsAppKindTy ext ty k
 -- Breaks up any parens in the result type:
 --      splitHsFunType (a -> (b -> c)) = ([a,b], c)
 -- Also deals with (->) t1 t2; that is why it only works on LHsType Name
---   (see Trac #9096)
+--   (see #9096)
 splitHsFunType :: LHsType GhcRn -> ([LHsType GhcRn], LHsType GhcRn)
 splitHsFunType (L _ (HsParTy _ ty))
   = splitHsFunType ty
@@ -1483,7 +1491,7 @@ pprConDeclFields fields = braces (sep (punctuate comma (map ppr_fld fields)))
 {-
 Note [Printing KindedTyVars]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Trac #3830 reminded me that we should really only print the kind
+#3830 reminded me that we should really only print the kind
 signature on a KindedTyVar if the kind signature was put there by the
 programmer.  During kind inference GHC now adds a PostTcKind to UserTyVars,
 rather than converting to KindedTyVars as before.

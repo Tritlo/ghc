@@ -54,8 +54,6 @@ import FamInst
 import FamInstEnv
 import PrelNames
 import THNames
-import Module ( moduleName, moduleNameString
-              , moduleUnitId, unitIdString )
 import MkId ( coerceId )
 import PrimOp
 import SrcLoc
@@ -217,7 +215,7 @@ gen_Eq_binds loc tycon = do
         nested_eq_expr tys as bs
           = foldr1 and_Expr (zipWith3Equal "nested_eq" nested_eq tys as bs)
           -- Using 'foldr1' here ensures that the derived code is correctly
-          -- associated. See Trac #10859.
+          -- associated. See #10859.
           where
             nested_eq ty a b = nlHsPar (eq_Expr ty (nlHsVar a) (nlHsVar b))
 
@@ -278,7 +276,7 @@ Several special cases:
 Note [Game plan for deriving Ord]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 It's a bad idea to define only 'compare', and build the other binary
-comparisons on top of it; see Trac #2130, #4019.  Reason: we don't
+comparisons on top of it; see #2130, #4019.  Reason: we don't
 want to laboriously make a three-way comparison, only to extract a
 binary result, something like this:
      (>) (I# x) (I# y) = case <# x y of
@@ -687,9 +685,9 @@ gen_Bounded_binds loc tycon
     arity          = dataConSourceArity data_con_1
 
     min_bound_1con = mkHsVarBind loc minBound_RDR $
-                     nlHsVarApps data_con_1_RDR (nOfThem arity minBound_RDR)
+                     nlHsVarApps data_con_1_RDR (replicate arity minBound_RDR)
     max_bound_1con = mkHsVarBind loc maxBound_RDR $
-                     nlHsVarApps data_con_1_RDR (nOfThem arity maxBound_RDR)
+                     nlHsVarApps data_con_1_RDR (replicate arity maxBound_RDR)
 
 {-
 ************************************************************************
@@ -870,7 +868,7 @@ gen_Ix_binds loc tycon = do
                  con_pat cs_needed] $
           if con_arity == 0
              -- If the product type has no fields, inRange is trivially true
-             -- (see Trac #12853).
+             -- (see #12853).
              then true_Expr
              else foldl1 and_Expr (zipWith3Equal "single_con_inRange" in_range
                     as_needed bs_needed cs_needed)
@@ -927,12 +925,12 @@ rather than
    Ident "T1" <- lexP
 The latter desugares to inline code for matching the Ident and the
 string, and this can be very voluminous. The former is much more
-compact.  Cf Trac #7258, although that also concerned non-linearity in
+compact.  Cf #7258, although that also concerned non-linearity in
 the occurrence analyser, a separate issue.
 
 Note [Read for empty data types]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-What should we get for this?  (Trac #7931)
+What should we get for this?  (#7931)
    data Emp deriving( Read )   -- No data constructors
 
 Here we want
@@ -1060,7 +1058,7 @@ gen_Read_binds get_fixity loc tycon
 
     -- For constructors and field labels ending in '#', we hackily
     -- let the lexer generate two tokens, and look for both in sequence
-    -- Thus [Ident "I"; Symbol "#"].  See Trac #5041
+    -- Thus [Ident "I"; Symbol "#"].  See #5041
     ident_h_pat s | Just (ss, '#') <- snocView s = [ ident_pat ss, symbol_pat "#" ]
                   | otherwise                    = [ ident_pat s ]
 
@@ -1313,7 +1311,7 @@ gen_Data_binds loc rep_tc
 
        -- Make unique names for the data type and constructor
        -- auxiliary bindings.  Start with the name of the TyCon/DataCon
-       -- but that might not be unique: see Trac #12245.
+       -- but that might not be unique: see #12245.
        ; dt_occ  <- chooseUniqueOccTc (mkDataTOcc (getOccName rep_tc))
        ; dc_occs <- mapM (chooseUniqueOccTc . mkDataCOcc . getOccName)
                          (tyConDataCons rep_tc)
@@ -1430,7 +1428,7 @@ gen_data dflags data_type_name constr_names loc rep_tc
         -- because D :: * -> *
         -- even though rep_tc has kind * -> * -> * -> *
         -- Hence looking for the kind of fam_tc not rep_tc
-        -- See Trac #4896
+        -- See #4896
     tycon_kind = case tyConFamInst_maybe rep_tc of
                     Just (fam_tc, _) -> tyConKind fam_tc
                     Nothing          -> tyConKind rep_tc
@@ -1559,68 +1557,36 @@ Example:
     ==>
 
     instance (Lift a) => Lift (Foo a) where
-        lift (Foo a)
-          = appE
-              (conE
-                (mkNameG_d "package-name" "ModuleName" "Foo"))
-              (lift a)
-        lift (u :^: v)
-          = infixApp
-              (lift u)
-              (conE
-                (mkNameG_d "package-name" "ModuleName" ":^:"))
-              (lift v)
+        lift (Foo a) = [| Foo a |]
+        lift ((:^:) u v) = [| (:^:) u v |]
 
-Note that (mkNameG_d "package-name" "ModuleName" "Foo") is equivalent to what
-'Foo would be when using the -XTemplateHaskell extension. To make sure that
--XDeriveLift can be used on stage-1 compilers, however, we explicitly invoke
-makeG_d.
+        liftTyped (Foo a) = [|| Foo a ||]
+        liftTyped ((:^:) u v) = [|| (:^:) u v ||]
 -}
 
+
 gen_Lift_binds :: SrcSpan -> TyCon -> (LHsBinds GhcPs, BagDerivStuff)
-gen_Lift_binds loc tycon = (unitBag lift_bind, emptyBag)
+gen_Lift_binds loc tycon = (listToBag [lift_bind, liftTyped_bind], emptyBag)
   where
-    lift_bind = mkFunBindEC 1 loc lift_RDR (nlHsApp pure_Expr)
-                            (map pats_etc data_cons)
+    lift_bind      = mkFunBindEC 1 loc lift_RDR (nlHsApp pure_Expr)
+                                 (map (pats_etc mk_exp) data_cons)
+    liftTyped_bind = mkFunBindEC 1 loc liftTyped_RDR (nlHsApp pure_Expr)
+                                 (map (pats_etc mk_texp) data_cons)
+
+    mk_exp = ExpBr NoExt
+    mk_texp = TExpBr NoExt
     data_cons = tyConDataCons tycon
 
-    pats_etc data_con
+    pats_etc mk_bracket data_con
       = ([con_pat], lift_Expr)
        where
             con_pat      = nlConVarPat data_con_RDR as_needed
             data_con_RDR = getRdrName data_con
             con_arity    = dataConSourceArity data_con
             as_needed    = take con_arity as_RDRs
-            lifted_as    = zipWithEqual "mk_lift_app" mk_lift_app
-                             tys_needed as_needed
-            tycon_name   = tyConName tycon
-            is_infix     = dataConIsInfix data_con
-            tys_needed   = dataConOrigArgTys data_con
-
-            mk_lift_app ty a
-              | not (isUnliftedType ty) = nlHsApp (nlHsVar lift_RDR)
-                                                  (nlHsVar a)
-              | otherwise = nlHsApp (nlHsVar litE_RDR)
-                              (primLitOp (mkBoxExp (nlHsVar a)))
-              where (primLitOp, mkBoxExp) = primLitOps "Lift" ty
-
-            pkg_name = unitIdString . moduleUnitId
-                     . nameModule $ tycon_name
-            mod_name = moduleNameString . moduleName . nameModule $ tycon_name
-            con_name = occNameString . nameOccName . dataConName $ data_con
-
-            conE_Expr = nlHsApp (nlHsVar conE_RDR)
-                                (nlHsApps mkNameG_dRDR
-                                  (map (nlHsLit . mkHsString)
-                                    [pkg_name, mod_name, con_name]))
-
-            lift_Expr
-              | is_infix  = nlHsApps infixApp_RDR [a1, conE_Expr, a2]
-              | otherwise = foldl' mk_appE_app conE_Expr lifted_as
-            (a1:a2:_) = lifted_as
-
-mk_appE_app :: LHsExpr GhcPs -> LHsExpr GhcPs -> LHsExpr GhcPs
-mk_appE_app a b = nlHsApps appE_RDR [a, b]
+            lift_Expr    = noLoc (HsBracket NoExt (mk_bracket br_body))
+            br_body      = nlHsApps (Exact (dataConName data_con))
+                                    (map nlHsVar as_needed)
 
 {-
 ************************************************************************
@@ -1684,7 +1650,7 @@ TcDeriv.genInst. See #8503 for more discussion.
 
 Note [Newtype-deriving trickiness]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Consider (Trac #12768):
+Consider (#12768):
   class C a where { op :: D a => a -> a }
 
   instance C a  => C [a] where { op = opList }
@@ -2091,7 +2057,7 @@ mkRdrFunBindEC arity catch_all
    --     foldMap _ z = mempty
    -- It's needed if there no data cons at all,
    -- which can happen with -XEmptyDataDecls
-   -- See Trac #4302
+   -- See #4302
    matches' = if null matches
               then [mkMatch (mkPrefixFunRhs fun)
                             (replicate (arity - 1) nlWildPat ++ [z_Pat])
@@ -2111,7 +2077,7 @@ mkRdrFunBindSE arity
    --     compare _ _ = error "Void compare"
    -- It's needed if there no data cons at all,
    -- which can happen with -XEmptyDataDecls
-   -- See Trac #4302
+   -- See #4302
    matches' = if null matches
               then [mkMatch (mkPrefixFunRhs fun)
                             (replicate arity nlWildPat)
@@ -2133,17 +2099,6 @@ primOrdOps :: String    -- The class involved
            -> (RdrName, RdrName, RdrName, RdrName, RdrName)  -- (lt,le,eq,ge,gt)
 -- See Note [Deriving and unboxed types] in TcDerivInfer
 primOrdOps str ty = assoc_ty_id str ordOpTbl ty
-
-primLitOps :: String -- The class involved
-           -> Type   -- The type
-           -> ( LHsExpr GhcPs -> LHsExpr GhcPs -- Constructs a Q Exp value
-              , LHsExpr GhcPs -> LHsExpr GhcPs -- Constructs a boxed value
-              )
-primLitOps str ty = (assoc_ty_id str litConTbl ty, \v -> boxed v)
-  where
-    boxed v
-      | ty `eqType` addrPrimTy = nlHsVar unpackCString_RDR `nlHsApp` v
-      | otherwise = assoc_ty_id str boxConTbl ty v
 
 ordOpTbl :: [(Type, (RdrName, RdrName, RdrName, RdrName, RdrName))]
 ordOpTbl
@@ -2425,7 +2380,7 @@ We often want to make a top-level auxiliary binding.  E.g. for comparison we hae
 Of course these top-level bindings should all have distinct name, and we are
 generating RdrNames here.  We can't just use the TyCon or DataCon to distinguish
 because with standalone deriving two imported TyCons might both be called T!
-(See Trac #7947.)
+(See #7947.)
 
 So we use package name, module name and the name of the parent
 (T in this example) as part of the OccName we generate for the new binding.

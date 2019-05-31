@@ -53,10 +53,12 @@ data TestArgs = TestArgs
     , testOnly       :: [String]
     , testOnlyPerf   :: Bool
     , testSkipPerf   :: Bool
+    , testRootDirs   :: [FilePath]
     , testSpeed      :: TestSpeed
     , testSummary    :: Maybe FilePath
     , testVerbosity  :: Maybe String
-    , testWays       :: [String] }
+    , testWays       :: [String]
+    , testAccept     :: Bool}
     deriving (Eq, Show)
 
 -- | Default value for `TestArgs`.
@@ -70,10 +72,12 @@ defaultTestArgs = TestArgs
     , testOnly       = []
     , testOnlyPerf   = False
     , testSkipPerf   = False
+    , testRootDirs   = []
     , testSpeed      = TestNormal
     , testSummary    = Nothing
     , testVerbosity  = Nothing
-    , testWays       = [] }
+    , testWays       = []
+    , testAccept     = False }
 
 readConfigure :: Either String (CommandLineArgs -> CommandLineArgs)
 readConfigure = Right $ \flags -> flags { configure = True }
@@ -124,6 +128,9 @@ readProgressInfo ms =
 readTestKeepFiles :: Either String (CommandLineArgs -> CommandLineArgs)
 readTestKeepFiles = Right $ \flags -> flags { testArgs = (testArgs flags) { testKeepFiles = True } }
 
+readTestAccept :: Either String (CommandLineArgs -> CommandLineArgs)
+readTestAccept = Right $ \flags -> flags { testArgs = (testArgs flags) { testAccept = True } }
+
 readTestCompiler :: Maybe String -> Either String (CommandLineArgs -> CommandLineArgs)
 readTestCompiler compiler = maybe (Left "Cannot parse compiler") (Right . set) compiler
   where
@@ -139,7 +146,7 @@ readTestConfig config =
 
 readTestConfigFile :: Maybe String -> Either String (CommandLineArgs -> CommandLineArgs)
 readTestConfigFile filepath =
-    maybe (Left "Cannot parse test-speed") (Right . set) filepath
+    maybe (Left "Cannot parse test-config-file") (Right . set) filepath
   where
     set filepath flags =  flags { testArgs = (testArgs flags) { testConfigFile = filepath } }
 
@@ -148,15 +155,23 @@ readTestJUnit filepath = Right $ \flags -> flags { testArgs = (testArgs flags) {
 
 readTestOnly :: Maybe String -> Either String (CommandLineArgs -> CommandLineArgs)
 readTestOnly tests = Right $ \flags ->
-  flags { testArgs = (testArgs flags) { testOnly = tests' } }
+  flags { testArgs = (testArgs flags) { testOnly = tests'' flags } }
 
   where tests' = maybe [] words tests
+        tests'' flags = testOnly (testArgs flags) ++ tests'
 
 readTestOnlyPerf :: Either String (CommandLineArgs -> CommandLineArgs)
 readTestOnlyPerf = Right $ \flags -> flags { testArgs = (testArgs flags) { testOnlyPerf = True } }
 
 readTestSkipPerf :: Either String (CommandLineArgs -> CommandLineArgs)
 readTestSkipPerf = Right $ \flags -> flags { testArgs = (testArgs flags) { testSkipPerf = True } }
+
+readTestRootDirs :: Maybe String -> Either String (CommandLineArgs -> CommandLineArgs)
+readTestRootDirs rootdirs = Right $ \flags ->
+  flags { testArgs = (testArgs flags) { testRootDirs = rootdirs'' flags } }
+
+  where rootdirs' = maybe [] (splitOn ":") rootdirs
+        rootdirs'' flags = testRootDirs (testArgs flags) ++ rootdirs'
 
 readTestSpeed :: Maybe String -> Either String (CommandLineArgs -> CommandLineArgs)
 readTestSpeed ms =
@@ -238,6 +253,8 @@ optDescrs =
       "Only run performance tests."
     , Option [] ["skip-perf"] (NoArg readTestSkipPerf)
       "Skip performance tests."
+    , Option [] ["test-root-dirs"] (OptArg readTestRootDirs "DIR1:[DIR2:...:DIRn]")
+      "Test root directories to look at (all by default)."
     , Option [] ["test-speed"] (OptArg readTestSpeed "SPEED")
       "fast, slow or normal. Normal by default"
     , Option [] ["summary"] (OptArg readTestSummary "TEST_SUMMARY")
@@ -245,7 +262,8 @@ optDescrs =
     , Option [] ["test-verbose"] (OptArg readTestVerbose "TEST_VERBOSE")
       "A verbosity value between 0 and 5. 0 is silent, 4 and higher activates extra output."
     , Option [] ["test-way"] (OptArg readTestWay "TEST_WAY")
-      "only run these ways" ]
+      "only run these ways"
+    , Option ['a'] ["test-accept"] (NoArg readTestAccept) "Accept new output of tests" ]
 
 -- | A type-indexed map containing Hadrian command line arguments to be passed
 -- to Shake via 'shakeExtra'.

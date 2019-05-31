@@ -16,8 +16,9 @@ module Hadrian.Utilities (
     BuildRoot (..), buildRoot, buildRootRules, isGeneratedSource,
 
     -- * File system operations
-    copyFile, copyFileUntracked, fixFile, makeExecutable, moveFile, removeFile,
-    createDirectory, copyDirectory, moveDirectory, removeDirectory,
+    copyFile, copyFileUntracked, createFileLink, createFileLinkUntracked, fixFile,
+    makeExecutable, moveFile, removeFile, createDirectory, copyDirectory,
+    moveDirectory, removeDirectory,
 
     -- * Diagnostic info
     UseColour (..), Colour (..), ANSIColour (..), putColoured,
@@ -166,14 +167,15 @@ makeRelativeNoSysLink a b
         -- Use removePrefix to get the relative paths relative to a new
         -- base directory as high in the directory tree as possible.
         (baseToA, baseToB) = removePrefix aRelSplit bRelSplit
-        aToBase = if isDirUp (head baseToA)
-                    -- if baseToA contains any '..' then there is no way to get
-                    -- a path from a to the base directory.
-                    -- E.g. if   baseToA == "../u/v"
-                    --      then aToBase == "../../<UnknownDir>"
-                    then error $ "Impossible to find relatieve path from "
+        aToBase = case baseToA of
+                   (p: _) | isDirUp p ->
+                      -- if baseToA contains any '..' then there is no way to get
+                      -- a path from a to the base directory.
+                      -- E.g. if   baseToA == "../u/v"
+                      --      then aToBase == "../../<UnknownDir>"
+                      error $ "Impossible to find relatieve path from "
                                     ++ a ++ " to " ++ b
-                    else".." <$ baseToA
+                   _ -> ".." <$ baseToA
         aToB = aToBase ++ baseToB
 
         -- removePrefix "pre123" "prefix456" == ("123", "fix456")
@@ -286,6 +288,25 @@ infixl 1 <&>
 -- test is usually very fast.
 isGeneratedSource :: FilePath -> Action Bool
 isGeneratedSource file = buildRoot <&> (`isPrefixOf` file)
+
+-- | Link a file (without tracking the link target). Create the target directory
+-- if missing.
+createFileLinkUntracked :: FilePath -> FilePath -> Action ()
+createFileLinkUntracked linkTarget link = do
+    let dir = takeDirectory link
+    liftIO $ IO.createDirectoryIfMissing True dir
+    putProgressInfo =<< renderCreateFileLink linkTarget link
+    quietly . liftIO $ IO.createFileLink linkTarget link
+
+-- | Link a file tracking the link target. Create the target directory if
+-- missing.
+createFileLink :: FilePath -> FilePath -> Action ()
+createFileLink linkTarget link = do
+    let source = if isAbsolute linkTarget
+                    then linkTarget
+                    else takeDirectory link -/- linkTarget
+    need [source]
+    createFileLinkUntracked linkTarget link
 
 -- | Copy a file tracking the source. Create the target directory if missing.
 copyFile :: FilePath -> FilePath -> Action ()
@@ -459,8 +480,12 @@ renderAction what input output = do
     return $ case progressInfo of
         None    -> ""
         Brief   -> "| " ++ what ++ ": " ++ i ++ " => " ++ o
-        Normal  -> renderBox [ what, "     input: " ++ i, " => output: " ++ o ]
-        Unicorn -> renderUnicorn [ what, "     input: " ++ i, " => output: " ++ o ]
+        Normal  -> renderBox [ what
+                             , "     input: " ++ i
+                             , " => output: " ++ o ]
+        Unicorn -> renderUnicorn [ what
+                                 , "     input: " ++ i
+                                 , " => output: " ++ o ]
   where
     i = unifyPath input
     o = unifyPath output
@@ -476,6 +501,24 @@ renderActionNoOutput what input = do
         Unicorn -> renderUnicorn [ what, "     input: " ++ i ]
   where
     i = unifyPath input
+
+-- | Render creating a file link.
+renderCreateFileLink :: String -> FilePath -> Action String
+renderCreateFileLink linkTarget link' = do
+    progressInfo <- userSetting Brief
+    let what = "Creating file link"
+        linkString = link ++ " -> " ++ linkTarget
+    return $ case progressInfo of
+        None    -> ""
+        Brief   -> "| " ++ what ++ ": " ++ linkString
+        Normal  -> renderBox [ what
+                             , "      link name: " ++ link
+                             , " -> link target: " ++ linkTarget ]
+        Unicorn -> renderUnicorn [ what
+                                 , "      link name: " ++ link
+                                 , " -> link target: " ++ linkTarget ]
+    where
+        link = unifyPath link'
 
 -- | Render the successful build of a program.
 renderProgram :: String -> String -> String -> String

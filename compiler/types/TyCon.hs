@@ -358,13 +358,27 @@ Note [Unboxed tuple RuntimeRep vars]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The contents of an unboxed tuple may have any representation. Accordingly,
 the kind of the unboxed tuple constructor is runtime-representation
-polymorphic. For example,
+polymorphic.
 
-   (#,#) :: forall (q :: RuntimeRep) (r :: RuntimeRep). TYPE q -> TYPE r -> #
+Type constructor (2 kind arguments)
+   (#,#) :: forall (q :: RuntimeRep) (r :: RuntimeRep).
+                   TYPE q -> TYPE r -> TYPE (TupleRep [q, r])
+Data constructor (4 type arguments)
+   (#,#) :: forall (q :: RuntimeRep) (r :: RuntimeRep)
+                   (a :: TYPE q) (b :: TYPE r). a -> b -> (# a, b #)
 
-These extra tyvars (v and w) cause some delicate processing around tuples,
-where we used to be able to assume that the tycon arity and the
-datacon arity were the same.
+These extra tyvars (q and r) cause some delicate processing around tuples,
+where we need to manually insert RuntimeRep arguments.
+The same situation happens with unboxed sums: each alternative
+has its own RuntimeRep.
+For boxed tuples, there is no levity polymorphism, and therefore
+we add RuntimeReps only for the unboxed version.
+
+Type constructor (no kind arguments)
+   (,) :: Type -> Type -> Type
+Data constructor (2 type arguments)
+   (,) :: forall a b. a -> b -> (a, b)
+
 
 Note [Injective type families]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -487,14 +501,22 @@ tyConVisibleTyVars tc
   = [ tv | Bndr tv vis <- tyConBinders tc
          , isVisibleTcbVis vis ]
 
-{- Note [AnonTCB InivsArg]
+{- Note [AnonTCB InvisArg]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 It's pretty rare to have an (AnonTCB InvisArg) binder.  The
-only way it can occur is in a PromotedDataCon whose
-kind has an equality constraint:
-  'MkT :: forall a b. (a~b) => blah
-See Note [Constraints in kinds] in TyCoRep, and
-Note [Promoted data constructors] in this module.
+only way it can occur is through equality constraints in kinds. These
+can arise in one of two ways:
+
+* In a PromotedDataCon whose kind has an equality constraint:
+
+    'MkT :: forall a b. (a~b) => blah
+
+  See Note [Constraints in kinds] in TyCoRep, and
+  Note [Promoted data constructors] in this module.
+* In a data type whose kind has an equality constraint, as in the
+  following example from #12102:
+
+    data T :: forall a. (IsTypeLit a ~ 'True) => a -> Type
 
 When mapping an (AnonTCB InvisArg) to an ArgFlag, in
 tyConBndrVisArgFlag, we use "Inferred" to mean "the user cannot
@@ -972,7 +994,7 @@ data AlgTyConRhs
                              -- Invariant: arity = #tvs in nt_etad_rhs;
                              -- See Note [Newtype eta]
                              -- Watch out!  If any newtypes become transparent
-                             -- again check Trac #1072.
+                             -- again check #1072.
     }
 
 mkSumTyConRhs :: [DataCon] -> AlgTyConRhs
@@ -1193,7 +1215,7 @@ For example consider
       T2 :: T Bool
       T3 :: T a
 What would [T1 ..] be?  [T1,T3] :: T Int? Easiest thing is to exclude them.
-See Trac #4528.
+See #4528.
 
 Note [Newtype coercions]
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1328,12 +1350,12 @@ Roughly in order of "includes more information":
    number of bits.  It may represent a signed or unsigned integer, a
    floating-point value, or an address.
 
-    data Width = W8 | W16 | W32 | W64 | W80 | W128
+    data Width = W8 | W16 | W32 | W64  | W128
 
  - Size, which is used in the native code generator, is Width +
    floating point information.
 
-   data Size = II8 | II16 | II32 | II64 | FF32 | FF64 | FF80
+   data Size = II8 | II16 | II32 | II64 | FF32 | FF64
 
    it is necessary because e.g. the instruction to move a 64-bit float
    on x86 (movsd) is different from the instruction to move a 64-bit
@@ -2642,7 +2664,7 @@ strictness analyser doesn't unbox infinitely deeply.
 More precisely, we keep a *count* of how many times we've seen it.
 This is to account for
    data instance T (a,b) = MkT (T a) (T b)
-Then (Trac #10482) if we have a type like
+Then (#10482) if we have a type like
         T (Int,(Int,(Int,(Int,Int))))
 we can still unbox deeply enough during strictness analysis.
 We have to treat T as potentially recursive, but it's still

@@ -34,9 +34,6 @@ import CLOSURE base_GHCziIOziException_heapOverflow_closure;
 import EnterCriticalSection;
 import LeaveCriticalSection;
 import CLOSURE ghczmprim_GHCziTypes_False_closure;
-#if defined(USE_MINIINTERPRETER) || !defined(mingw32_HOST_OS)
-import CLOSURE sm_mutex;
-#endif
 #if defined(PROFILING)
 import CLOSURE CCS_MAIN;
 #endif
@@ -403,7 +400,7 @@ stg_newSmallArrayzh ( W_ n /* words */, gcptr init )
 
     words = BYTES_TO_WDS(SIZEOF_StgSmallMutArrPtrs) + n;
     ("ptr" arr) = ccall allocateMightFail(MyCapability() "ptr",words);
-    if (arr == NULL) {
+    if (arr == NULL) (likely: False) {
         jump stg_raisezh(base_GHCziIOziException_heapOverflow_closure);
     }
     TICK_ALLOC_PRIM(SIZEOF_StgSmallMutArrPtrs, WDS(n), 0);
@@ -413,8 +410,11 @@ stg_newSmallArrayzh ( W_ n /* words */, gcptr init )
 
     // Initialise all elements of the array with the value in R2
     p = arr + SIZEOF_StgSmallMutArrPtrs;
+    // Avoid the shift for `WDS(n)` in the inner loop
+    W_ limit;
+    limit = arr + SIZEOF_StgSmallMutArrPtrs + WDS(n);
   for:
-    if (p < arr + SIZEOF_StgSmallMutArrPtrs + WDS(n)) (likely: True) {
+    if (p < limit) (likely: True) {
         W_[p] = init;
         p = p + WDS(1);
         goto for;
@@ -1101,10 +1101,9 @@ INFO_TABLE_RET(stg_atomically_frame, ATOMICALLY_FRAME,
     return (P_ result) // value returned to the frame
 {
     W_ valid;
-    gcptr trec, outer, q;
+    gcptr trec;
 
-    trec   = StgTSO_trec(CurrentTSO);
-    outer  = StgTRecHeader_enclosing_trec(trec);
+    trec = StgTSO_trec(CurrentTSO);
 
     /* Back at the atomically frame */
     frame_result = result;
@@ -2039,6 +2038,13 @@ for:
     ("ptr" ptrArray) = foreign "C" heap_view_closurePtrs(MyCapability() "ptr", clos "ptr");
 
     return (info, dat_arr, ptrArray);
+}
+
+stg_closureSizzezh (P_ clos)
+{
+    W_ len;
+    (len) = foreign "C" heap_view_closureSize(UNTAG(clos) "ptr");
+    return (len);
 }
 
 /* -----------------------------------------------------------------------------

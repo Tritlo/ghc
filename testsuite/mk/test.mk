@@ -53,7 +53,7 @@ TEST_HC_OPTS += -fdiagnostics-color=never
 TEST_HC_OPTS += -fno-diagnostics-show-caret
 endif
 
-# See Trac #15278.
+# See #15278.
 TEST_HC_OPTS += -Werror=compat
 
 # Add the no-debug-output last as it is often convenient to copy the test invocation
@@ -277,6 +277,8 @@ RUNTEST_OPTS +=  \
 	--config 'hpc=$(call quote_path,$(HPC))' \
 	--config 'gs=$(call quote_path,$(GS))' \
 	--config 'timeout_prog=$(call quote_path,$(TIMEOUT_PROGRAM))'
+
+RUNTEST_OPTS += --config 'stats_files_dir=$(TOP)/tests/perf/haddock'
 
 RUNTEST_OPTS += -e "config.stage=$(GhcStage)"
 

@@ -5,8 +5,8 @@
 # This file is part of the GHC build system.
 #
 # To understand how the build system works and how to modify it, see
-#      http://ghc.haskell.org/trac/ghc/wiki/Building/Architecture
-#      http://ghc.haskell.org/trac/ghc/wiki/Building/Modifying
+#      https://gitlab.haskell.org/ghc/ghc/wikis/building/architecture
+#      https://gitlab.haskell.org/ghc/ghc/wikis/building/modifying
 #
 # -----------------------------------------------------------------------------
 
@@ -165,6 +165,70 @@ endif
 	@echo "Done."
 
 endif
+
+# -----------------------------------------------------------------------------
+# Settings
+
+# These settings are read by GHC at runtime, so as to not cause spurious
+# rebuilds.
+
+includes_SETTINGS = includes/dist/build/settings
+
+$(includes_SETTINGS) : includes/Makefile | $$(dir $$@)/.
+	$(call removeFiles,$@)
+	@echo '[("GCC extra via C opts", "$(GccExtraViaCOpts)")' >> $@
+	@echo ',("C compiler command", "$(SettingsCCompilerCommand)")' >> $@
+	@echo ',("C compiler flags", "$(SettingsCCompilerFlags)")' >> $@
+	@echo ',("C compiler link flags", "$(SettingsCCompilerLinkFlags)")' >> $@
+	@echo ',("C compiler supports -no-pie", "$(SettingsCCompilerSupportsNoPie)")' >> $@
+	@echo ',("Haskell CPP command", "$(SettingsHaskellCPPCommand)")' >> $@
+	@echo ',("Haskell CPP flags", "$(SettingsHaskellCPPFlags)")' >> $@
+	@echo ',("ld command", "$(SettingsLdCommand)")' >> $@
+	@echo ',("ld flags", "$(SettingsLdFlags)")' >> $@
+	@echo ',("ld supports compact unwind", "$(LdHasNoCompactUnwind)")' >> $@
+	@echo ',("ld supports build-id", "$(LdHasBuildId)")' >> $@
+	@echo ',("ld supports filelist", "$(LdHasFilelist)")' >> $@
+	@echo ',("ld is GNU ld", "$(LdIsGNULd)")' >> $@
+	@echo ',("ar command", "$(SettingsArCommand)")' >> $@
+	@echo ',("ar flags", "$(ArArgs)")' >> $@
+	@echo ',("ar supports at file", "$(ArSupportsAtFile)")' >> $@
+	@echo ',("ranlib command", "$(SettingsRanlibCommand)")' >> $@
+	@echo ',("touch command", "$(SettingsTouchCommand)")' >> $@
+	@echo ',("dllwrap command", "$(SettingsDllWrapCommand)")' >> $@
+	@echo ',("windres command", "$(SettingsWindresCommand)")' >> $@
+	@echo ',("libtool command", "$(SettingsLibtoolCommand)")' >> $@
+	@echo ',("unlit command", "$$topdir/bin/$(utils/unlit_dist_PROG)")' >> $@
+	@echo ',("cross compiling", "$(CrossCompiling)")' >> $@
+	@echo ',("target platform string", "$(TARGETPLATFORM)")' >> $@
+	@echo ',("target os", "$(HaskellTargetOs)")' >> $@
+	@echo ',("target arch", "$(HaskellTargetArch)")' >> $@
+	@echo ',("target word size", "$(TargetWordSize)")' >> $@
+	@echo ',("target has GNU nonexec stack", "$(HaskellHaveGnuNonexecStack)")' >> $@
+	@echo ',("target has .ident directive", "$(HaskellHaveIdentDirective)")' >> $@
+	@echo ',("target has subsections via symbols", "$(HaskellHaveSubsectionsViaSymbols)")' >> $@
+	@echo ',("target has RTS linker", "$(HaskellHaveRTSLinker)")' >> $@
+	@echo ',("Unregisterised", "$(Unregisterised)")' >> $@
+	@echo ',("LLVM llc command", "$(SettingsLlcCommand)")' >> $@
+	@echo ',("LLVM opt command", "$(SettingsOptCommand)")' >> $@
+	@echo ',("LLVM clang command", "$(SettingsClangCommand)")' >> $@
+	@echo
+	@echo ',("integer library", "$(INTEGER_LIBRARY)")' >> $@
+	@echo ',("Use interpreter", "$(GhcWithInterpreter)")' >> $@
+	@echo ',("Use native code generator", "$(GhcWithNativeCodeGen)")' >> $@
+	@echo ',("Support SMP", "$(GhcWithSMP)")' >> $@
+	@echo ',("RTS ways", "$(GhcRTSWays)")' >> $@
+	@echo ',("Tables next to code", "$(GhcEnableTablesNextToCode)")' >> $@
+	@echo ',("Leading underscore", "$(LeadingUnderscore)")' >> $@
+	@echo ',("Use LibFFI", "$(UseLibFFIForAdjustors)")' >> $@
+# Note that GhcThreaded just reflects the Makefile variable setting. In
+# particular, the stage1 compiler is never actually compiled with -threaded, but
+# it will nevertheless have cGhcThreaded = True. The "+RTS --info" output will
+# show what RTS GHC is really using.
+	@echo ",(\"Use Threads\", \"$(GhcThreaded)\")" >> $@
+	@echo ",(\"Use Debugging\", \"$(GhcDebugged)\")" >> $@
+	@echo ",(\"RTS expects libdw\", \"$(GhcRtsWithLibdw)\")" >> $@
+	@echo "]" >> $@
+
 
 # ---------------------------------------------------------------------------
 # Make DerivedConstants.h for the compiler

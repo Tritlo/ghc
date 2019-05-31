@@ -702,7 +702,7 @@ getWanted verbose os tmpdir gccProgram gccFlags nmProgram mobjdumpProgram
          case Map.lookup "CONTROL_GROUP_CONST_291" m of
              Just 292   -> return () -- OK
              Nothing    -> die "CONTROL_GROUP_CONST_291 missing!"
-             Just 0x292 -> die $ "broken 'nm' detected, see https://ghc.haskell.org/ticket/11744.\n"
+             Just 0x292 -> die $ "broken 'nm' detected, see https://gitlab.haskell.org/ghc/ghc/issues/11744.\n"
                               ++ "\n"
                               ++ "Workaround: You may want to pass\n"
                               ++ "    --with-nm=$(xcrun --find nm-classic)\n"
@@ -918,13 +918,13 @@ writeHaskellWrappers fn ws = writeFile fn xs
           doWhat (GetFieldType {}) = []
           doWhat (GetClosureSize {}) = []
           doWhat (GetWord name _) = [haskellise name ++ " :: DynFlags -> Int",
-                                    haskellise name ++ " dflags = pc_" ++ name ++ " (sPlatformConstants (settings dflags))"]
+                                    haskellise name ++ " dflags = pc_" ++ name ++ " (platformConstants dflags)"]
           doWhat (GetInt name _) = [haskellise name ++ " :: DynFlags -> Int",
-                                   haskellise name ++ " dflags = pc_" ++ name ++ " (sPlatformConstants (settings dflags))"]
+                                   haskellise name ++ " dflags = pc_" ++ name ++ " (platformConstants dflags)"]
           doWhat (GetNatural name _) = [haskellise name ++ " :: DynFlags -> Integer",
-                                        haskellise name ++ " dflags = pc_" ++ name ++ " (sPlatformConstants (settings dflags))"]
+                                        haskellise name ++ " dflags = pc_" ++ name ++ " (platformConstants dflags)"]
           doWhat (GetBool name _) = [haskellise name ++ " :: DynFlags -> Bool",
-                                     haskellise name ++ " dflags = pc_" ++ name ++ " (sPlatformConstants (settings dflags))"]
+                                     haskellise name ++ " dflags = pc_" ++ name ++ " (platformConstants dflags)"]
           doWhat (StructFieldMacro {}) = []
           doWhat (ClosureFieldMacro {}) = []
           doWhat (ClosurePayloadMacro {}) = []

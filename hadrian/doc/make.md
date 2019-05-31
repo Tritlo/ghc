@@ -92,6 +92,7 @@ time you fire up a build. This is not possible with the Make build system.
   # Hadrian
   build --flavour=quickest
   ```
+  See [flavours documentation](https://gitlab.haskell.org/ghc/ghc/blob/master/hadrian/doc/flavours.md) for info on flavours.
 
 - Building with `integer-simple` as the integer library
 
@@ -122,6 +123,8 @@ time you fire up a build. This is not possible with the Make build system.
   make test                             # (1)
   make test TEST=plugins01              # (2)
   make test TEST="plugins01 plugins02"  # (3)
+  make accept                           # (4)
+  PLATFORM=YES OS=YES make accept       # (5)
 
 
   # Hadrian
@@ -133,6 +136,12 @@ time you fire up a build. This is not possible with the Make build system.
   build test --only="plugins01 plugins02"    # equivalent to (3)
   TEST="plugins01 plugins02" build test      # equivalent to (3)
   TEST=plugins01 build test --only=plugins02 # equivalent to (3)
+
+  build test -a            # equivalent to (4)
+  build test --test-accept # equivalent to (4)
+
+  PLATFORM=YES OS=YES build test -a            # equivalent to (5)
+  PLATFORM=YES OS=YES build test --test-accept # equivalent to (5)
   ```
 
   As illustrated in the examples above, you can use the `TEST` environment
@@ -152,6 +161,17 @@ time you fire up a build. This is not possible with the Make build system.
   # Hadrian
   build _build/stage0/lib/platformConstants
   build _build/stage1/lib/platformConstants
+  ```
+
+- Generate the `settings` file to be used for stage 1/2 GHC
+
+  ``` sh
+  # Make
+  make inplace/lib/settings
+
+  # Hadrian
+  build _build/stage0/lib/settings
+  build _build/stage1/lib/settings
   ```
 
 - Build a static library for base with the stage 1 compiler

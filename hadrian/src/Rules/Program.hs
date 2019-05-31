@@ -14,6 +14,7 @@ import Settings
 import Settings.Default
 import Target
 import Utilities
+import Rules.Library
 
 -- | TODO: Drop code duplication
 buildProgramRules :: [(Resource, Int)] -> Rules ()
@@ -88,6 +89,15 @@ buildProgram bin ctx@(Context{..}) rs = do
   when (package == haddock) $ do
     -- Haddock has a resource folder
     need =<< haddockDeps stage
+
+  -- Need library dependencies.
+  -- Note pkgLibraryFile gets the path in the build dir e.g.
+  --    _build/stage1/libraries/haskeline/build/libHShaskeline-0.7.5.0-ghc8.9.0.20190430.so
+  -- but when building the program, we link against the *ghc-pkg registered* library e.g.
+  --    _build/stage1/lib/x86_64-linux-ghc-8.9.0.20190430/libHShaskeline-0.7.5.0-ghc8.9.0.20190430.so
+  -- so we use pkgRegisteredLibraryFile instead.
+  need =<< mapM pkgRegisteredLibraryFile
+       =<< contextDependencies ctx
 
   cross <- flag CrossCompiling
   -- For cross compiler, copy @stage0/bin/<pgm>@ to @stage1/bin/@.

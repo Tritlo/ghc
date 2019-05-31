@@ -7,7 +7,7 @@
  * Documentation on the architecture of the Garbage Collector can be
  * found in the online commentary:
  *
- *   http://ghc.haskell.org/trac/ghc/wiki/Commentary/Rts/Storage/GC
+ *   https://gitlab.haskell.org/ghc/ghc/wikis/commentary/rts/storage/gc
  *
  * ---------------------------------------------------------------------------*/
 
@@ -23,16 +23,6 @@ mark(StgPtr p, bdescr *bd)
         (offset_within_block / BITS_IN(W_));
     StgWord bit_mask = (StgWord)1 << (offset_within_block & (BITS_IN(W_) - 1));
     *bitmap_word |= bit_mask;
-}
-
-INLINE_HEADER void
-unmark(StgPtr p, bdescr *bd)
-{
-    uint32_t offset_within_block = p - bd->start; // in words
-    StgPtr bitmap_word = (StgPtr)bd->u.bitmap +
-        (offset_within_block / BITS_IN(W_));
-    StgWord bit_mask = (StgWord)1 << (offset_within_block & (BITS_IN(W_) - 1));
-    *bitmap_word &= ~bit_mask;
 }
 
 INLINE_HEADER StgWord

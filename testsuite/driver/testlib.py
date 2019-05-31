@@ -67,7 +67,6 @@ def isStatsTest():
     opts = getTestOpts()
     return opts.is_stats_test
 
-
 # This can be called at the top of a file of tests, to set default test options
 # for the following tests.
 def setTestOpts( f ):
@@ -891,11 +890,17 @@ def do_test(name, way, func, args, files):
 
     full_name = name + '(' + way + ')'
 
-    if_verbose(2, "=====> {0} {1} of {2} {3}".format(
-        full_name, t.total_tests, len(allTestNames),
+    progress_args = [ full_name, t.total_tests, len(allTestNames),
         [len(t.unexpected_passes),
          len(t.unexpected_failures),
-         len(t.framework_failures)]))
+         len(t.framework_failures)]]
+    if_verbose(2, "=====> {0} {1} of {2} {3}".format(*progress_args))
+
+    # Update terminal title
+    # useful progress indicator even when make test VERBOSE=1
+    if config.supports_colors:
+        print("\033]0;{0} {1} of {2} {3}\007".format(*progress_args), end="")
+        sys.stdout.flush()
 
     # Clean up prior to the test, so that we can't spuriously conclude
     # that it passed on the basis of old run outputs.
@@ -1131,9 +1136,9 @@ def do_compile(name, way, should_fail, top_mod, extra_mods, extra_hc_opts, **kwa
     # no problems found, this test passed
     return passed()
 
-def compile_cmp_asm( name, way, extra_hc_opts ):
+def compile_cmp_asm( name, way, ext, extra_hc_opts ):
     print('Compile only, extra args = ', extra_hc_opts)
-    result = simple_build(name + '.cmm', way, '-keep-s-files -O ' + extra_hc_opts, 0, '', 0, 0)
+    result = simple_build(name + '.' + ext, way, '-keep-s-files -O ' + extra_hc_opts, 0, '', 0, 0)
 
     if badResult(result):
         return result
@@ -1148,6 +1153,24 @@ def compile_cmp_asm( name, way, extra_hc_opts ):
     if not compare_outputs(way, 'asm',
                            join_normalisers(normalise_errmsg, normalise_asm),
                            expected_asm_file, actual_asm_file):
+        return failBecause('asm mismatch')
+
+    # no problems found, this test passed
+    return passed()
+
+def compile_grep_asm( name, way, ext, is_substring, extra_hc_opts ):
+    print('Compile only, extra args = ', extra_hc_opts)
+    result = simple_build(name + '.' + ext, way, '-keep-s-files -O ' + extra_hc_opts, 0, '', 0, 0)
+
+    if badResult(result):
+        return result
+
+    expected_pat_file = find_expected_file(name, 'asm')
+    actual_asm_file = add_suffix(name, 's')
+
+    if not grep_output(join_normalisers(normalise_errmsg),
+                       expected_pat_file, actual_asm_file,
+                       is_substring):
         return failBecause('asm mismatch')
 
     # no problems found, this test passed
@@ -1187,7 +1210,11 @@ def multi_compile_and_run( name, way, top_mod, extra_mods, extra_hc_opts ):
 
 def stats( name, way, stats_file ):
     opts = getTestOpts()
-    return check_stats(name, way, stats_file, opts.stats_range_fields)
+    return check_stats(name, way, in_testdir(stats_file), opts.stats_range_fields)
+
+def static_stats( name, way, stats_file ):
+    opts = getTestOpts()
+    return check_stats(name, way, in_statsdir(stats_file), opts.stats_range_fields)
 
 def metric_dict(name, way, metric, value):
     return Perf.PerfStat(
@@ -1210,7 +1237,7 @@ def check_stats(name, way, stats_file, range_fields):
     result = passed()
     if range_fields:
         try:
-            f = open(in_testdir(stats_file))
+            f = open(stats_file)
         except IOError as e:
             return failBecause(str(e))
         stats_file_contents = f.read()
@@ -1333,7 +1360,7 @@ def simple_build(name, way, extra_hc_opts, should_fail, top_mod, link, addsuf, b
     # ToDo: if the sub-shell was killed by ^C, then exit
 
     if isCompilerStatsTest():
-        statsResult = check_stats(name, way, stats_file, opts.stats_range_fields)
+        statsResult = check_stats(name, way, in_testdir(stats_file), opts.stats_range_fields)
         if badResult(statsResult):
             return statsResult
 
@@ -1402,7 +1429,7 @@ def simple_run(name, way, prog, extra_run_opts):
             print('Wrong exit code for ' + name + '(' + way + ')' + '(expected', opts.exit_code, ', actual', exit_code, ')')
             dump_stdout(name)
             dump_stderr(name)
-        return failBecause('bad exit code')
+        return failBecause('bad exit code (%d)' % exit_code)
 
     if not (opts.ignore_stderr or stderr_ok(name, way) or opts.combined_output):
         return failBecause('bad stderr')
@@ -1418,7 +1445,7 @@ def simple_run(name, way, prog, extra_run_opts):
     if check_prof and not check_prof_ok(name, way):
         return failBecause('bad profile')
 
-    return check_stats(name, way, stats_file, opts.stats_range_fields)
+    return check_stats(name, way, in_testdir(stats_file), opts.stats_range_fields)
 
 def rts_flags(way):
     args = config.way_rts_flags.get(way, [])
@@ -1489,7 +1516,7 @@ def interpreter_run(name, way, extra_hc_opts, top_mod):
         print('Wrong exit code for ' + name + '(' + way + ') (expected', getTestOpts().exit_code, ', actual', exit_code, ')')
         dump_stdout(name)
         dump_stderr(name)
-        return failBecause('bad exit code')
+        return failBecause('bad exit code (%d)' % exit_code)
 
     # ToDo: if the sub-shell was killed by ^C, then exit
 
@@ -1735,6 +1762,43 @@ def compare_outputs(way, kind, normaliser, expected_file, actual_file, diff_file
         else:
             return False
 
+# Checks that each line from pattern_file is present in actual_file as
+# a substring or regex pattern depending on is_substring.
+def grep_output(normaliser, pattern_file, actual_file, is_substring=True):
+    expected_path = in_srcdir(pattern_file)
+    actual_path = in_testdir(actual_file)
+
+    expected_patterns = read_no_crs(expected_path).strip().split('\n')
+    actual_raw = read_no_crs(actual_path)
+    actual_str = normaliser(actual_raw)
+
+    success = True
+    failed_patterns = []
+
+    def regex_match(pat, actual):
+        return re.search(pat, actual) is not None
+
+    def substring_match(pat, actual):
+        return pat in actual
+
+    def is_match(pat, actual):
+        if is_substring:
+            return substring_match(pat, actual)
+        else:
+            return regex_match(pat, actual)
+
+    for pat in expected_patterns:
+        if not is_match(pat, actual_str):
+            success = False
+            failed_patterns.append(pat)
+
+    if not success:
+        print('Actual output does not contain the following patterns:')
+        for pat in failed_patterns:
+            print(pat)
+
+    return success
+
 # Note [Output comparison]
 #
 # We do two types of output comparison:
@@ -1820,7 +1884,7 @@ def normalise_errmsg( str ):
     str = str.replace(bullet, '')
 
     # Windows only, this is a bug in hsc2hs but it is preventing
-    # stable output for the testsuite. See Trac #9775. For now we filter out this
+    # stable output for the testsuite. See #9775. For now we filter out this
     # warning message to get clean output.
     if config.msys:
         str = re.sub('Failed to remove file (.*); error= (.*)$', '', str)
@@ -2042,6 +2106,9 @@ def in_testdir(name, suffix=''):
 def in_srcdir(name, suffix=''):
     return os.path.join(getTestOpts().srcdir, add_suffix(name, suffix))
 
+def in_statsdir(name, suffix=''):
+    return os.path.join(config.stats_files_dir, add_suffix(name, suffix))
+
 # Finding the sample output.  The filename is of the form
 #
 #   <test>.stdout[-ws-<wordsize>][-<platform>|-<os>]
@@ -2091,7 +2158,7 @@ if config.msys:
         # still locked then abort the current test by throwing an exception, this so it won't fail
         # with an even more cryptic error.
         #
-        # See Trac #13162
+        # See #13162
         exception = None
         while retries > 0 and os.path.exists(testdir):
             time.sleep((max_attempts-retries)*6)
@@ -2214,7 +2281,7 @@ def printUnexpectedTests(file, testInfoss):
 
 def printTestInfosSummary(file, testInfos):
     maxDirLen = max(len(tr.directory) for tr in testInfos)
-    for result in testInfos:
+    for result in sorted(testInfos, key=lambda r: (r.testname.lower(), r.way, r.directory)):
         directory = result.directory.ljust(maxDirLen)
         file.write('   {directory}  {r.testname} [{r.reason}] ({r.way})\n'.format(
             r = result,

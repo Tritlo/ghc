@@ -32,7 +32,7 @@ import Data.Kind
 Note [Trees that grow]
 ~~~~~~~~~~~~~~~~~~~~~~
 
-See https://ghc.haskell.org/trac/ghc/wiki/ImplementingTreesThatGrow
+See https://gitlab.haskell.org/ghc/ghc/wikis/implementing-trees-that-grow
 
 The hsSyn AST is reused across multiple compiler passes. We also have the
 Template Haskell AST, and the haskell-src-exts one (outside of GHC)
@@ -355,12 +355,12 @@ type ForallXConDecl (c :: * -> Constraint) (x :: *) =
 
 -- -------------------------------------
 -- FamEqn type families
-type family XCFamEqn      x p r
-type family XXFamEqn      x p r
+type family XCFamEqn      x r
+type family XXFamEqn      x r
 
-type ForallXFamEqn (c :: * -> Constraint) (x :: *) (p :: *) (r :: *) =
-       ( c (XCFamEqn       x p r)
-       , c (XXFamEqn       x p r)
+type ForallXFamEqn (c :: * -> Constraint) (x :: *) (r :: *) =
+       ( c (XCFamEqn       x r)
+       , c (XXFamEqn       x r)
        )
 
 -- -------------------------------------
@@ -536,15 +536,9 @@ type family XTcBracketOut   x
 type family XSpliceE        x
 type family XProc           x
 type family XStatic         x
-type family XArrApp         x
-type family XArrForm        x
 type family XTick           x
 type family XBinTick        x
 type family XTickPragma     x
-type family XEWildPat       x
-type family XEAsPat         x
-type family XEViewPat       x
-type family XELazyPat       x
 type family XWrap           x
 type family XXExpr          x
 
@@ -586,15 +580,9 @@ type ForallXExpr (c :: * -> Constraint) (x :: *) =
        , c (XSpliceE        x)
        , c (XProc           x)
        , c (XStatic         x)
-       , c (XArrApp         x)
-       , c (XArrForm        x)
        , c (XTick           x)
        , c (XBinTick        x)
        , c (XTickPragma     x)
-       , c (XEWildPat       x)
-       , c (XEAsPat         x)
-       , c (XEViewPat       x)
-       , c (XELazyPat       x)
        , c (XWrap           x)
        , c (XXExpr          x)
        )

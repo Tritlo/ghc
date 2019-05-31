@@ -260,7 +260,7 @@ the `UnfoldingGuidance`.)
 
 In the example, x's ug_arity is 0, so we should inline it at every use
 site.  It's rare to have such an INLINE pragma (usually INLINE Is on
-functions), but it's occasionally very important (Trac #15578, #15519).
+functions), but it's occasionally very important (#15578, #15519).
 In #15519 we had something like
    x = case (g a b) of I# r -> T r
    {-# INLINE x #-}
@@ -357,7 +357,7 @@ But given this decision it's vital that we do
 where g* is (for some strange reason) the loop breaker.  If we don't
 occ-anal it when reading it in, we won't mark g as a loop breaker, and
 we may inline g entirely in body, dropping its binding, and leaving
-the occurrence in f out of scope. This happened in Trac #8892, where
+the occurrence in f out of scope. This happened in #8892, where
 the unfolding in question was a DFun unfolding.
 
 But more generally, the simplifier is designed on the
@@ -395,7 +395,7 @@ GlobalIds.  That seems (just) tolerable for the occurrence analysis that happens
 just before the Simplifier, but not for unfoldings, which are Linted
 independently.
 As a quick workaround, we disable binder swap in this module.
-See Trac #16288 and #16296 for further plans.
+See #16288 and #16296 for further plans.
 
 Note [Calculate unfolding guidance on the non-occ-anal'd expression]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -910,7 +910,7 @@ Simon M tried a MUCH bigger discount: (10 * (10 + n_val_args)),
 and said it was an "unambiguous win", but its terribly dangerous
 because a function with many many case branches, each finishing with
 a constructor, can have an arbitrarily large discount.  This led to
-terrible code bloat: see Trac #6099.
+terrible code bloat: see #6099.
 
 Note [Unboxed tuple size and result discount]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -936,10 +936,10 @@ monadic combinators with continuation arguments, where inlining is
 quite important.
 
 But we don't want a big discount when a function is called many times
-(see the detailed comments with Trac #6048) because if the function is
+(see the detailed comments with #6048) because if the function is
 big it won't be inlined at its many call sites and no benefit results.
 Indeed, we can get exponentially big inlinings this way; that is what
-Trac #6048 is about.
+#6048 is about.
 
 On the other hand, for data-valued arguments, if there are lots of
 case expressions in the body, each one will get smaller if we apply
@@ -1149,15 +1149,15 @@ certainlyWillInline dflags fn_info
         -- INLINABLE functions come via this path
         --    See Note [certainlyWillInline: INLINABLE]
     do_cunf expr (UnfIfGoodArgs { ug_size = size, ug_args = args })
-      | not (null args)  -- See Note [certainlyWillInline: be careful of thunks]
+      | arityInfo fn_info > 0  -- See Note [certainlyWillInline: be careful of thunks]
       , not (isBottomingSig (strictnessInfo fn_info))
               -- Do not unconditionally inline a bottoming functions even if
               -- it seems smallish. We've carefully lifted it out to top level,
               -- so we don't want to re-inline it.
-      , let arity = length args
-      , size - (10 * (arity + 1)) <= ufUseThreshold dflags
+      , let unf_arity = length args
+      , size - (10 * (unf_arity + 1)) <= ufUseThreshold dflags
       = Just (fn_unf { uf_src      = InlineStable
-                     , uf_guidance = UnfWhen { ug_arity     = arity
+                     , uf_guidance = UnfWhen { ug_arity     = unf_arity
                                              , ug_unsat_ok  = unSaturatedOk
                                              , ug_boring_ok = inlineBoringOk expr } })
              -- Note the "unsaturatedOk". A function like  f = \ab. a
@@ -1170,10 +1170,21 @@ certainlyWillInline dflags fn_info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Don't claim that thunks will certainly inline, because that risks work
 duplication.  Even if the work duplication is not great (eg is_cheap
-holds), it can make a big difference in an inner loop In Trac #5623 we
+holds), it can make a big difference in an inner loop In #5623 we
 found that the WorkWrap phase thought that
        y = case x of F# v -> F# (v +# v)
 was certainlyWillInline, so the addition got duplicated.
+
+Note that we check arityInfo instead of the arity of the unfolding to detect
+this case. This is so that we don't accidentally fail to inline small partial
+applications, like `f = g 42` (where `g` recurses into `f`) where g has arity 2
+(say). Here there is no risk of work duplication, and the RHS is tiny, so
+certainlyWillInline should return True. But `unf_arity` is zero! However f's
+arity, gotten from `arityInfo fn_info`, is 1.
+
+Failing to say that `f` will inline forces W/W to generate a potentially huge
+worker for f that will immediately cancel with `g`'s wrapper anyway, causing
+unnecessary churn in the Simplifier while arriving at the same result.
 
 Note [certainlyWillInline: INLINABLE]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

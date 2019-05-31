@@ -19,6 +19,8 @@ needed by the tests.
 
 ## Running only a subset of the testsuite
 
+### Specific tests
+
 You can use the `TEST` environment variable, like with the
 Make build system, or the `--only=...` command line argument.
 This is best illustrated with examples:
@@ -38,6 +40,60 @@ TEST="test1 test2" build test
 
 # only run 'test1', 'test2', 'test3' and 'test4'
 TEST="test1 test2" build test --only="test3 test4"
+```
+
+### Whole directories of tests
+
+You can also ask Hadrian to run all the tests that live under one or
+more directories, under which the testsuite driver will be looking for
+`.T` files (usually called `all.T`), where our tests are declared.
+
+By default, the `test` rule tries to run all the tests available (the ones
+under `testsuite/tests/` as well as all the tests of the boot libraries
+or programs (`base`, `haddock`, etc).
+
+To restrict the testsuite driver to only run a specific directory of tests,
+e.g `testsuite/tests/th`, you can simply do:
+
+``` sh
+$ build -j test --test-root-dirs=testsuite/tests/th
+```
+
+If you want to run several directories of tests, you can either
+use several `--test-root-dirs` arguments or just one but separating
+the various directories with `:`:
+
+``` sh
+# first approach
+build -j test --test-root-dirs=testsuite/tests/th --test-root-dirs=testsuite/tests/gadt
+
+# second approach
+build -j test --test-root-dirs=testsuite/tests/th:testsuite/tests/gadt
+```
+
+## Accepting new output
+
+You can use the `-a` or `--test-accept` flag to "accept" the new
+output of your tests. This has the effect of updating the expected
+output of all the tests that fail due to mismatching output, so as to
+consider the new output the correct one.
+
+When the `PLATFORM` environment variable is set to `YES`, passing this flag has
+the effect of accepting the new output for the current platform.
+
+When the `OS` environment variable is set to `YES`, passing this flag has the
+effect of accepting the new output for all word sizes on the current OS.
+
+``` sh
+# accept new output for all tests
+build test -a
+
+# just run and accept new output for 'test123' and 'test456'
+build test -a --only="test123 test456"
+
+# accept new output for current platform and all word sizes for
+# the current OS, for all tests
+PLATFORM=YES OS=YES build test -a
 ```
 
 ## Performance tests

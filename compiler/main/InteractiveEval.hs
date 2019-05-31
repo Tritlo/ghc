@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, MagicHash, NondecreasingIndentation, UnboxedTuples,
+{-# LANGUAGE CPP, MagicHash, NondecreasingIndentation,
     RecordWildCards, BangPatterns #-}
 
 -- -----------------------------------------------------------------------------
@@ -249,7 +249,7 @@ Things like the coercion axiom for newtypes. These bindings all get
 OccNames that users can't write, to avoid the possibility of name
 clashes (in linker symbols).  That gives a convenient way to suppress
 them. The relevant predicate is OccName.isDerivedOccName.
-See Trac #11051 for more background and examples.
+See #11051 for more background and examples.
 -}
 
 withVirtualCWD :: GhcMonad m => m a -> m a
@@ -357,7 +357,8 @@ handleRunStatus step expr bindings final_ids status history
     = do hsc_env <- getSession
          let final_ic = extendInteractiveContextWithIds (hsc_IC hsc_env) final_ids
              final_names = map getName final_ids
-         liftIO $ Linker.extendLinkEnv (zip final_names hvals)
+             dl = hsc_dynLinker hsc_env
+         liftIO $ Linker.extendLinkEnv dl (zip final_names hvals)
          hsc_env' <- liftIO $ rttiEnvironment hsc_env{hsc_IC=final_ic}
          setSession hsc_env'
          return (ExecComplete (Right final_names) allocs)
@@ -396,7 +397,8 @@ resumeExec canLogSpan step
             new_names = [ n | thing <- ic_tythings ic
                             , let n = getName thing
                             , not (n `elem` old_names) ]
-        liftIO $ Linker.deleteFromLinkEnv new_names
+            dl        = hsc_dynLinker hsc_env
+        liftIO $ Linker.deleteFromLinkEnv dl new_names
 
         case r of
           Resume { resumeStmt = expr, resumeContext = fhv
@@ -490,8 +492,9 @@ bindLocalsAtBreakpoint hsc_env apStack Nothing = do
 
        ictxt0 = hsc_IC hsc_env
        ictxt1 = extendInteractiveContextWithIds ictxt0 [exn_id]
+       dl     = hsc_dynLinker hsc_env
    --
-   Linker.extendLinkEnv [(exn_name, apStack)]
+   Linker.extendLinkEnv dl [(exn_name, apStack)]
    return (hsc_env{ hsc_IC = ictxt1 }, [exn_name], span, "<exception thrown>")
 
 -- Just case: we stopped at a breakpoint, we have information about the location
@@ -548,10 +551,11 @@ bindLocalsAtBreakpoint hsc_env apStack_fhv (Just BreakInfo{..}) = do
        ictxt0 = hsc_IC hsc_env
        ictxt1 = extendInteractiveContextWithIds ictxt0 final_ids
        names  = map idName new_ids
+       dl     = hsc_dynLinker hsc_env
 
    let fhvs = catMaybes mb_hValues
-   Linker.extendLinkEnv (zip names fhvs)
-   when result_ok $ Linker.extendLinkEnv [(result_name, apStack_fhv)]
+   Linker.extendLinkEnv dl (zip names fhvs)
+   when result_ok $ Linker.extendLinkEnv dl [(result_name, apStack_fhv)]
    hsc_env1 <- rttiEnvironment hsc_env{ hsc_IC = ictxt1 }
    return (hsc_env1, if result_ok then result_name:names else names, span, decl)
   where
@@ -756,7 +760,7 @@ moduleIsInterpreted modl = withSession $ \h ->
 -- Filter the instances by the ones whose tycons (or clases resp)
 -- are in scope (qualified or otherwise).  Otherwise we list a whole lot too many!
 -- The exact choice of which ones to show, and which to hide, is a judgement call.
---      (see Trac #1581)
+--      (see #1581)
 getInfo :: GhcMonad m => Bool -> Name
         -> m (Maybe (TyThing,Fixity,[ClsInst],[FamInst], SDoc))
 getInfo allInfo name
@@ -800,7 +804,7 @@ getRdrNamesInScope = withSession $ \hsc_env -> do
       ic = hsc_IC hsc_env
       gbl_rdrenv = ic_rn_gbl_env ic
       gbl_names = concatMap greRdrNames $ globalRdrEnvElts gbl_rdrenv
-  -- Exclude internally generated names; see e.g. Trac #11328
+  -- Exclude internally generated names; see e.g. #11328
   return (filter (not . isDerivedOccName . rdrNameOcc) gbl_names)
 
 

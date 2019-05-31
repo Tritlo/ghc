@@ -5,8 +5,8 @@
 # This file is part of the GHC build system.
 #
 # To understand how the build system works and how to modify it, see
-#      http://ghc.haskell.org/trac/ghc/wiki/Building/Architecture
-#      http://ghc.haskell.org/trac/ghc/wiki/Building/Modifying
+#      https://gitlab.haskell.org/ghc/ghc/wikis/building/architecture
+#      https://gitlab.haskell.org/ghc/ghc/wikis/building/modifying
 #
 # -----------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@
 #
 # The actual build order is defined by dependencies, and the phase
 # ordering used to ensure correct ordering of makefile-generation; see
-#    http://ghc.haskell.org/trac/ghc/wiki/Building/Architecture/Idiom/PhaseOrdering
+#    https://gitlab.haskell.org/ghc/ghc/wikis/building/architecture/idiom/phase-ordering
 #
 #     * With bootstrapping compiler:
 #           o Build utils/ghc-cabal
@@ -97,7 +97,7 @@ endif
 ifeq      "$(MAKE_RESTARTS)" ""
 else ifeq "$(MAKE_RESTARTS)" "1"
 else
-$(error Make has restarted itself $(MAKE_RESTARTS) times; is there a makefile bug? See http://ghc.haskell.org/trac/ghc/wiki/Building/Troubleshooting#Makehasrestarteditself3timesisthereamakefilebug for details)
+$(error Make has restarted itself $(MAKE_RESTARTS) times; is there a makefile bug? See https://gitlab.haskell.org/ghc/ghc/wikis/building/troubleshooting#make-has-restarted-itself-3-times-is-there-a-makefile-bug for details)
 endif
 
 # -----------------------------------------------------------------------------
@@ -175,7 +175,7 @@ ifeq "$(SPHINXBUILD)" ""
 $(error BUILD_SPHINX_HTML=YES, but `sphinx-build` was not found. \
   Create a file `mk/validate.mk` containing `BUILD_SPHINX_HTML=NO` \
   (when validating), or install `sphinx-build` and rerun `./configure`. \
-  See https://ghc.haskell.org/trac/ghc/wiki/Building/Preparation)
+  See https://gitlab.haskell.org/ghc/ghc/wikis/building/preparation)
 endif
 endif
 
@@ -183,7 +183,7 @@ ifeq "$(BUILD_SPHINX_PDF)" "YES"
 ifeq "$(XELATEX)" ""
 $(error BUILD_SPHINX_PDF=YES, but `xelatex` was not found. \
   Install `xelatex`, then rerun `./configure`. \
-  See https://ghc.haskell.org/trac/ghc/wiki/Building/Preparation)
+  See https://gitlab.haskell.org/ghc/ghc/wikis/building/preparation)
 endif
 endif
 
@@ -191,7 +191,7 @@ ifeq "$(HSCOLOUR_SRCS)" "YES"
 ifeq "$(HSCOLOUR_CMD)" ""
 $(error HSCOLOUR_SRCS=YES, but HSCOLOUR_CMD is empty. \
   Run `cabal install hscolour`, then rerun `./configure`. \
-  See https://ghc.haskell.org/trac/ghc/wiki/Building/Preparation)
+  See https://gitlab.haskell.org/ghc/ghc/wikis/building/preparation)
 endif
 endif
 
@@ -1010,7 +1010,6 @@ $(eval $(call bindist-list,.,\
     README \
     INSTALL \
     configure config.sub config.guess install-sh \
-    settings.in \
     llvm-targets \
     llvm-passes \
     packages \
@@ -1067,7 +1066,7 @@ BIN_DIST_MK = $(BIN_DIST_PREP_DIR)/bindist.mk
 unix-binary-dist-prep:
 	$(call removeTrees,bindistprep/)
 	"$(MKDIRHIER)" $(BIN_DIST_PREP_DIR)
-	set -e; for i in packages LICENSE compiler ghc rts libraries utils docs libffi includes driver mk rules Makefile aclocal.m4 config.sub config.guess install-sh settings.in llvm-targets llvm-passes ghc.mk inplace distrib/configure.ac distrib/README distrib/INSTALL; do ln -s ../../$$i $(BIN_DIST_PREP_DIR)/; done
+	set -e; for i in packages LICENSE compiler ghc rts libraries utils docs libffi includes driver mk rules Makefile aclocal.m4 config.sub config.guess install-sh llvm-targets llvm-passes ghc.mk inplace distrib/configure.ac distrib/README distrib/INSTALL; do ln -s ../../$$i $(BIN_DIST_PREP_DIR)/; done
 	echo "HADDOCK_DOCS       = $(HADDOCK_DOCS)"       >> $(BIN_DIST_MK)
 	echo "BUILD_SPHINX_HTML  = $(BUILD_SPHINX_HTML)"  >> $(BIN_DIST_MK)
 	echo "BUILD_SPHINX_PDF   = $(BUILD_SPHINX_PDF)"   >> $(BIN_DIST_MK)
@@ -1165,7 +1164,7 @@ SRC_DIST_GHC_DIRS = mk rules docs distrib bindisttest libffi includes \
 SRC_DIST_GHC_FILES += \
     configure.ac config.guess config.sub configure \
     aclocal.m4 README.md ANNOUNCE HACKING.md INSTALL.md LICENSE Makefile \
-    install-sh settings.in llvm-targets llvm-passes VERSION GIT_COMMIT_ID \
+    install-sh llvm-targets llvm-passes VERSION GIT_COMMIT_ID \
     boot packages ghc.mk MAKEHELP.md
 
 .PHONY: VERSION
@@ -1434,7 +1433,7 @@ maintainer-clean : distclean
 .PHONY: all_libraries
 
 .PHONY: bootstrapping-files
-# See https://ghc.haskell.org/trac/ghc/wiki/Building/Porting
+# See https://gitlab.haskell.org/ghc/ghc/wikis/building/porting
 bootstrapping-files: $(includes_H_CONFIG)
 bootstrapping-files: $(includes_DERIVEDCONSTANTS)
 bootstrapping-files: $(includes_GHCCONSTANTS)
@@ -1503,7 +1502,7 @@ endif
 #  [2]
 #  find utils -name package-data.mk | xargs grep -l 'DEP_NAMES =.* ghc\($\| \)'
 #
-#  [3] https://ghc.haskell.org/trac/ghc/wiki/Building/CrossCompiling
+#  [3] https://gitlab.haskell.org/ghc/ghc/wikis/building/cross-compiling
 #
 #  [4] * bc31dbe8ee22819054df60f5ef219fed393a1c54
 #      "Disable any packages built with stage 2 when cross-compiling

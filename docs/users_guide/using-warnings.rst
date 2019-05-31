@@ -12,7 +12,7 @@ messages, otherwise known as warnings, can be generated during compilation.
 Some options control individual warnings and others control collections
 of warnings.
 To turn off an individual warning ``-W<wflag>``, use ``-Wno-<wflag>``.
-To reverse``-Werror``, which makes all warnings into errors, use ``-Wwarn``.
+To reverse ``-Werror``, which makes all warnings into errors, use ``-Wwarn``.
 
 By default, you get a standard set of warnings which are
 generally likely to indicate bugs in your program. These are:
@@ -215,7 +215,7 @@ all these warnings can still be controlled with ``-f(no-)warn-*`` instead
 of ``-W(no-)*``.
 
 .. ghc-flag:: -Wunrecognised-warning-flags
-    :shortdesc: throw a warning when an unreconised ``-W...`` flag is
+    :shortdesc: throw a warning when an unrecognised ``-W...`` flag is
         encountered on the command line.
     :type: dynamic
     :reverse: -Wno-unrecognised-warning-flags
@@ -1545,9 +1545,10 @@ of ``-W(no-)*``.
     :shortdesc: Warn about record wildcard matches when none of the bound variables
       are used.
     :type: dynamic
-    :since: 8.10.1
     :reverse: -Wno-unused-record-wildcards
     :category:
+
+    :since: 8.10.1
 
     .. index::
        single: unused, warning, record wildcards
@@ -1566,9 +1567,10 @@ of ``-W(no-)*``.
 .. ghc-flag:: -Wredundant-record-wildcards
     :shortdesc: Warn about record wildcard matches when the wildcard binds no patterns.
     :type: dynamic
-    :since: 8.10.1
     :reverse: -Wno-redundant-record-wildcards
     :category:
+
+    :since: 8.10.1
 
     .. index::
        single: unused, warning, record wildcards

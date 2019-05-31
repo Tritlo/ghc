@@ -7,7 +7,7 @@
  * Documentation on the architecture of the Garbage Collector can be
  * found in the online commentary:
  *
- *   http://ghc.haskell.org/trac/ghc/wiki/Commentary/Rts/Storage/GC
+ *   https://gitlab.haskell.org/ghc/ghc/wikis/commentary/rts/storage/gc
  *
  * ---------------------------------------------------------------------------*/
 
@@ -281,7 +281,7 @@ GarbageCollect (uint32_t collect_gen,
       // lose locality by moving cached data into another CPU's cache
       // (this effect can be quite significant).
       //
-      // We could have a more complex way to deterimine whether to do
+      // We could have a more complex way to determine whether to do
       // work stealing or not, e.g. it might be a good idea to do it
       // if the heap is big.  For now, we just turn it on or off with
       // a flag.

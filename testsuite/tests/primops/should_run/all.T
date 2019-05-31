@@ -13,13 +13,16 @@ test('T10678',
      compile_and_run, ['-O'])
 test('T11296', normal, compile_and_run, [''])
 test('T13825-compile', normal, compile_and_run, [''])
+test('T16164', normal, compile_and_run, [''])
 test('ArithInt8', omit_ways(['ghci']), compile_and_run, [''])
 test('ArithWord8', omit_ways(['ghci']), compile_and_run, [''])
 test('CmpInt8', normal, compile_and_run, [''])
 test('CmpWord8', normal, compile_and_run, [''])
 test('ShowPrim', normal, compile_and_run, [''])
 
-test('ArithInt16', normal, compile_and_run, [''])
-test('ArithWord16', normal, compile_and_run, [''])
+# These two tests use unboxed tuples, which GHCi doesn't support
+test('ArithInt16', omit_ways(['ghci']), compile_and_run, [''])
+test('ArithWord16', omit_ways(['ghci']), compile_and_run, [''])
+
 test('CmpInt16', normal, compile_and_run, [''])
 test('CmpWord16', normal, compile_and_run, [''])

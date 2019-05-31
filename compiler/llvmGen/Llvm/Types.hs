@@ -185,6 +185,7 @@ pprSpecialStatic :: LlvmStatic -> SDoc
 pprSpecialStatic (LMBitc v t) =
     ppr (pLower t) <> text ", bitcast (" <> ppr v <> text " to " <> ppr t
         <> char ')'
+pprSpecialStatic v@(LMStaticPointer x) = ppr (pLower $ getVarType x) <> comma <+> ppr v
 pprSpecialStatic stat = ppr stat
 
 
@@ -231,7 +232,7 @@ ppLit f@(LMFloatLit _ _)       = sdocWithDynFlags (\dflags ->
                                    error $ "Can't print this float literal!" ++ showSDoc dflags (ppr f))
 ppLit (LMVectorLit ls  )       = char '<' <+> ppCommaJoin ls <+> char '>'
 ppLit (LMNullLit _     )       = text "null"
--- Trac 11487 was an issue where we passed undef for some arguments
+-- #11487 was an issue where we passed undef for some arguments
 -- that were actually live. By chance the registers holding those
 -- arguments usually happened to have the right values anyways, but
 -- that was not guaranteed. To find such bugs reliably, we set the
