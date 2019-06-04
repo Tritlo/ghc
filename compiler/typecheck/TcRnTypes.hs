@@ -4026,12 +4026,14 @@ data HoleFitPlugin = HoleFitPlugin
   { candPlugin :: CandPlugin
   , fitPlugin :: FitPlugin }
 
--- | HoleFitPluginR allows plugins to use an internal TcRef for tracking state.
+-- | HoleFitPluginR adds a TcRef to hole fit plugins so that plugins can
+-- track internal state. Note the existential quantification, ensuring that
+-- the state cannot be modified from outside the plugin.
 data HoleFitPluginR = forall s. HoleFitPluginR
   { hfPluginInit :: TcM (TcRef s)
     -- ^ Initializes the TcRef to be passed to the plugin
   , holeFitPluginR :: TcRef s -> HoleFitPlugin
-    -- ^
+    -- ^ The function defining the plugin itself
   , hfPluginStop :: TcRef s -> TcM ()
-    -- ^ Cleanup of state, guaranteed to be called even on error.
+    -- ^ Cleanup of state, guaranteed to be called even on error
   }
