@@ -869,12 +869,12 @@ at error generation.
 
 ::
 
-    data TypedHole = TyH { relevantCts :: Cts
+    data TypedHole = TyH { tyHRelevantCts :: Cts
                           -- ^ Any relevant Cts to the hole
-                        , implics :: [Implication]
+                        , tyHImplics :: [Implication]
                           -- ^ The nested implications of the hole with the
                           --   innermost implication first.
-                        , holeCt :: Maybe Ct
+                        , tyHCt :: Maybe Ct
                           -- ^ The hole constraint itself, if available.
                         }
 
@@ -912,7 +912,7 @@ communication between the candidate and fit plugin.
     data HoleFitPluginR = forall s. HoleFitPluginR
       { hfPluginInit :: TcM (TcRef s)
         -- ^ Initializes the TcRef to be passed to the plugin
-      , holeFitPluginR :: TcRef s -> HoleFitPlugin
+      , hfPluginRun :: TcRef s -> HoleFitPlugin
         -- ^ The function defining the plugin itself
       , hfPluginStop :: TcRef s -> TcM ()
         -- ^ Cleanup of state, guaranteed to be called even on error
@@ -987,7 +987,7 @@ spent on searching for valid hole fits, after which new searches are aborted.
     fromModule _ = []
 
     toHoleFitCommand :: TypedHole -> String -> Maybe String
-    toHoleFitCommand TyH{holeCt = Just (CHoleCan _ h)} str
+    toHoleFitCommand TyH{tyHCt = Just (CHoleCan _ h)} str
         = stripPrefix ("_" <> str) $ occNameString $ holeOcc h
     toHoleFitCommand _ _ = Nothing
 
