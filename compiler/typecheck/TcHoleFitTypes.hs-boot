@@ -4,4 +4,7 @@
 -- + which needs 'TcRnTypes'
 module TcHoleFitTypes where
 
+-- Build ordering
+import GHC.Base()
+
 data HoleFitPlugin
