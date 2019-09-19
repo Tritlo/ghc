@@ -617,8 +617,6 @@ TH_QUASIQUOTE   { L _ (ITquasiQuote _) }
 TH_QQUASIQUOTE  { L _ (ITqQuasiQuote _) }
 
  '_('           { L _ ITopenTypedHole }
- '_$('          { L _ ITopenTypedHoleEscape }
- '_$$('         { L _ ITopenTypedHoleTyEscape }
 
 %monad { P } { >>= } { return }
 %lexer { (lexer True) } { L _ ITeof }
@@ -2865,14 +2863,8 @@ infix_extended_typed_hole :: { forall b. DisambInfixOp b => PV (Located b) }
         | '`' typed_hole_splice           maybe_hole_id '`' { amms (mkHsExtInfixHoleSplicePV (comb2 $1 $>) $3 $2)
                                                               [mj AnnBackquote $1, mj AnnBackquote $4] }
 
-
-typed_hole_splice :: { Located (HsSplice GhcPs) }
-    : '_$(' exp ')'        {% runECP_P $2 >>= \ $2 ->
-                               ams (sLL $1 $> $ mkUntypedSplice HasParens $2)
-                                 [mj AnnOpenHolePE $1, mj AnnCloseP $3] }
-    | '_$$(' exp ')'        {% runECP_P $2 >>= \ $2 ->
-                                ams (sLL $1 $> $ mkTypedSplice HasParens $2)
-                                  [mj AnnOpenHolePTE $1, mj AnnCloseP $3] }
+typed_hole_splice :: { Located (LHsExpr GhcPs) }
+  : '_' splice_exp {% ams (sLL $1 $> $2) [mj AnnVal $1] }
 
 maybe_hole_id :: { Maybe (Located Int) }
   : INTEGER     {% ajs (Just $ sLL $1 $1 $ fromInteger $ il_value $ getINTEGER $1)

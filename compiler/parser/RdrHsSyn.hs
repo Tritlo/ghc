@@ -1840,7 +1840,7 @@ class DisambInfixOp b where
   mkHsConOpPV :: Located RdrName -> PV (Located b)
   mkHsInfixHolePV :: SrcSpan -> PV (Located b)
   mkHsExtInfixHolePV :: SrcSpan -> Maybe (Located Int) -> Maybe (Located FastString) -> PV (Located b)
-  mkHsExtInfixHoleSplicePV :: SrcSpan -> Maybe (Located Int) -> Located (HsSplice GhcPs) -> PV (Located b)
+  mkHsExtInfixHoleSplicePV :: SrcSpan -> Maybe (Located Int) -> Located (LHsExpr GhcPs) -> PV (Located b)
 
 instance p ~ GhcPs => DisambInfixOp (HsExpr p) where
   mkHsVarOpPV v = return $ cL (getLoc v) (HsVar noExtField v)
@@ -1911,7 +1911,7 @@ class b ~ (Body b) GhcPs => DisambECP b where
   mkHsWildCardPV :: SrcSpan -> PV (Located b)
   -- | An extended hole _(...), _$(...) or _$$(...)
   mkHsExtHolePV :: SrcSpan -> Maybe (Located Int) -> Maybe (Located FastString) -> PV (Located b)
-  mkHsExtHoleSplicePV :: SrcSpan -> Maybe (Located Int) -> Located (HsSplice GhcPs) -> PV (Located b)
+  mkHsExtHoleSplicePV :: SrcSpan -> Maybe (Located Int) -> Located (LHsExpr GhcPs) -> PV (Located b)
   -- | Disambiguate "a :: t" (type annotation)
   mkHsTySigPV :: SrcSpan -> Located b -> LHsType GhcPs -> PV (Located b)
   -- | Disambiguate "[a,b,c]" (list syntax)
@@ -2103,7 +2103,7 @@ hsHoleFSExpr hid fs =
         i = maybe "" (show . unLoc) hid
         unLoc (L _ i) = i
 
-hsHoleSpliceExpr :: Maybe (Located Int) -> Located (HsSplice GhcPs) -> HsExpr (GhcPass id)
+hsHoleSpliceExpr :: Maybe (Located Int) -> Located (LHsExpr GhcPs) -> HsExpr (GhcPass id)
 hsHoleSpliceExpr hid spl =
    HsUnboundVar noExtField $ TrueExprHole $
     mkVarOcc $ "_" ++ (showSDocUnsafe (ppr spl)) ++ i -- Splices are printed as $(...) already
@@ -2165,10 +2165,7 @@ instance p ~ GhcPs => DisambECP (PatBuilder p) where
   mkHsWildCardPV l = return $ cL l (PatBuilderPat (WildPat noExtField))
   mkHsExtHolePV l _ _ =  addFatalError l $ text "(_(...))-syntax in pattern"
   mkHsExtHoleSplicePV l _ (L _ spl) = addFatalError l $
-    text "(" <+> rep <+> text ")-syntax in pattern"
-      where rep = text $ case spl of
-                           HsTypedSplice{} -> "_$$(...)"
-                           _ -> "_$(...)"
+    text "(_" <+> (ppr spl) <+> text ")-syntax in pattern"
   mkHsTySigPV l b sig = do
     p <- checkLPat b
     return $ cL l (PatBuilderPat (SigPat noExtField p (mkLHsSigWcType sig)))
