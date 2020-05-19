@@ -1473,7 +1473,7 @@ repE (HsLet _ (L _ bs) e)       = do { (ss,ds) <- repBinds bs
 
 -- FIXME: I haven't got the types here right yet
 repE e@(HsDo _ ctxt (L _ sts))
- | case ctxt of { DoExpr -> True; GhciStmtCtxt -> True; _ -> False }
+ | case ctxt of { DoExpr{} -> True; GhciStmtCtxt -> True; _ -> False }
  = do { (ss,zs) <- repLSts sts;
         e'      <- repDoE (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
@@ -1483,7 +1483,7 @@ repE e@(HsDo _ ctxt (L _ sts))
         e'      <- repComp (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
 
- | MDoExpr <- ctxt
+ | MDoExpr{} <- ctxt
  = do { (ss,zs) <- repLSts sts;
         e'      <- repMDoE (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
