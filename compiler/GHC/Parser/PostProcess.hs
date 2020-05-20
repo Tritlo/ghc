@@ -112,6 +112,7 @@ import GHC.Core.ConLike        ( ConLike(..) )
 import GHC.Core.Coercion.Axiom ( Role, fsFromRole )
 import GHC.Types.Name.Reader
 import GHC.Types.Name
+import GHC.Unit.Module (ModuleName)
 import GHC.Types.Basic
 import GHC.Parser.Lexer
 import GHC.Utils.Lexeme ( isLexCon )
@@ -1824,7 +1825,11 @@ class b ~ (Body b) GhcPs => DisambECP b where
          -> Located b
          -> PV (Located b)
   -- | Disambiguate "do { ... }" (do notation)
-  mkHsDoPV :: SrcSpan -> Located [LStmt GhcPs (Located b)] -> PV (Located b)
+  mkHsDoPV ::
+    SrcSpan ->
+    Maybe ModuleName ->
+    Located [LStmt GhcPs (Located b)] ->
+    PV (Located b)
   -- | Disambiguate "( ... )" (parentheses)
   mkHsParPV :: SrcSpan -> Located b -> PV (Located b)
   -- | Disambiguate a variable "f" or a data constructor "MkF".
@@ -1933,7 +1938,11 @@ instance DisambECP (HsCmd GhcPs) where
   mkHsIfPV l c semi1 a semi2 b = do
     checkDoAndIfThenElse c semi1 a semi2 b
     return $ L l (mkHsCmdIf c a b)
-  mkHsDoPV l stmts = return $ L l (HsCmdDo noExtField stmts)
+  mkHsDoPV l Nothing stmts = return $ L l (HsCmdDo noExtField stmts)
+  mkHsDoPV l (Just m)    _ =
+    cmdFail l $
+      text "Found a qualified" <+> ppr m <> text ".do block in a command, but"
+      $$ text "qualified 'do' is not supported in commands."
   mkHsParPV l c = return $ L l (HsCmdPar noExtField c)
   mkHsVarPV (L l v) = cmdFail l (ppr v)
   mkHsLitPV (L l a) = cmdFail l (ppr a)
@@ -1993,7 +2002,7 @@ instance DisambECP (HsExpr GhcPs) where
   mkHsIfPV l c semi1 a semi2 b = do
     checkDoAndIfThenElse c semi1 a semi2 b
     return $ L l (mkHsIf c a b)
-  mkHsDoPV l stmts = return $ L l (HsDo noExtField (DoExpr Nothing) stmts)
+  mkHsDoPV l mod stmts = return $ L l (HsDo noExtField (DoExpr mod) stmts)
   mkHsParPV l e = return $ L l (HsPar noExtField e)
   mkHsVarPV v@(getLoc -> l) = return $ L l (HsVar noExtField v)
   mkHsLitPV (L l a) = return $ L l (HsLit noExtField a)
@@ -2075,7 +2084,7 @@ instance DisambECP (PatBuilder GhcPs) where
   mkHsAppTypePV l _ _ = addFatalError l $
     text "Type applications in patterns are not yet supported"
   mkHsIfPV l _ _ _ _ _ = addFatalError l $ text "(if ... then ... else ...)-syntax in pattern"
-  mkHsDoPV l _ = addFatalError l $ text "do-notation in pattern"
+  mkHsDoPV l _ _ = addFatalError l $ text "do-notation in pattern"
   mkHsParPV l p = return $ L l (PatBuilderPar p)
   mkHsVarPV v@(getLoc -> l) = return $ L l (PatBuilderVar v)
   mkHsLitPV lit@(L l a) = do
