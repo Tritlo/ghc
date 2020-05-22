@@ -1798,25 +1798,25 @@ data Hole = ExprHole UnboundVar
             -- expression (TypedHoles)
           | TypeHole OccName
             -- ^ A hole in a type (PartialTypeSignatures)
-          | ExtendedExprHole OccName ExtendedHoleResult
-            -- ^ A extended hole (_(...)) in an expression extended holes
+          | NonEmptyExprHole OccName NonEmptyHoleResult
+            -- ^ A non-empty hole (_(...)) in an expression.
 
 
 
 isExprHole :: Hole -> Bool
 isExprHole (ExprHole {}) = True
-isExprHole (ExtendedExprHole {}) = True
+isExprHole (NonEmptyExprHole {}) = True
 isExprHole _ = False
 
 instance Outputable Hole where
   ppr (ExprHole ub)  = ppr ub
   ppr (TypeHole occ) = text "TypeHole" <> parens (ppr occ)
-  ppr (ExtendedExprHole occ ehr) = text "ExtendedExprHole" <> ppr occ <> parens (ppr ehr)
+  ppr (NonEmptyExprHole occ ehr) = text "NonEmptyExprHole" <> ppr occ <> parens (ppr ehr)
 
 holeOcc :: Hole -> OccName
 holeOcc (ExprHole uv)  = unboundVarOcc uv
 holeOcc (TypeHole occ) = occ
-holeOcc (ExtendedExprHole eh _) = occName eh
+holeOcc (NonEmptyExprHole eh _) = occName eh
 
 {- Note [Hole constraints]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2229,7 +2229,7 @@ isOutOfScopeCt _ = False
 
 isExprHoleCt :: Ct -> Bool
 isExprHoleCt (CHoleCan { cc_hole = ExprHole {} }) = True
-isExprHoleCt (CHoleCan { cc_hole = ExtendedExprHole {} }) = True
+isExprHoleCt (CHoleCan { cc_hole = NonEmptyExprHole {} }) = True
 isExprHoleCt _ = False
 
 isTypeHoleCt :: Ct -> Bool
@@ -3742,7 +3742,7 @@ exprCtOrigin (HsTcBracketOut {})= panic "exprCtOrigin HsTcBracketOut"
 exprCtOrigin (HsSpliceE {})      = Shouldn'tHappenOrigin "TH splice"
 exprCtOrigin (HsProc {})         = Shouldn'tHappenOrigin "proc"
 exprCtOrigin (HsStatic {})       = Shouldn'tHappenOrigin "static expression"
-exprCtOrigin (HsExtendedHole {}) = HoleOrigin
+exprCtOrigin (HsNonEmptyHole {}) = HoleOrigin
 exprCtOrigin (HsTick _ _ e)           = lexprCtOrigin e
 exprCtOrigin (HsBinTick _ _ _ e)      = lexprCtOrigin e
 exprCtOrigin (HsTickPragma _ _ _ _ e) = lexprCtOrigin e

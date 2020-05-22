@@ -214,17 +214,17 @@ rnExpr e@(HsBracket _ br_body) = rnBracket e br_body
 rnExpr (HsSpliceE _ splice) = rnSpliceExpr splice
 
 ------------------------------------------
--- See Note [Extended Typed-Holes]
-rnExpr (HsExtendedHole ext (ExtendedHoleE nm cont)) =
+-- See Note [Non-Empty Typed-Holes]
+rnExpr (HsNonEmptyHole ext (NonEmptyHoleE nm cont)) =
     case cont of
-      EHCNothing ->
-        return (HsExtendedHole ext (ExtendedHoleE nm EHCNothing), emptyFVs)
-      EHCExpr e ->
-        return (HsExtendedHole ext (ExtendedHoleE nm (EHCExpr e)), emptyFVs)
-      EHCSplice (L l spl) ->
+      NEHCNothing ->
+        return (HsNonEmptyHole ext (NonEmptyHoleE nm NEHCNothing), emptyFVs)
+      NEHCExpr e ->
+        return (HsNonEmptyHole ext (NonEmptyHoleE nm (NEHCExpr e)), emptyFVs)
+      NEHCSplice (L l spl) ->
         do (rne, fvs) <- rnSpliceExpr spl
-           return (HsExtendedHole ext (ExtendedHoleE nm (EHCRunSplice (L l rne))), fvs)
-      EHCRunSplice e ->
+           return (HsNonEmptyHole ext (NonEmptyHoleE nm (NEHCRunSplice (L l rne))), fvs)
+      NEHCRunSplice e ->
         pprPanic "rnExpr:already run-splice in extended hole!" (ppr e)
 
 ---------------------------------------------

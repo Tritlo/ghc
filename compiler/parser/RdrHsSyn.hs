@@ -1841,7 +1841,7 @@ class DisambInfixOp b where
   mkHsInfixHolePV :: SrcSpan -> PV (Located b)
   mkHsExtInfixHolePV :: SrcSpan
                      -> Located (Maybe FastString)
-                     -> ExtendedHoleContent GhcPs
+                     -> NonEmptyHoleContent GhcPs
                      -> PV (Located b)
 
 instance p ~ GhcPs => DisambInfixOp (HsExpr p) where
@@ -1856,7 +1856,7 @@ instance DisambInfixOp RdrName where
   mkHsInfixHolePV l =
     addFatalError l $ text "Invalid infix hole, expected an infix operator"
   mkHsExtInfixHolePV l _ _ =
-    addFatalError l $ text "Invalid extended infix hole, expected an infix operator"
+    addFatalError l $ text "Invalid non-empty infix hole, expected an infix operator"
 
 -- | Disambiguate constructs that may appear when we do not know ahead of time whether we are
 -- parsing an expression, a command, or a pattern.
@@ -1908,10 +1908,10 @@ class b ~ (Body b) GhcPs => DisambECP b where
   mkHsOverLitPV :: Located (HsOverLit GhcPs) -> PV (Located b)
   -- | Disambiguate a wildcard
   mkHsWildCardPV :: SrcSpan -> PV (Located b)
-  -- | An extended hole _(...), _$(...) or _$$(...)
+  -- | An non-empty hole _(...), _$(...) or _$$(...)
   mkHsExtHolePV :: SrcSpan
                 -> Located (Maybe FastString)
-                -> ExtendedHoleContent GhcPs
+                -> NonEmptyHoleContent GhcPs
                 -> PV (Located b)
   -- | Disambiguate "a :: t" (type annotation)
   mkHsTySigPV :: SrcSpan -> Located b -> LHsType GhcPs -> PV (Located b)
@@ -2011,11 +2011,11 @@ instance p ~ GhcPs => DisambECP (HsCmd p) where
   mkHsExtHolePV l hid cont = cmdFail l (text "_"  <+> prc <+> prHid)
     where prHid = maybe empty ppr $ unLoc hid
           prc = case cont of
-                  EHCNothing -> text "()"
-                  EHCExpr p -> text "(" <+> ppr p <+> text ")"
-                  EHCSplice spl -> ppr spl
-                  EHCRunSplice e ->
-                    pprPanic "hsExtHoleExpr:Already run splice in extended hole!" $ ppr e
+                  NEHCNothing -> text "()"
+                  NEHCExpr p -> text "(" <+> ppr p <+> text ")"
+                  NEHCSplice spl -> ppr spl
+                  NEHCRunSplice e ->
+                    pprPanic "hsExtHoleExpr:Already run splice in non-empty hole!" $ ppr e
   mkHsTySigPV l a sig = cmdFail l (ppr a <+> text "::" <+> ppr sig)
   mkHsExplicitListPV l xs = cmdFail l $
     brackets (fsep (punctuate comma (map ppr xs)))
@@ -2101,23 +2101,23 @@ hsHoleExpr :: HsExpr (GhcPass id)
 hsHoleExpr = HsUnboundVar noExtField (TrueExprHole (mkVarOcc "_"))
 
 
--- See Note [Extended Typed-Holes]
+-- See Note [Non-Empty Typed-Holes]
 hsExtHoleExpr :: Located (Maybe FastString)
-              -> ExtendedHoleContent GhcPs
+              -> NonEmptyHoleContent GhcPs
               -> HsExpr GhcPs
 hsExtHoleExpr hid cont =
-      HsExtendedHole noExtField (ExtendedHoleE (mkVarOcc (pat ++ i)) cont)
+      HsNonEmptyHole noExtField (NonEmptyHoleE (mkVarOcc (pat ++ i)) cont)
   where i = maybe "" unpackFS $ unLoc hid
         pat = case cont of
-                  EHCNothing   -> "_()"
-                  EHCExpr _ -> "_(...)"
-                  EHCRunSplice e ->
-                    pprPanic "hsExtHoleExpr:Already run splice in extended hole!" $ ppr e
-                  EHCSplice (L _ spl) ->
+                  NEHCNothing   -> "_()"
+                  NEHCExpr _ -> "_(...)"
+                  NEHCRunSplice e ->
+                    pprPanic "hsExtHoleExpr:Already run splice in non-empty hole!" $ ppr e
+                  NEHCSplice (L _ spl) ->
                     case spl of
                         HsUntypedSplice {} -> "_$(...)"
                         HsTypedSplice {} -> "_$$(...)"
-                        _ -> pprPanic "non-$( or $$( splice in extended hole:"  $ ppr spl
+                        _ -> pprPanic "non-$( or $$( splice in non-empty hole:"  $ ppr spl
 
 -- | See Note [Ambiguous syntactic categories] and Note [PatBuilder]
 data PatBuilder p
@@ -2177,15 +2177,15 @@ instance p ~ GhcPs => DisambECP (PatBuilder p) where
     text "(" <+> rep <+> text ")-syntax in pattern"
       where rep = text $
               case cont of
-                EHCNothing   -> "_()"
-                EHCExpr _ -> "_(...)"
-                EHCRunSplice e ->
-                  pprPanic "hsExtHoleExpr:Already run splice in extended hole!" $ ppr e
-                EHCSplice (L _ spl) ->
+                NEHCNothing   -> "_()"
+                NEHCExpr _ -> "_(...)"
+                NEHCRunSplice e ->
+                  pprPanic "hsExtHoleExpr:Already run splice in non-empty hole!" $ ppr e
+                NEHCSplice (L _ spl) ->
                   case spl of
                     HsUntypedSplice{} -> "_$(...)"
                     HsTypedSplice{} -> "_$$(...)"
-                    _ -> pprPanic "non-$( or $$( splice in extended hole:"  $ ppr spl
+                    _ -> pprPanic "non-$( or $$( splice in non-empty hole:"  $ ppr spl
   mkHsTySigPV l b sig = do
     p <- checkLPat b
     return $ cL l (PatBuilderPat (SigPat noExtField p (mkLHsSigWcType sig)))

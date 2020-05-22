@@ -2815,7 +2815,7 @@ aexp2   :: { ECP }
 
         | '[' list ']'      { ECP $ $2 (comb2 $1 $>) >>= \a -> ams a [mos $1,mcs $3] }
         | '_'               { ECP $ mkHsWildCardPV (getLoc $1) }
-        | extended_typed_hole { ECP $ mkHsExtHolePV (getLoc $ snd $1) (fst $1) (unLoc $ snd $1) }
+        | non_empty_typed_hole { ECP $ mkHsExtHolePV (getLoc $ snd $1) (fst $1) (unLoc $ snd $1) }
         -- Template Haskell Extension
         | splice_untyped { ECP $ mkHsSplicePV $1 }
         | splice_typed   { ecpFromExp $ mapLoc (HsSpliceE noExtField) $1 }
@@ -2852,19 +2852,19 @@ aexp2   :: { ECP }
                                                            Nothing (reverse $3))
                                           [mu AnnOpenB $1,mu AnnCloseB $4] }
 
-extended_typed_hole :: { (Located (Maybe FastString), Located (ExtendedHoleContent GhcPs)) }
+non_empty_typed_hole :: { (Located (Maybe FastString), Located (NonEmptyHoleContent GhcPs)) }
         : '_('   exp hole_close   {% runECP_P $2
-                                     >>= \ $2 -> fmap EHCExpr (ams (sLL $1 $> $ unLoc $2)
+                                     >>= \ $2 -> fmap NEHCExpr (ams (sLL $1 $> $ unLoc $2)
                                                   [mj AnnOpenHolePE $1,mj AnnCloseHoleP $3])
                                      >>= \ $2 -> return ($3, sLL $1 $> $2) }
-        | '_('   {- empty -} hole_close  { ($2, sLL $1 $> EHCNothing) }
+        | '_('   {- empty -} hole_close  { ($2, sLL $1 $> NEHCNothing) }
         | '_$('  exp hole_close   {% runECP_P $2
-                                     >>= \ $2 -> fmap EHCSplice (ams (sLL $1 $> $
+                                     >>= \ $2 -> fmap NEHCSplice (ams (sLL $1 $> $
                                                         mkUntypedSplice HasParens $2)
                                                    [mj AnnOpenHolePE $1,mj AnnCloseHoleP $3])
                                      >>= \ $2 -> return ($3, sLL $1 $> $2) }
         | '_$$(' exp hole_close   {% runECP_P $2
-                                     >>= \ $2 -> fmap EHCSplice (ams (sLL $1 $> $
+                                     >>= \ $2 -> fmap NEHCSplice (ams (sLL $1 $> $
                                                       mkTypedSplice HasParens $2)
                                                  [mj AnnOpenHolePE $1,mj AnnCloseHoleP $3])
                                      >>= \ $2 -> return ($3, sLL $1 $> $2) }
@@ -3565,7 +3565,7 @@ hole_op :: { forall b. DisambInfixOp b => PV (Located b) }   -- used in sections
 hole_op : '`' '_' '`'           { amms (mkHsInfixHolePV (comb2 $1 $>))
                                        [mj AnnBackquote $1,mj AnnVal $2
                                        ,mj AnnBackquote $3] }
-        | '`' extended_typed_hole '`' { amms (mkHsExtInfixHolePV (comb2 $1 $>)
+        | '`' non_empty_typed_hole '`' { amms (mkHsExtInfixHolePV (comb2 $1 $>)
                                              (fst $2) (unLoc $ snd $2))
                                              [mj AnnBackquote $1, mj AnnBackquote $3 ] }
 

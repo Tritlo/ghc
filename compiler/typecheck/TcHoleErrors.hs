@@ -15,9 +15,9 @@ module TcHoleErrors ( findValidHoleFits, tcFilterHoleFits
                     , HoleFitPlugin (..), HoleFitPluginR (..)
 
                     -- Re-exported from HsSyn
-                    , ExtendedHoleResult (..)
-                    -- Facilities to extract values from extended holes.
-                    , runEHRExpr, runEHRExprDyn, runEHSplice
+                    , NonEmptyHoleResult (..)
+                    -- Facilities to extract values from non-empty holes.
+                    , runNEHRExpr, runNEHRExprDyn, runNEHSplice
                     ) where
 
 import GhcPrelude
@@ -61,7 +61,7 @@ import TcHsSyn  ( zonkTopLExpr )
 import GHC      ( HValue, mkHsApp, mkHsDictLet, GenLocated (..) )
 import Control.Exception ( throwIO )
 
-import HsExpr (ExtendedHoleResult(..), LHsExpr, HsExpr (..) )
+import HsExpr (NonEmptyHoleResult(..), LHsExpr, HsExpr (..) )
 
 import Control.Arrow ( (&&&) )
 
@@ -569,8 +569,8 @@ findValidHoleFits :: TidyEnv        -- ^ The tidy_env for zonking
                   -> TcM (TidyEnv, SDoc)
 findValidHoleFits tidy_env implics simples ct | isExprHoleCt ct =
   do { rdr_env <- getGlobalRdrEnv
-     ; traceTc "Hole is extended by: " $  case ct of
-        CHoleCan { cc_hole = (ExtendedExprHole _ eh)} -> ppr eh
+     ; traceTc "Hole is has contents: " $  case ct of
+        CHoleCan { cc_hole = (NonEmptyExprHole _ eh)} -> ppr eh
         _ -> text "Nothing"
      ; lclBinds <- getLocalBindings tidy_env ct
      ; maxVSubs <- maxValidHoleFits <$> getDynFlags
@@ -1035,10 +1035,10 @@ fromPureHFPlugin plug =
 --   it evaluates to. Note that this HValue can then be coerced with
 --   `(unsafeCoerce# hv :: a)`, if the result type `a` is known. Note that when
 --   multiple plugins are at play, this might not be the case, and the more
---   conservative `runEHRExprDyn` should be used, albeit with the additional
+--   conservative `runNEHRExprDyn` should be used, albeit with the additional
 --   constraint that the HValue is Typeable.
-runEHRExpr :: LHsExpr GhcPs -> TcM HValue
-runEHRExpr parsed_expr@(L loc _) =
+runNEHRExpr :: LHsExpr GhcPs -> TcM HValue
+runNEHRExpr parsed_expr@(L loc _) =
     setSrcSpan loc $
     checkNoErrs $ -- We don't want any errors
     unsetGOptM Opt_DeferTypeErrors $ -- We're running the code, so we don't
@@ -1054,10 +1054,10 @@ runEHRExpr parsed_expr@(L loc _) =
 
 -- | Runs the given expression, but as a Dynamic requires the expression to be
 --   Typeable, otherwise the call to `toDyn` will fail.
-runEHRExprDyn :: LHsExpr GhcPs -> TcM Dynamic
-runEHRExprDyn lexpr@(L loc _) =
+runNEHRExprDyn :: LHsExpr GhcPs -> TcM Dynamic
+runNEHRExprDyn lexpr@(L loc _) =
   setSrcSpan loc $
-  do { dv <- runEHRExpr (wrapInDyn lexpr)
+  do { dv <- runNEHRExpr (wrapInDyn lexpr)
      ; return (unsafeCoerce# dv :: Dynamic) }
  where wrapInDyn :: LHsExpr GhcPs -> LHsExpr GhcPs
        wrapInDyn lexp@(L loc _) =
@@ -1067,12 +1067,12 @@ runEHRExprDyn lexpr@(L loc _) =
 -- | Takes a Haskell expression that evaluates to `Dynamic` and trys to run it,
 --   returning a `Dynamic` that resolves to the value of the given type passed
 --   to `fromDynamic`.
-runEHSplice :: LHsExpr GhcTc -> TcM Dynamic
-runEHSplice lexpr@(L loc _) =
+runNEHSplice :: LHsExpr GhcTc -> TcM Dynamic
+runNEHSplice lexpr@(L loc _) =
  setSrcSpan loc $
   do { dv <- shadow_fatal $ run_lhs_expr lexpr
        -- The unsafeCoerce# is safe here, since any expression contained in an
-       -- ExtendedExprHole is wrapped by `toDyn`
+       -- NonEmptyExprHole is wrapped by `toDyn`
      ; return (unsafeCoerce# dv :: Dynamic) }
 
 

@@ -215,44 +215,44 @@ unboundVarOcc (OutOfScope occ _) = occ
 unboundVarOcc (TrueExprHole occ) = occ
 
 {-
-Note [Extended Typed-Holes]
+Note [Non-Empty Typed-Holes]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Extended holes are used to enable more feature rich typed-holes, where we can
+Non-Empty holes are used to enable more feature rich typed-holes, where we can
 pass arguments along to the typed-hole message beyond just the name of the hole.
 
 They can carry either a string (which is then fed to hole plugins) or a template
 haskell splice, which is run and the contents then handed to hole plugins.
 -}
 
-data ExtendedHoleContent p = EHCNothing
-                           | EHCExpr (LHsExpr GhcPs)
-                           | EHCSplice  (Located (HsSplice p))
-                           | EHCRunSplice (LHsExpr p)
+data NonEmptyHoleContent p = NEHCNothing
+                           | NEHCExpr (LHsExpr GhcPs)
+                           | NEHCSplice  (Located (HsSplice p))
+                           | NEHCRunSplice (LHsExpr p)
 
-data ExtendedHoleResult = EHRNothing
-                        | EHRExpr (LHsExpr GhcPs)
-                        | EHRSplice (LHsExpr GhcTc)
+data NonEmptyHoleResult = NEHRNothing
+                        | NEHRExpr (LHsExpr GhcPs)
+                        | NEHRSplice (LHsExpr GhcTc)
 
-data ExtendedHoleExpr p = ExtendedHoleE OccName (ExtendedHoleContent p)
+data NonEmptyHoleExpr p = NonEmptyHoleE OccName (NonEmptyHoleContent p)
 
-instance Outputable (ExtendedHoleExpr p) where
-  ppr (ExtendedHoleE occ _) = text "ExtendedHoleE" <> parens (ppr occ)
+instance Outputable (NonEmptyHoleExpr p) where
+  ppr (NonEmptyHoleE occ _) = text "NonEmptyHoleE" <> parens (ppr occ)
 
-instance Outputable ExtendedHoleResult where
-  ppr c = text "ExtendedHoleResult: " <> parens (case c of
-                                            EHRNothing -> text "Nothing"
-                                            EHRExpr e -> ppr e
-                                            EHRSplice s -> ppr s )
+instance Outputable NonEmptyHoleResult where
+  ppr c = text "NonEmptyHoleResult: " <> parens (case c of
+                                            NEHRNothing -> text "Nothing"
+                                            NEHRExpr e -> ppr e
+                                            NEHRSplice s -> ppr s )
 
-instance (HasOccName (ExtendedHoleExpr e)) where
-  occName (ExtendedHoleE occ _) = occ
+instance (HasOccName (NonEmptyHoleExpr e)) where
+  occName (NonEmptyHoleE occ _) = occ
 
 
-instance Data p => Data (ExtendedHoleExpr p) where
-  gunfold _ _ _ = panic "ExtendedHoleExpr"
-  toConstr  a   = mkConstr (dataTypeOf a) "ExtendedHoleE" [] Data.Prefix
-  dataTypeOf a  = mkDataType "HsExpr.ExtendedHoleExpr" [toConstr a]
+instance Data p => Data (NonEmptyHoleExpr p) where
+  gunfold _ _ _ = panic "NonEmptyHoleExpr"
+  toConstr  a   = mkConstr (dataTypeOf a) "NonEmptyHoleE" [] Data.Prefix
+  dataTypeOf a  = mkDataType "HsExpr.NonEmptyHoleExpr" [toConstr a]
 
 
 
@@ -635,9 +635,9 @@ data HsExpr p
              (LHsExpr p)        -- Body
 
   ---------------------------------------
-  -- See Note [Extended Typed-Holes]
-  | HsExtendedHole (XExtendedHole p)
-                   (ExtendedHoleExpr p)
+  -- See Note [NonEmpty Typed-Holes]
+  | HsNonEmptyHole (XNonEmptyHole p)
+                   (NonEmptyHoleExpr p)
   ---------------------------------------
   -- Haskell program coverage (Hpc) Support
 
@@ -776,7 +776,7 @@ type instance XTcBracketOut  (GhcPass _) = NoExtField
 type instance XSpliceE       (GhcPass _) = NoExtField
 type instance XProc          (GhcPass _) = NoExtField
 
-type instance XExtendedHole  (GhcPass _) = NoExtField
+type instance XNonEmptyHole  (GhcPass _) = NoExtField
 
 type instance XStatic        GhcPs = NoExtField
 type instance XStatic        GhcRn = NameSet
@@ -1085,7 +1085,7 @@ ppr_expr (HsProc _ pat (L _ (HsCmdTop _ cmd)))
 ppr_expr (HsProc _ pat (L _ (XCmdTop x)))
   = hsep [text "proc", ppr pat, ptext (sLit "->"), ppr x]
 
-ppr_expr (HsExtendedHole _ hole) = ppr (occName hole)
+ppr_expr (HsNonEmptyHole _ hole) = ppr (occName hole)
 
 ppr_expr (HsStatic _ e)
   = hsep [text "static", ppr e]
@@ -1214,7 +1214,7 @@ hsExprNeedsParens p = go
     go (HsTcBracketOut{})             = False
     go (HsProc{})                     = p > topPrec
     go (HsStatic{})                   = p >= appPrec
-    go (HsExtendedHole {})            = False
+    go (HsNonEmptyHole {})            = False
     go (HsTick _ _ (L _ e))           = go e
     go (HsBinTick _ _ _ (L _ e))      = go e
     go (HsTickPragma _ _ _ _ (L _ e)) = go e

@@ -994,7 +994,7 @@ instance ( a ~ GhcPass p
       HsStatic _ expr ->
         [ toHie expr
         ]
-      HsExtendedHole _ _ ->
+      HsNonEmptyHole _ _ ->
         []
       HsTick _ _ expr ->
         [ toHie expr

@@ -725,7 +725,7 @@ ds_expr _ (HsSpliceE _ s)         = pprPanic "dsExpr:splice" (ppr s)
 -- Arrow notation extension
 ds_expr _ (HsProc _ pat cmd) = dsProcExpr pat cmd
 
-ds_expr _ (HsExtendedHole _ h)         = pprPanic "dsExpr:extended_hole" (ppr h)
+ds_expr _ (HsNonEmptyHole _ h)         = pprPanic "dsExpr:non-empty_hole" (ppr h)
 
 -- Hpc Support
 

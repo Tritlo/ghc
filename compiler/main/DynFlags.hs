@@ -4515,7 +4515,7 @@ xFlagsDeps = [
   flagSpec' "TemplateHaskell"                 LangExt.TemplateHaskell
                                               checkTemplateHaskellOk,
   flagSpec "TemplateHaskellQuotes"            LangExt.TemplateHaskellQuotes,
-  flagSpec "ExtendedTypedHoles"               LangExt.ExtendedTypedHoles,
+  flagSpec "NonEmptyTypedHoles"               LangExt.NonEmptyTypedHoles,
   flagSpec "TraditionalRecordSyntax"          LangExt.TraditionalRecordSyntax,
   flagSpec "TransformListComp"                LangExt.TransformListComp,
   flagSpec "TupleSections"                    LangExt.TupleSections,
