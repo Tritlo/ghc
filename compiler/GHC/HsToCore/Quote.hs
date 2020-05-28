@@ -40,6 +40,7 @@ import GHC.HsToCore.Match.Literal
 import GHC.HsToCore.Monad
 
 import qualified Language.Haskell.TH as TH
+import qualified Language.Haskell.TH.Syntax as TH
 
 import GHC.Hs
 import GHC.Builtin.Names
@@ -1475,7 +1476,7 @@ repE (HsLet _ (L _ bs) e)       = do { (ss,ds) <- repBinds bs
 repE e@(HsDo _ ctxt (L _ sts))
  | case ctxt of { DoExpr{} -> True; GhciStmtCtxt -> True; _ -> False }
  = do { (ss,zs) <- repLSts sts;
-        e'      <- repDoE (nonEmptyCoreList zs);
+        e'      <- repDoE ctxt (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
 
  | ListComp <- ctxt
@@ -1485,7 +1486,7 @@ repE e@(HsDo _ ctxt (L _ sts))
 
  | MDoExpr{} <- ctxt
  = do { (ss,zs) <- repLSts sts;
-        e'      <- repMDoE (nonEmptyCoreList zs);
+        e'      <- repMDoE ctxt (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
 
   | otherwise
@@ -1634,7 +1635,8 @@ repUpdFields = repListM fieldExpTyConName rep_fld
 --
 -- do { x'1 <- gensym "x"
 --    ; x'2 <- gensym "x"
---    ; doE [ BindSt (pvar x'1) [| f 1 |]
+--    ; doE Nothing
+--          [ BindSt (pvar x'1) [| f 1 |]
 --          , BindSt (pvar x'2) [| f x |]
 --          , NoBindSt [| g x |]
 --          ]
@@ -2272,11 +2274,29 @@ repLetE (MkC ds) (MkC e) = rep2 letEName [ds, e]
 repCaseE :: Core (M TH.Exp) -> Core [(M TH.Match)] -> MetaM (Core (M TH.Exp))
 repCaseE (MkC e) (MkC ms) = rep2 caseEName [e, ms]
 
-repDoE :: Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
-repDoE (MkC ss) = rep2 doEName [ss]
+repDoE :: HsStmtContext GhcRn -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
+repDoE = repDoBlock doEName
 
-repMDoE :: Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
-repMDoE (MkC ss) = rep2 mdoEName [ss]
+repMDoE :: HsStmtContext GhcRn -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
+repMDoE = repDoBlock mdoEName
+
+repDoBlock :: Name -> HsStmtContext GhcRn -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
+repDoBlock doName ctxt (MkC ss) = do
+    MkC coreModName <- coreModNameM
+    rep2 doName [coreModName, ss]
+  where
+    maybeModName = case ctxt of
+      DoExpr m -> m
+      MDoExpr m -> m
+      _ -> Nothing
+
+    coreModNameM :: MetaM (Core (Maybe TH.ModName))
+    coreModNameM = case maybeModName of
+      Just m -> do
+        MkC s <- coreStringLit (moduleNameString m)
+        mName <- rep2_nw mkModNameName [s]
+        coreJust modNameTyConName mName
+      _ -> coreNothing modNameTyConName
 
 repComp :: Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
 repComp (MkC ss) = rep2 compEName [ss]
