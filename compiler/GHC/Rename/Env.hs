@@ -1715,7 +1715,7 @@ is enabled or not.
 -- do, then use lookupSyntaxExpr.
 lookupQualifiedDoExpr :: HsStmtContext p -> Name -> RnM (HsExpr GhcRn, FreeVars)
 lookupQualifiedDoExpr ctxt std_name
-  = case maybeQualifiedDo ctxt of
+  = case qualifiedDoModuleName_maybe ctxt of
       Nothing -> lookupSyntaxExpr std_name
       Just modName -> lookupNameExprWithQualifier std_name modName
 
@@ -1725,7 +1725,7 @@ lookupQualifiedDo
   -> Name
   -> RnM (SyntaxExpr GhcRn, FreeVars)
 lookupQualifiedDo ctxt std_name
-  = case maybeQualifiedDo ctxt of
+  = case qualifiedDoModuleName_maybe ctxt of
       Nothing -> lookupSyntax std_name
       Just modName ->
         first mkSyntaxExpr <$> lookupNameExprWithQualifier std_name modName
@@ -1744,7 +1744,7 @@ lookupQualifiedDoName
   -> Name
   -> RnM (Name, FreeVars)
 lookupQualifiedDoName ctxt std_name
-  = case maybeQualifiedDo ctxt of
+  = case qualifiedDoModuleName_maybe ctxt of
       Nothing -> lookupSyntaxName std_name
       Just modName -> lookupNameWithQualifier std_name modName
 

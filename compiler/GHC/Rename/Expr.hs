@@ -960,7 +960,7 @@ rnParallelStmts ctxt return_op segs thing_inside
 lookupQualifiedDoStmtName :: HsStmtContext GhcRn -> Name -> RnM (SyntaxExpr GhcRn, FreeVars)
 -- Like lookupStmtName, but respects QualifiedDo
 lookupQualifiedDoStmtName ctxt n
-  = case maybeQualifiedDo ctxt of
+  = case qualifiedDoModuleName_maybe ctxt of
       Nothing -> lookupStmtName ctxt n
       Just modName ->
         first mkSyntaxExpr <$> lookupNameExprWithQualifier n modName
@@ -2206,7 +2206,7 @@ getMonadFailOp ctxt
       ; return (Just fail, fvs)
       }
   where
-    isQualifiedDo = isJust (maybeQualifiedDo ctxt)
+    isQualifiedDo = isJust (qualifiedDoModuleName_maybe ctxt)
 
     reallyGetMonadFailOp rebindableSyntax overloadedStrings
       | (isQualifiedDo || rebindableSyntax) && overloadedStrings = do

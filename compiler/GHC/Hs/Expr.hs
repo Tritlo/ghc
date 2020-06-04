@@ -2799,8 +2799,8 @@ data HsStmtContext p
 deriving instance Data (HsStmtContext GhcPs)
 deriving instance Data (HsStmtContext GhcRn)
 
-maybeQualifiedDo :: HsStmtContext p -> Maybe ModuleName
-maybeQualifiedDo ctxt = case ctxt of
+qualifiedDoModuleName_maybe :: HsStmtContext p -> Maybe ModuleName
+qualifiedDoModuleName_maybe ctxt = case ctxt of
   DoExpr m -> m
   MDoExpr m -> m
   _ -> Nothing
