@@ -24,7 +24,7 @@
 
   * Add `Semigroup` and `Monoid` instances for `Q` (#18123).
 
-  * Implement QualifiedDo. The data constructors DoE and MDoE got a new
+  * Add support for QualifiedDo. The data constructors `DoE` and `MDoE` got a new
     `Maybe ModName` argument to describe the qualifier of do blocks.
 
 ## 2.16.0.0 *TBA*
