@@ -2763,8 +2763,6 @@ data HsMatchContext p
   | ThPatSplice            -- ^A Template Haskell pattern splice
   | ThPatQuote             -- ^A Template Haskell pattern quotation [p| (a,b) |]
   | PatSyn                 -- ^A pattern synonym declaration
-deriving instance Data (HsMatchContext GhcPs)
-deriving instance Data (HsMatchContext GhcRn)
 
 instance OutputableBndrId p => Outputable (HsMatchContext (GhcPass p)) where
   ppr m@(FunRhs{})          = text "FunRhs" <+> ppr (mc_fun m) <+> ppr (mc_fixity m)
@@ -2799,8 +2797,6 @@ data HsStmtContext p
   | PatGuard (HsMatchContext p)      -- ^Pattern guard for specified thing
   | ParStmtCtxt (HsStmtContext p)    -- ^A branch of a parallel stmt
   | TransStmtCtxt (HsStmtContext p)  -- ^A branch of a transform stmt
-deriving instance Data (HsStmtContext GhcPs)
-deriving instance Data (HsStmtContext GhcRn)
 
 qualifiedDoModuleName_maybe :: HsStmtContext p -> Maybe ModuleName
 qualifiedDoModuleName_maybe ctxt = case ctxt of

@@ -306,8 +306,12 @@ deriving instance Data (ApplicativeArg GhcPs)
 deriving instance Data (ApplicativeArg GhcRn)
 deriving instance Data (ApplicativeArg GhcTc)
 
+deriving instance Data (HsStmtContext GhcPs)
+deriving instance Data (HsStmtContext GhcRn)
 deriving instance Data (HsStmtContext GhcTc)
 
+deriving instance Data (HsMatchContext GhcPs)
+deriving instance Data (HsMatchContext GhcRn)
 deriving instance Data (HsMatchContext GhcTc)
 
 -- deriving instance (DataIdLR p p) => Data (HsSplice p)
