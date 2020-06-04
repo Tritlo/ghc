@@ -688,7 +688,7 @@ overlapTyConKey         = mkPreludeTyConUnique 233
 derivClauseTyConKey    = mkPreludeTyConUnique 234
 derivStrategyTyConKey  = mkPreludeTyConUnique 235
 decsTyConKey            = mkPreludeTyConUnique 236
-modNameTyConKey         = mkPreludeTyConUnique 237
+modNameTyConKey         = mkPreludeTyConUnique 238
 
 {- *********************************************************************
 *                                                                      *
