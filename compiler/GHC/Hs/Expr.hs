@@ -2359,16 +2359,19 @@ pprBy (Just e) = text "by" <+> ppr e
 pprDo :: (OutputableBndrId p, Outputable body)
       => HsStmtContext any -> [LStmt (GhcPass p) body] -> SDoc
 pprDo (DoExpr m)    stmts =
-  maybe id (\md p -> ppr md <> char '.' <> p) m $
-  text "do"  <+> ppr_do_stmts stmts
+  ppr_module_name_prefix m <> text "do"  <+> ppr_do_stmts stmts
 pprDo GhciStmtCtxt  stmts = text "do"  <+> ppr_do_stmts stmts
 pprDo ArrowExpr     stmts = text "do"  <+> ppr_do_stmts stmts
 pprDo (MDoExpr m)   stmts =
-  maybe id (\md p -> ppr md <> char '.' <> p) m $
-  text "mdo"  <+> ppr_do_stmts stmts
+  ppr_module_name_prefix m <> text "mdo"  <+> ppr_do_stmts stmts
 pprDo ListComp      stmts = brackets    $ pprComp stmts
 pprDo MonadComp     stmts = brackets    $ pprComp stmts
 pprDo _             _     = panic "pprDo" -- PatGuard, ParStmtCxt
+
+ppr_module_name_prefix :: Maybe ModuleName -> SDoc
+ppr_module_name_prefix = \case
+  Nothing -> empty
+  Just module_name -> ppr module_name <> char '.'
 
 ppr_do_stmts :: (OutputableBndrId idL, OutputableBndrId idR,
                  Outputable body)
