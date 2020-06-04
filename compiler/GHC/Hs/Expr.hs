@@ -2886,8 +2886,8 @@ pprAStmtContext ctxt = article <+> pprStmtContext ctxt
 
 -----------------
 pprStmtContext GhciStmtCtxt    = text "interactive GHCi command"
-pprStmtContext (DoExpr m)      = text (qualified m "'do' block")
-pprStmtContext (MDoExpr m)     = text (qualified m "'mdo' block")
+pprStmtContext (DoExpr m)      = prependQualified m (text "'do' block")
+pprStmtContext (MDoExpr m)     = prependQualified m (text "'mdo' block")
 pprStmtContext ArrowExpr       = text "'do' block in an arrow command"
 pprStmtContext ListComp        = text "list comprehension"
 pprStmtContext MonadComp       = text "monad comprehension"
@@ -2905,8 +2905,9 @@ pprStmtContext (TransStmtCtxt c) =
   ifPprDebug (sep [text "transformed branch of", pprAStmtContext c])
              (pprStmtContext c)
 
-qualified :: Maybe ModuleName -> String -> String
-qualified m t = maybe t (\_ -> "qualified " ++ t) m
+prependQualified :: Maybe ModuleName -> SDoc -> SDoc
+prependQualified Nothing  t = t
+prependQualified (Just _) t = text "qualified" <+> t
 
 instance OutputableBndrId p
       => Outputable (HsStmtContext (GhcPass p)) where
@@ -2930,9 +2931,9 @@ matchContextErrString (StmtCtxt (ParStmtCtxt c))   = matchContextErrString (Stmt
 matchContextErrString (StmtCtxt (TransStmtCtxt c)) = matchContextErrString (StmtCtxt c)
 matchContextErrString (StmtCtxt (PatGuard _))      = text "pattern guard"
 matchContextErrString (StmtCtxt GhciStmtCtxt)      = text "interactive GHCi command"
-matchContextErrString (StmtCtxt (DoExpr m))  = text (qualified m "'do' block")
+matchContextErrString (StmtCtxt (DoExpr m))        = prependQualified m (text "'do' block")
 matchContextErrString (StmtCtxt ArrowExpr)         = text "'do' block"
-matchContextErrString (StmtCtxt (MDoExpr m)) = text (qualified m "'mdo' block")
+matchContextErrString (StmtCtxt (MDoExpr m))       = prependQualified m (text "'mdo' block")
 matchContextErrString (StmtCtxt ListComp)          = text "list comprehension"
 matchContextErrString (StmtCtxt MonadComp)         = text "monad comprehension"
 
