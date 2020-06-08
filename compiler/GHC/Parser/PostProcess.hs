@@ -988,33 +988,32 @@ checkCmdBlockArguments :: LHsCmd GhcPs -> PV ()
   where
     checkExpr :: LHsExpr GhcPs -> PV ()
     checkExpr expr = do
-     let qualified m t = maybe t (\_ -> "qualified " ++ t) m
      case unLoc expr of
-      HsDo _ (DoExpr m) _ -> check (qualified m "do block") expr
-      HsDo _ (MDoExpr m) _ -> check (qualified m "mdo block") expr
-      HsLam {} -> check "lambda expression" expr
-      HsCase {} -> check "case expression" expr
-      HsLamCase {} -> check "lambda-case expression" expr
-      HsLet {} -> check "let expression" expr
-      HsIf {} -> check "if expression" expr
-      HsProc {} -> check "proc expression" expr
+      HsDo _ (DoExpr m) _ -> check (prependQualified m (text "do block")) expr
+      HsDo _ (MDoExpr m) _ -> check (prependQualified m (text "mdo block")) expr
+      HsLam {} -> check (text "lambda expression") expr
+      HsCase {} -> check (text "case expression") expr
+      HsLamCase {} -> check (text "lambda-case expression") expr
+      HsLet {} -> check (text "let expression") expr
+      HsIf {} -> check (text "if expression") expr
+      HsProc {} -> check (text "proc expression") expr
       _ -> return ()
 
     checkCmd :: LHsCmd GhcPs -> PV ()
     checkCmd cmd = case unLoc cmd of
-      HsCmdLam {} -> check "lambda command" cmd
-      HsCmdCase {} -> check "case command" cmd
-      HsCmdIf {} -> check "if command" cmd
-      HsCmdLet {} -> check "let command" cmd
-      HsCmdDo {} -> check "do command" cmd
+      HsCmdLam {} -> check (text "lambda command") cmd
+      HsCmdCase {} -> check (text "case command") cmd
+      HsCmdIf {} -> check (text "if command") cmd
+      HsCmdLet {} -> check (text "let command") cmd
+      HsCmdDo {} -> check (text "do command") cmd
       _ -> return ()
 
-    check :: Outputable a => String -> Located a -> PV ()
+    check :: Outputable a => SDoc -> Located a -> PV ()
     check element a = do
       blockArguments <- getBit BlockArgumentsBit
       unless blockArguments $
         addError (getLoc a) $
-          text "Unexpected " <> text element <> text " in function application:"
+          text "Unexpected " <> element <> text " in function application:"
            $$ nest 4 (ppr a)
            $$ text "You could write it with parentheses"
            $$ text "Or perhaps you meant to enable BlockArguments?"
