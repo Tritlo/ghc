@@ -94,7 +94,7 @@ import GHC.Builtin.Types ( unitTyCon, unitDataCon, tupleTyCon, tupleDataCon, nil
 
 %expect 232 -- shift/reduce conflicts
 
-{- Last updated: 04 June 2018
+{- Last updated: 08 June 2020
 
 If you modify this parser and add a conflict, please update this comment.
 You can learn more about the conflicts by passing 'happy' the -i flag:
@@ -359,6 +359,13 @@ or a valid variable named 'forall', for example a function @:: Int -> Int@
 
 Shift means the parser only allows the former. Also see conflict 753 above.
 
+-------------------------------------------------------------------------------
+
+state 1285 contains 1 shift/reduce conflict.
+
+	constrs1 -> constrs1 maybe_docnext '|' . maybe_docprev constr
+
+   Conflict: DOCPREV
 
 -------------------------------------------------------------------------------
 
@@ -2812,16 +2819,14 @@ aexp    :: { ECP }
         | DO  stmtlist               {% (hintQualifiedDo $1 >>) $ return $ ECP $
                                         $2 >>= \ $2 ->
                                         amms (mkHsDoPV (comb2 $1 $2)
-                                                       (fmap mkModuleNameFS
-                                                        (getDO $1))
+                                                       (fmap mkModuleNameFS (getDO $1))
                                                        (mapLoc snd $2))
-                                               (mj AnnDo $1:(fst $ unLoc $2)) }
+                                             (mj AnnDo $1:(fst $ unLoc $2)) }
         | MDO stmtlist             {% hintQualifiedDo $1 >> runPV $2 >>= \ $2 ->
                                        fmap ecpFromExp $
                                        ams (L (comb2 $1 $2)
                                               (mkHsDo (MDoExpr $
-                                                        fmap mkModuleNameFS
-                                                        (getMDO $1))
+                                                        fmap mkModuleNameFS (getMDO $1))
                                                         (snd $ unLoc $2)))
                                            (mj AnnMdo $1:(fst $ unLoc $2)) }
         | 'proc' aexp '->' exp
