@@ -963,7 +963,7 @@ lookupQualifiedDoStmtName ctxt n
   = case qualifiedDoModuleName_maybe ctxt of
       Nothing -> lookupStmtName ctxt n
       Just modName ->
-        first mkSyntaxExpr <$> lookupNameExprWithQualifier n modName
+        first (mkSyntaxExpr . nl_HsVar) <$> lookupNameWithQualifier n modName
 
 lookupStmtName :: HsStmtContext GhcRn -> Name -> RnM (SyntaxExpr GhcRn, FreeVars)
 -- Like lookupSyntax, but respects contexts

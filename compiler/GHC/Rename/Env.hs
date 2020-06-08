@@ -35,7 +35,7 @@ module GHC.Rename.Env (
 
         -- QualifiedDo
         lookupQualifiedDoExpr, lookupQualifiedDo,
-        lookupQualifiedDoName, lookupNameExprWithQualifier,
+        lookupQualifiedDoName, lookupNameWithQualifier,
 
         -- Constructing usage information
         addUsedGRE, addUsedGREs, addUsedDataCons,
@@ -1705,33 +1705,26 @@ by the Opt_QualifiedDo dynamic flag.
 -}
 
 -- Lookup operations for a qualified do. If the context is not a qualified
--- do, then use lookupSyntaxExpr.
+-- do, then use lookupSyntaxExpr. See Note [QualifiedDo].
 lookupQualifiedDoExpr :: HsStmtContext p -> Name -> RnM (HsExpr GhcRn, FreeVars)
 lookupQualifiedDoExpr ctxt std_name
-  = case qualifiedDoModuleName_maybe ctxt of
-      Nothing -> lookupSyntaxExpr std_name
-      Just modName -> lookupNameExprWithQualifier std_name modName
+  = first nl_HsVar <$> lookupQualifiedDoName ctxt std_name
 
--- Like lookupQualifiedDoExpr but for producing SyntaxExpr
+-- Like lookupQualifiedDoExpr but for producing SyntaxExpr.
+-- See Note [QualifiedDo].
 lookupQualifiedDo
   :: HsStmtContext p
   -> Name
   -> RnM (SyntaxExpr GhcRn, FreeVars)
 lookupQualifiedDo ctxt std_name
-  = case qualifiedDoModuleName_maybe ctxt of
-      Nothing -> lookupSyntax std_name
-      Just modName ->
-        first mkSyntaxExpr <$> lookupNameExprWithQualifier std_name modName
-
-lookupNameExprWithQualifier :: Name -> ModuleName -> RnM (HsExpr GhcRn, FreeVars)
-lookupNameExprWithQualifier std_name modName
-  = first nl_HsVar <$> lookupNameWithQualifier std_name modName
+  = first mkSyntaxExpr <$> lookupQualifiedDoExpr ctxt std_name
 
 lookupNameWithQualifier :: Name -> ModuleName -> RnM (Name, FreeVars)
 lookupNameWithQualifier std_name modName
   = do { qname <- lookupOccRn (mkRdrQual modName (nameOccName std_name))
        ; return (qname, emptyFVs) }
 
+-- See Note [QualifiedDo].
 lookupQualifiedDoName
   :: HsStmtContext p
   -> Name
