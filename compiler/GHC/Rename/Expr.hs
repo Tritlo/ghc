@@ -2195,7 +2195,7 @@ using fromString:
 
   foo x = x M.>>= \r -> case r of
                         Just y  -> return y
-                        Nothing -> M.fail (fromString "Patterm match error")
+                        Nothing -> M.fail (fromString "Pattern match error")
 
 -}
 getMonadFailOp :: HsStmtContext p -> RnM (FailOperator GhcRn, FreeVars) -- Syntax expr fail op
