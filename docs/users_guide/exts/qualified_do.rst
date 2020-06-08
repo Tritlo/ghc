@@ -40,10 +40,11 @@ It allows you to mix and match ``do`` blocks of different types with suitable
 operations to use on each case: ::
 
   {-# LANGUAGE QualifiedDo #-}
-  import MAC
   import qualified Control.Monad.Linear as L
 
-  -- runMAC, label, and box are from MAC.
+  import MAC (label, box, runMAC)
+  import qualified MAC as MAC
+
   f :: IO ()
   f = do
     x <- runMAC $           -- (Prelude.>>=)
@@ -114,6 +115,8 @@ there are no specific requirements on the types.
 If no qualifier is specified with ``-XQualifiedDo`` enabled, it defaults to the operations defined in the Prelude, or, if
 ``-XRebindableSyntax`` is enabled, to whatever operations are in scope.
 
+Note that the operations to be qualified must be in scope for QualifiedDo to work. I.e. ``import MAC (label)`` in the
+example above would result in an error, since ``MAC.>>=`` and ``MAC.>>`` would not be in scope.
 
 Examples
 ~~~~~~~~
