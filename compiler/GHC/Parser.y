@@ -2816,7 +2816,9 @@ aexp    :: { ECP }
                                                (mj AnnCase $1:mj AnnOf $3
                                                   :(fst $ unLoc $4)) }
         -- QualifiedDo.
-        | DO  stmtlist               {% (hintQualifiedDo $1 >>) $ return $ ECP $
+        | DO  stmtlist               {% do
+                                      hintQualifiedDo $1
+                                      return $ ECP $
                                         $2 >>= \ $2 ->
                                         amms (mkHsDoPV (comb2 $1 $2)
                                                        (fmap mkModuleNameFS (getDO $1))
