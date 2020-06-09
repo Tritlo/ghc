@@ -1474,9 +1474,10 @@ repE (HsLet _ (L _ bs) e)       = do { (ss,ds) <- repBinds bs
 
 -- FIXME: I haven't got the types here right yet
 repE e@(HsDo _ ctxt (L _ sts))
- | case ctxt of { DoExpr{} -> True; GhciStmtCtxt -> True; _ -> False }
+ | Just maybeModuleName <- case ctxt of
+     { DoExpr m -> Just m; GhciStmtCtxt -> Just Nothing; _ -> Nothing }
  = do { (ss,zs) <- repLSts sts;
-        e'      <- repDoE ctxt (nonEmptyCoreList zs);
+        e'      <- repDoE maybeModuleName (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
 
  | ListComp <- ctxt
@@ -1484,9 +1485,9 @@ repE e@(HsDo _ ctxt (L _ sts))
         e'      <- repComp (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
 
- | MDoExpr{} <- ctxt
+ | MDoExpr maybeModuleName <- ctxt
  = do { (ss,zs) <- repLSts sts;
-        e'      <- repMDoE ctxt (nonEmptyCoreList zs);
+        e'      <- repMDoE maybeModuleName (nonEmptyCoreList zs);
         wrapGenSyms ss e' }
 
   | otherwise
@@ -2274,22 +2275,17 @@ repLetE (MkC ds) (MkC e) = rep2 letEName [ds, e]
 repCaseE :: Core (M TH.Exp) -> Core [(M TH.Match)] -> MetaM (Core (M TH.Exp))
 repCaseE (MkC e) (MkC ms) = rep2 caseEName [e, ms]
 
-repDoE :: HsStmtContext GhcRn -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
+repDoE :: Maybe ModuleName -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
 repDoE = repDoBlock doEName
 
-repMDoE :: HsStmtContext GhcRn -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
+repMDoE :: Maybe ModuleName -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
 repMDoE = repDoBlock mdoEName
 
-repDoBlock :: Name -> HsStmtContext GhcRn -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
-repDoBlock doName ctxt (MkC ss) = do
+repDoBlock :: Name -> Maybe ModuleName -> Core [(M TH.Stmt)] -> MetaM (Core (M TH.Exp))
+repDoBlock doName maybeModName (MkC ss) = do
     MkC coreModName <- coreModNameM
     rep2 doName [coreModName, ss]
   where
-    maybeModName = case ctxt of
-      DoExpr m -> m
-      MDoExpr m -> m
-      _ -> Nothing
-
     coreModNameM :: MetaM (Core (Maybe TH.ModName))
     coreModNameM = case maybeModName of
       Just m -> do
