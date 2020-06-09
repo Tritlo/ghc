@@ -363,7 +363,7 @@ Shift means the parser only allows the former. Also see conflict 753 above.
 
 state 1285 contains 1 shift/reduce conflict.
 
-	constrs1 -> constrs1 maybe_docnext '|' . maybe_docprev constr
+        constrs1 -> constrs1 maybe_docnext '|' . maybe_docprev constr
 
    Conflict: DOCPREV
 
