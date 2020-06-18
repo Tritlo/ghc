@@ -2068,6 +2068,7 @@ data ApplicativeArg idL
     , final_expr        :: HsExpr idL    -- return (v1,..,vn), or just (v1,..,vn)
     , bv_pattern        :: LPat idL      -- (v1,...,vn)
     , stmt_context      :: HsStmtContext GhcRn -- context of the do expression
+                                               -- used in pprArg
     }
   | XApplicativeArg !(XXApplicativeArg idL)
 
