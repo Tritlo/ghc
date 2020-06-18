@@ -2813,16 +2813,15 @@ isComprehensionContext (ParStmtCtxt c)   = isComprehensionContext c
 isComprehensionContext (TransStmtCtxt c) = isComprehensionContext c
 isComprehensionContext _ = False
 
--- | Should pattern match failure in a 'HsStmtContext' be desugared using
--- 'MonadFail'?
-isMonadFailStmtContext :: HsStmtContext id -> Bool
-isMonadFailStmtContext MonadComp            = True
-isMonadFailStmtContext DoExpr{}             = True
-isMonadFailStmtContext MDoExpr{}            = True
-isMonadFailStmtContext GhciStmtCtxt         = True
-isMonadFailStmtContext (ParStmtCtxt ctxt)   = isMonadFailStmtContext ctxt
-isMonadFailStmtContext (TransStmtCtxt ctxt) = isMonadFailStmtContext ctxt
-isMonadFailStmtContext _ = False -- ListComp, PatGuard, ArrowExpr
+-- | Is this a monadic context?
+isMonadStmtContext :: HsStmtContext id -> Bool
+isMonadStmtContext MonadComp            = True
+isMonadStmtContext DoExpr{}             = True
+isMonadStmtContext MDoExpr{}            = True
+isMonadStmtContext GhciStmtCtxt         = True
+isMonadStmtContext (ParStmtCtxt ctxt)   = isMonadStmtContext ctxt
+isMonadStmtContext (TransStmtCtxt ctxt) = isMonadStmtContext ctxt
+isMonadStmtContext _ = False -- ListComp, PatGuard, ArrowExpr
 
 isMonadCompContext :: HsStmtContext id -> Bool
 isMonadCompContext MonadComp = True

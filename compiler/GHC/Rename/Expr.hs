@@ -2158,7 +2158,7 @@ monadFailOp pat ctxt
   -- For non-monadic contexts (e.g. guard patterns, list
   -- comprehensions, etc.) we should not need to fail, or failure is handled in
   -- a different way. See Note [Failing pattern matches in Stmts].
-  | not (isMonadFailStmtContext ctxt) = return (Nothing, emptyFVs)
+  | not (isMonadStmtContext ctxt) = return (Nothing, emptyFVs)
 
   | otherwise = getMonadFailOp ctxt
 
