@@ -132,7 +132,7 @@ processModule modName modContents (Mix _ _ hash _ entries) locals globals = do
                | n <- [0..(length entries - 1)]
                ]
 
-   return $ TixModule modName hash (length tixs') tixs'
+   return $ TixModule modName hash (length tixs') tixs' [0] [0,1]
 
 qualifier :: HpcPos -> Maybe Qualifier -> Bool
 qualifier _   Nothing = True

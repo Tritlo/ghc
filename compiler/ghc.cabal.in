@@ -80,7 +80,7 @@ Library
                    array      >= 0.1 && < 0.6,
                    filepath   >= 1   && < 1.5,
                    template-haskell == 2.18.*,
-                   hpc        == 0.6.*,
+                   hpc        == 0.7.*,
                    transformers == 0.5.*,
                    exceptions == 0.10.*,
                    stm,

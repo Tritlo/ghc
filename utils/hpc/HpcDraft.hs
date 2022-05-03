@@ -47,7 +47,7 @@ draft_main hpcflags (progName:mods) = do
     Just (Tix tickCounts) -> do
         outs <- sequence
                       [ makeDraft hpcflags1 tixModule
-                      | tixModule@(TixModule m _ _ _) <- tickCounts
+                      | tixModule@(TixModule m _ _ _ _ _) <- tickCounts
                       , allowModule hpcflags1 m
                       ]
         case outputFile hpcflags1 of
