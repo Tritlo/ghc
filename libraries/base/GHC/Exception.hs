@@ -4,6 +4,7 @@
            , MagicHash
            , RecordWildCards
            , PatternSynonyms
+           , CPP
   #-}
 {-# LANGUAGE TypeInType #-}
 {-# OPTIONS_HADDOCK not-home #-}
@@ -42,6 +43,13 @@ import GHC.Prim
 import GHC.IO.Unsafe
 import {-# SOURCE #-} GHC.Stack.CCS
 import GHC.Exception.Type
+
+#if __GLASGOW_HASKELL__ >= 903
+
+import {-# SOURCE #-} GHC.Exception.Trace
+
+#endif
+
 
 -- | Throw an exception.  Exceptions may be thrown from purely
 -- functional code, but may only be caught within the 'IO' monad.
@@ -84,6 +92,14 @@ errorCallWithCallStackException s stk = unsafeDupablePerformIO $ do
     implicitParamCallStack = prettyCallStackLines stk
     ccsCallStack = showCCSStack ccsStack
     stack = intercalate "\n" $ implicitParamCallStack ++ ccsCallStack
+#if __GLASGOW_HASKELL__ >= 903
+  t_msgs <- traceMsgs
+  let ostack = intercalate "\n" $ implicitParamCallStack ++ ccsCallStack
+      nstack = "Recently evaluated locations (from HPC):\n"
+                ++ (intercalate "\n" $ map ("  " ++) t_msgs)
+      stack = (ostack ++) $ if not (null t_msgs)
+                            then "\n" ++ nstack else ""
+#endif
   return $ toException (ErrorCallWithLocation s stack)
 
 showCCSStack :: [String] -> [String]
