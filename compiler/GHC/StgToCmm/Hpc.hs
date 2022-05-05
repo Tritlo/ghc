@@ -70,11 +70,11 @@ initHpc this_mod (HpcInfo tickCount traceLength _hashNo)
                         [ CmmInt 0 W64
                         | _ <- take tickCount [0 :: Int ..]
                         ]
-           emitDataLits(mkHpcTraceInfoLabel this_mod)
+           emitDataLits (mkHpcTraceInfoLabel this_mod)
                         [ CmmInt 0 W64,
                           CmmInt (fromIntegral traceLength) W64 ]
            emitDataLits (mkHpcTraceLabel this_mod)
-                        [ CmmInt 0 W64
+                        [ CmmInt (fromIntegral tickCount) W64
                         | _ <- take traceLength [0 :: Int ..]
                         ]
 

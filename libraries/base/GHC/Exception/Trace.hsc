@@ -9,9 +9,12 @@ import Foreign.Marshal.Array
 import Foreign.Ptr
 import Foreign.Storable ( Storable (..))
 import Data.Word
-import Text.Read
+import Text.Read ( readMaybe )
 import System.Environment
 import Control.Exception
+import Data.Maybe ( mapMaybe )
+import Data.Char ( isAlpha, isSpace )
+import Data.List (intercalate)
 
 #include "Rts.h"
 foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
@@ -75,8 +78,6 @@ data BaseCondBox = GuardBinBox
                  | QualBinBox
                   deriving (Read)
 
-parseMix :: String -> Maybe [HpcPos]
-parseMix = fmap (map fst) . readMaybe @[(HpcPos,BaseBoxLabel)]
 
 parseAndReport :: FilePath -> ([Char],Int,Int,[Int]) -> IO [[Char]]
 parseAndReport dir (m, hash, next_index, trx) = do
@@ -85,17 +86,17 @@ parseAndReport dir (m, hash, next_index, trx) = do
              (Just <$> readFile mixLoc)
              (\_ -> return Nothing)
     return $ case res of
-      Nothing -> ["** Error: Could not find .mix file for " ++ m ++ "**",
+      Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
                   "Try setting $HPCDIR (with trailing slash)"]
-      Just r | (header,rest) <- splitAt 4 r,
+      Just r | (header,_) <- splitAt 4 r,
                header /= "Mix " -> ["** Error: Mix file is corrupted **"]
       Just r | rest <- drop 5 r -> 
         let (fn,_:_:wofn) = span (/= '"') rest
-            (utcdate, _:woutcdate)  = span (/= ' ') wofn
-            (utctime, _:woutctime)  = span (/= ' ') woutcdate
-            (utcheader, _:woutcheader) = span (/= ' ') woutctime
+            (_, _:woutcdate)  = span (/= ' ') wofn -- utcdate
+            (_, _:woutctime)  = span (/= ' ') woutcdate -- utctime
+            (_, _:woutcheader) = span (/= ' ') woutctime -- utcheader
             (hashstr, _:wohash) = span (/= ' ') woutcheader
-            (lenstr, _:mix_li) = span (/= ' ') wohash
+            (_, _:mix_li) = span (/= ' ') wohash -- lenstr
             p_res = parseMix mix_li
         in if ((read hashstr) :: Word32) /= ((fromIntegral hash) :: Word32)
            then ["** Error: Mixfile hash mismatch **",
@@ -106,10 +107,41 @@ parseAndReport dir (m, hash, next_index, trx) = do
                   Just p_li ->
                     let look i = 
                            if i < length p_li
-                           then (fn ++ ":" ++show (p_li !! i))
-                           else "Index " ++ show i ++" too large, wrong .mix file?"
-                    in (reverse $ rot next_index $ map look trx)
+                           then Just (display (fn, p_li !! i))
+                           else Nothing
+                    in align (reverse $ rot next_index $ mapMaybe look trx)
                   Nothing -> ["** Error: could not parse Mix file **"]
+    where parseMix :: [Char] -> Maybe [(HpcPos,BaseBoxLabel)]
+          parseMix = readMaybe @[(HpcPos,BaseBoxLabel)]
+          display :: ([Char], (HpcPos, BaseBoxLabel)) -> ([Char], [Char])
+          display (fn, (p,bb)) = (fn ++ ":" ++ show p, renderBB bb)
+          renderBB bb | TopLevelBox lbs <- bb =
+                            m ++ ":" ++ rtlbs lbs
+                      | LocalBox (tl:lbs) <- bb = 
+                            m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
+                      | LocalBox [] <- bb =  "empty local box?"
+                      | ExpBox True <- bb = "alternative"
+                      | ExpBox False <- bb = ""
+                      | BinBox CondBinBox True <- bb = "condition was true"
+                      | BinBox CondBinBox False <- bb = "condition was false"
+                      | BinBox QualBinBox True <- bb = "qualifier matched"
+                      | BinBox QualBinBox False <- bb = "qualifier did not match"
+                      | BinBox GuardBinBox True <- bb = "guard held"
+                      | BinBox GuardBinBox False <- bb = "guard did not hold"
+            where rtlbs lbs = intercalate ":" $ map wrap lbs
+                  wrap :: [Char] -> [Char]
+                  wrap s | (s1:_) <- s, isAlpha s1,
+                           not (any isSpace s) = s
+                         | otherwise = "(" ++ s ++ ")"
+          align :: [([Char], [Char])] -> [[Char]]
+          align strs = map c strs
+            where longest :: Int
+                  longest = maximum (map (length . fst) strs)
+                  al :: [Char] -> [Char]
+                  al st = st ++ replicate ((longest - length st) + 1) ' '
+                  c :: ([Char], [Char]) -> [Char]
+                  c (s,[]) = s
+                  c (s,rd) = al s ++ rd
 
 rot :: Int -> [a] -> [a]
 rot n xs = (drop n xs) ++ (take n xs)

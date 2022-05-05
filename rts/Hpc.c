@@ -330,7 +330,7 @@ hs_hpc_module(char *modName,
       trxInfo[0] = 0;
       trxInfo[1] = modTraceLength;
       for(i=0;i < modTraceLength;i++) {
-          trxArr[i] = 0;
+          trxArr[i] = modCount;
       }
       tmpModule->next = modules;
       tmpModule->from_file = false;
