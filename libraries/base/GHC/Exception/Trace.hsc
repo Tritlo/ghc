@@ -12,9 +12,10 @@ import Data.Word
 import Text.Read ( readMaybe )
 import System.Environment
 import Control.Exception
-import Data.Maybe ( mapMaybe )
+import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
-import Data.List (intercalate)
+import Data.List ( intercalate, elemIndex )
+import Data.Function (fix)
 
 #include "Rts.h"
 foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
@@ -105,29 +106,38 @@ parseAndReport dir (m, hash, next_index, trx) = do
                  "Try deleting: " ++ mixLoc]
            else case p_res of
                   Just p_li ->
-                    let look i = 
+                    let look skipNonAlt i =
                            if i < length p_li
-                           then Just (display (fn, p_li !! i))
+                           then (display skipNonAlt (fn, p_li !! i))
                            else Nothing
-                    in align (reverse $ rot next_index $ mapMaybe look trx)
+                        -- We want to display non-alternative exprs
+                        -- up until the first interesting one and then
+                        -- just the interesting stuff from thereon.
+                        (nonAlts,mbAlts) = span (not . isJust . look True)
+                                            $ filter (< (length p_li))
+                                            $ reverse $ rot next_index trx
+                    in (align $ mapMaybe (look False) nonAlts
+                             ++ mapMaybe (look True) mbAlts)
                   Nothing -> ["** Error: could not parse Mix file **"]
     where parseMix :: [Char] -> Maybe [(HpcPos,BaseBoxLabel)]
           parseMix = readMaybe @[(HpcPos,BaseBoxLabel)]
-          display :: ([Char], (HpcPos, BaseBoxLabel)) -> ([Char], [Char])
-          display (fn, (p,bb)) = (fn ++ ":" ++ show p, renderBB bb)
+          display :: Bool -> ([Char], (HpcPos, BaseBoxLabel)) -> Maybe ([Char], [Char])
+          display True (fn, (p, ExpBox False)) = Nothing
+          display _ (fn, (p,bb)) = Just (fn ++ ":" ++ show p, renderBB bb)
+
           renderBB bb | TopLevelBox lbs <- bb =
                             m ++ ":" ++ rtlbs lbs
                       | LocalBox (tl:lbs) <- bb = 
                             m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
                       | LocalBox [] <- bb =  "empty local box?"
-                      | ExpBox True <- bb = "alternative"
+                      | ExpBox True <- bb = "alternative branch taken"
                       | ExpBox False <- bb = ""
-                      | BinBox CondBinBox True <- bb = "condition was true"
-                      | BinBox CondBinBox False <- bb = "condition was false"
-                      | BinBox QualBinBox True <- bb = "qualifier matched"
-                      | BinBox QualBinBox False <- bb = "qualifier did not match"
-                      | BinBox GuardBinBox True <- bb = "guard held"
-                      | BinBox GuardBinBox False <- bb = "guard did not hold"
+                      | BinBox CondBinBox True <- bb   = "then branch taken"
+                      | BinBox CondBinBox False <- bb  = "else branch taken"
+                      | BinBox QualBinBox True <- bb   = "qualifying branch taken "
+                      | BinBox QualBinBox False <- bb  = "qualifying branch not taken"
+                      | BinBox GuardBinBox True <- bb  = "guarded branch taken"
+                      | BinBox GuardBinBox False <- bb = "guarded branch not taken"
             where rtlbs lbs = intercalate ":" $ map wrap lbs
                   wrap :: [Char] -> [Char]
                   wrap s | (s1:_) <- s, isAlpha s1,
@@ -142,6 +152,7 @@ parseAndReport dir (m, hash, next_index, trx) = do
                   c :: ([Char], [Char]) -> [Char]
                   c (s,[]) = s
                   c (s,rd) = al s ++ rd
+
 
 rot :: Int -> [a] -> [a]
 rot n xs = (drop n xs) ++ (take n xs)
