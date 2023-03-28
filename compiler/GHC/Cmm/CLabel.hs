@@ -90,6 +90,8 @@ module GHC.Cmm.CLabel (
         mkPicBaseLabel,
         mkDeadStripPreventer,
         mkHpcTicksLabel,
+        mkHpcTraceLabel,
+        mkHpcTraceInfoLabel,
 
         -- * Predicates
         hasCAF,
@@ -276,6 +278,11 @@ data CLabel
   -- | Per-module table of tick locations
   | HpcTicksLabel Module
 
+  -- | Per-module table of current trace locations
+  | HpcTraceLabel Module
+  -- | Per-module table of info for trace (cur index and size)
+  | HpcTraceInfoLabel Module
+
   -- | Static reference table
   | SRTLabel
         {-# UNPACK #-} !Unique
@@ -364,6 +371,10 @@ instance Ord CLabel where
     compare a1 a2
   compare (HpcTicksLabel a1) (HpcTicksLabel a2) =
     compare a1 a2
+  compare (HpcTraceLabel a1) (HpcTraceLabel a2) =
+    compare a1 a2
+  compare (HpcTraceInfoLabel a1) (HpcTraceInfoLabel a2) =
+    compare a1 a2
   compare (SRTLabel u1) (SRTLabel u2) =
     nonDetCmpUnique u1 u2
   compare (LargeBitmapLabel u1) (LargeBitmapLabel u2) =
@@ -396,6 +407,10 @@ instance Ord CLabel where
   compare _ DeadStripPreventer{} = GT
   compare HpcTicksLabel{} _ = LT
   compare _ HpcTicksLabel{} = GT
+  compare HpcTraceLabel{} _ = LT
+  compare _ HpcTraceLabel{} = GT
+  compare HpcTraceInfoLabel{} _ = LT
+  compare _ HpcTraceInfoLabel{} = GT
   compare SRTLabel{} _ = LT
   compare _ SRTLabel{} = GT
   compare (IPE_Label {}) _ = LT
@@ -820,8 +835,10 @@ mkRtsSlowFastTickyCtrLabel pat = RtsLabel (RtsSlowFastTickyCtr pat)
 
 
 -- Constructing Code Coverage Labels
-mkHpcTicksLabel :: Module -> CLabel
+mkHpcTicksLabel, mkHpcTraceLabel, mkHpcTraceInfoLabel :: Module -> CLabel
 mkHpcTicksLabel                = HpcTicksLabel
+mkHpcTraceLabel                = HpcTraceLabel
+mkHpcTraceInfoLabel             = HpcTraceInfoLabel
 
 
 -- Constructing labels used for dynamic linking
@@ -966,6 +983,8 @@ needsCDecl (CC_Label _)                 = True
 needsCDecl (CCS_Label _)                = True
 needsCDecl (IPE_Label {})               = True
 needsCDecl (HpcTicksLabel _)            = True
+needsCDecl (HpcTraceLabel _)            = True
+needsCDecl (HpcTraceInfoLabel _)            = True
 needsCDecl (DynamicLinkerLabel {})      = panic "needsCDecl DynamicLinkerLabel"
 needsCDecl PicBaseLabel                 = panic "needsCDecl PicBaseLabel"
 needsCDecl (DeadStripPreventer {})      = panic "needsCDecl DeadStripPreventer"
@@ -1090,6 +1109,8 @@ externallyVisibleCLabel (CCS_Label _)           = True
 externallyVisibleCLabel (IPE_Label {})          = True
 externallyVisibleCLabel (DynamicLinkerLabel _ _)  = False
 externallyVisibleCLabel (HpcTicksLabel _)       = True
+externallyVisibleCLabel (HpcTraceLabel _)       = True
+externallyVisibleCLabel (HpcTraceInfoLabel _)       = True
 externallyVisibleCLabel (LargeBitmapLabel _)    = False
 externallyVisibleCLabel (SRTLabel _)            = False
 externallyVisibleCLabel (PicBaseLabel {}) = panic "externallyVisibleCLabel PicBaseLabel"
@@ -1152,6 +1173,8 @@ labelType (DynamicLinkerLabel _ _)              = DataLabel -- Is this right?
 labelType PicBaseLabel                          = DataLabel
 labelType (DeadStripPreventer _)                = DataLabel
 labelType (HpcTicksLabel _)                     = DataLabel
+labelType (HpcTraceLabel _)                     = DataLabel
+labelType (HpcTraceInfoLabel _)                 = DataLabel
 labelType (LargeBitmapLabel _)                  = DataLabel
 
 idInfoLabelType :: IdLabelInfo -> CLabelType
@@ -1239,6 +1262,10 @@ labelDynamic this_mod platform external_dynamic_refs lbl =
    IPE_Label {} -> True
 
    HpcTicksLabel m ->
+     external_dynamic_refs && this_mod /= m
+   HpcTraceLabel m ->
+     external_dynamic_refs && this_mod /= m
+   HpcTraceInfoLabel m ->
      external_dynamic_refs && this_mod /= m
 
    -- Note that DynamicLinkerLabels do NOT require dynamic linking themselves.
@@ -1464,6 +1491,10 @@ pprCLabel !platform !sty lbl = -- see Note [Bangs in CLabel]
 
    HpcTicksLabel mod
       -> maybe_underscore $ text "_hpc_tickboxes_"  <> ppr mod <> text "_hpc"
+   HpcTraceLabel mod
+      -> maybe_underscore $ text "_hpc_traceboxes_"  <> ppr mod <> text "_hpc"
+   HpcTraceInfoLabel mod
+      -> maybe_underscore $ text "_hpc_traceinfo_"  <> ppr mod <> text "_hpc"
 
    CC_Label cc   -> maybe_underscore $ ppr cc
    CCS_Label ccs -> maybe_underscore $ ppr ccs

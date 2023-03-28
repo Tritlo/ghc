@@ -1243,7 +1243,9 @@ cgTick tick
   = do { platform <- getPlatform
        ; case tick of
            ProfNote   cc t p -> emitSetCCC cc t p
-           HpcTick    m n    -> emit (mkTickBox platform m n)
+           HpcTick    m n    -> emit $ mkTickBox platform m n
+                                   <*> mkTraceBox platform m n
+                                   <*> mkTraceBump platform m
            SourceNote s n    -> emitTick $ SourceNote s n
            _other            -> return () -- ignore
        }

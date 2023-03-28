@@ -144,8 +144,8 @@ addTicksToBinds (CoverageConfig
 
      putDumpFileMaybe logger Opt_D_dump_ticked "HPC" FormatHaskell
        (pprLHsBinds binds1)
-
-     return (binds1, HpcInfo tickCount hashNo, modBreaks)
+     let traceLength = hpcTraceLength dflags
+     return (binds1, HpcInfo tickCount traceLength hashNo, modBreaks)
 
   | otherwise = return (binds, emptyHpcInfo False, Nothing)
 
@@ -1342,26 +1342,31 @@ static void hpc_init_Main(void)
 
 hpcInitCode :: Platform -> Module -> HpcInfo -> CStub
 hpcInitCode _ _ (NoHpcInfo {}) = mempty
-hpcInitCode platform this_mod (HpcInfo tickCount hashNo)
+hpcInitCode platform this_mod (HpcInfo tickCount traceLength hashNo)
  = CStub $ vcat
     [ text "static void hpc_init_" <> ppr this_mod
          <> text "(void) __attribute__((constructor));"
     , text "static void hpc_init_" <> ppr this_mod <> text "(void)"
     , braces (vcat [
-        text "extern StgWord64 " <> tickboxes <>
-               text "[]" <> semi,
-        text "hs_hpc_module" <>
+          text "extern StgWord64 " <> tickboxes  <> text "[]" <> semi
+        , text "extern StgWord64 " <> traceinfo <> text "[]" <> semi
+        , text "extern StgWord64 " <> traceboxes <> text "[]" <> semi
+        , text "hs_hpc_module" <>
           parens (hcat (punctuate comma [
-              doubleQuotes full_name_str,
-              int tickCount, -- really StgWord32
-              int hashNo,    -- really StgWord32
-              tickboxes
+                doubleQuotes full_name_str
+              , int tickCount   -- really StgWord32
+              , int hashNo      -- really StgWord32
+              , int traceLength -- really StgWord32
+              , tickboxes
+              , traceinfo
+              , traceboxes
             ])) <> semi
        ])
     ]
   where
     tickboxes = pprCLabel platform CStyle (mkHpcTicksLabel $ this_mod)
-
+    traceinfo = pprCLabel platform CStyle (mkHpcTraceInfoLabel $ this_mod)
+    traceboxes = pprCLabel platform CStyle (mkHpcTraceLabel $ this_mod)
     module_name  = hcat (map (text.charToC) $ BS.unpack $
                          bytesFS (moduleNameFS (moduleName this_mod)))
     package_name = hcat (map (text.charToC) $ BS.unpack $

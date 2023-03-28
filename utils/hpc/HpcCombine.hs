@@ -112,8 +112,8 @@ map_main flags [first_file] = do
   Just tix <- readTix first_file
 
   let (Tix inside_tix) = filterTix flags tix
-  let tix' = Tix [ TixModule m p i (map f t)
-                 | TixModule m p i t <- inside_tix
+  let tix' = Tix [ TixModule m p i (map f t) n r
+                 | TixModule m p i t n r <- inside_tix
                  ]
 
   case outputFile flags of
@@ -137,14 +137,14 @@ mergeTix modComb f
          (Tix t2)  = Tix
          [ case (Map.lookup m fm1,Map.lookup m fm2) of
            -- todo, revisit the semantics of this combination
-            (Just (TixModule _ hash1 len1 tix1),Just (TixModule _ hash2 len2 tix2))
+            (Just (TixModule _ hash1 len1 tix1 n1 r1),Just (TixModule _ hash2 len2 tix2 n2 r2))
                | hash1 /= hash2
                || length tix1 /= length tix2
                || len1 /= length tix1
                || len2 /= length tix2
                      -> error $ "mismatched in module " ++ m
                | otherwise      ->
-                     TixModule m hash1 len1 (zipWith f tix1 tix2)
+                     TixModule m hash1 len1 (zipWith f tix1 tix2) n1 r1
             (Just m1,Nothing) ->
                   m1
             (Nothing,Just m2) ->
@@ -193,6 +193,6 @@ instance Strict Tix where
             Tix $! strict t1
 
 instance Strict TixModule where
-  strict (TixModule m1 p1 i1 t1) =
-            ((((TixModule $! strict m1) $! strict p1) $! strict i1) $! strict t1)
+  strict (TixModule m1 p1 i1 t1 n1 r1) =
+            ((((((TixModule $! strict m1) $! strict p1) $! strict i1) $! strict t1) $! strict n1) $! strict r1)
 

@@ -55,7 +55,7 @@ showtix_main flags (prog:modNames) = do
                                          ljust 20  modName ++ " " ++ rjust 20 (show pos) ++ " " ++ show lab)
                              | (count,ix,(pos,lab)) <- zip3 tixs' [(0::Int)..] entries
                              ]
-                 | ( TixModule modName _hash1 _ tixs'
+                 | ( TixModule modName _hash1 _ tixs' _ _
                    , Mix _file _timestamp _hash2 _tab entries
                    ) <- tixs_mixs
                  ]
