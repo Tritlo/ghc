@@ -175,10 +175,11 @@ deSugar hsc_env
             Just (orig_file2, ticks)
               | gopt Opt_Hpc $ hsc_dflags hsc_env
               -> do
+              let traceLength = hpcTraceLength (hsc_dflags hsc_env)
               hashNo <- if gopt Opt_Hpc $ hsc_dflags hsc_env
                 then writeMixEntries (hpcDir dflags) mod ticks orig_file2
                 else return 0 -- dummy hash when none are written
-              pure $ HpcInfo (fromIntegral $ sizeSS ticks) hashNo
+              pure $ HpcInfo (fromIntegral $ sizeSS ticks) traceLength hashNo
             _ -> pure $ emptyHpcInfo other_hpc_info
 
         ; (msgs, mb_res) <- initDs hsc_env tcg_env $

@@ -113,20 +113,27 @@ module with the RTS, and it looks something like this:
 -}
 hpcInitCode :: Platform -> Module -> HpcInfo -> CStub
 hpcInitCode _ _ (NoHpcInfo {}) = mempty
-hpcInitCode platform this_mod (HpcInfo tickCount hashNo)
+hpcInitCode platform this_mod (HpcInfo tickCount traceLength hashNo)
  = initializerCStub platform fn_name decls body
   where
     fn_name = mkInitializerStubLabel this_mod (fsLit "hpc")
-    decls = text "extern StgWord64 " <> tickboxes <> text "[]" <> semi
+    decls = vcat [text "extern StgWord64 " <> tickboxes <> text "[]" <> semi,
+                  text "extern StgWord64 " <> traceinfo <> text "[]" <> semi,
+                  text "extern StgWord64 " <> traceboxes <> text "[]" <> semi]
     body = text "hs_hpc_module" <>
               parens (hcat (punctuate comma [
                   doubleQuotes full_name_str,
-                  int tickCount, -- really StgWord32
+                  int tickCount,   -- really StgWord32
                   int hashNo,    -- really StgWord32
-                  tickboxes
+                  int traceLength, -- really StgWord32
+                  tickboxes,
+                  traceinfo,
+                  traceboxes
                 ])) <> semi
 
     tickboxes = pprCLabel platform (mkHpcTicksLabel $ this_mod)
+    traceinfo = pprCLabel platform (mkHpcTraceInfoLabel $ this_mod)
+    traceboxes = pprCLabel platform (mkHpcTraceLabel $ this_mod)
 
     module_name  = hcat (map (text.charToC) $ BS.unpack $
                          bytesFS (moduleNameFS (moduleName this_mod)))

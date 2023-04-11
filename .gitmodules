@@ -60,7 +60,7 @@
 	ignore = untracked
 [submodule "libraries/hpc"]
 	path = libraries/hpc
-	url = https://gitlab.haskell.org/ghc/packages/hpc.git
+	url = https://gitlab.haskell.org/hpc/hpc.git
 	ignore = untracked
 [submodule "libraries/parsec"]
 	path = libraries/parsec

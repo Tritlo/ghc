@@ -210,6 +210,7 @@ Library
         GHC.Event.TimeOut
         GHC.Exception
         GHC.Exception.Type
+        GHC.Exception.Trace
         GHC.ExecutionStack
         GHC.ExecutionStack.Internal
         GHC.Exts
