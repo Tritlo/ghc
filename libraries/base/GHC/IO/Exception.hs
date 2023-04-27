@@ -1,6 +1,11 @@
 {-# LANGUAGE Trustworthy #-}
-{-# LANGUAGE DeriveGeneric, NoImplicitPrelude, MagicHash,
-             ExistentialQuantification, ImplicitParams #-}
+{-# LANGUAGE DeriveGeneric
+           , NoImplicitPrelude
+           , MagicHash
+           , ExistentialQuantification
+           , ImplicitParams
+           , CPP
+  #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 {-# OPTIONS_HADDOCK not-home #-}
 
@@ -59,6 +64,12 @@ import {-# SOURCE #-} GHC.Stack.CCS
 import Foreign.C.Types
 
 import Data.Typeable ( cast )
+
+#if __GLASGOW_HASKELL__ >= 907
+
+import {-# SOURCE #-} GHC.Exception.Trace
+
+#endif
 
 -- ------------------------------------------------------------------------
 -- Exception datatypes and operations
@@ -440,7 +451,17 @@ assertError predicate v
     let
       implicitParamCallStack = prettyCallStackLines ?callStack
       ccsCallStack = showCCSStack ccsStack
+#if __GLASGOW_HASKELL__ >= 907
+    t_msgs <- traceMsgs
+    let
+      ostack = intercalate "\n" $ implicitParamCallStack ++ ccsCallStack
+      nstack = "Recently evaluated locations (from HPC):\n"
+                  ++ (intercalate "\n" $ map ("  " ++) t_msgs)
+      stack = (ostack ++) $ if not (null t_msgs)
+                              then "\n" ++ nstack else ""
+#else
       stack = intercalate "\n" $ implicitParamCallStack ++ ccsCallStack
+#endif
     throwIO (AssertionFailed ("Assertion failed\n" ++ stack))
 
 unsupportedOperation :: IOError
