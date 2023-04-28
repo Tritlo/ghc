@@ -1,5 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE Trustworthy #-}
 
 {-# OPTIONS_HADDOCK not-home #-}
@@ -23,6 +24,9 @@ module GHC.Exception.Type
        , SomeException(..), ArithException(..)
        , divZeroException, overflowException, ratioZeroDenomException
        , underflowException
+#if __GLASGOW_HASKELL__ >= 907
+       , recentlyEvaledStack
+#endif
        ) where
 
 import Data.Maybe
@@ -30,6 +34,22 @@ import Data.Typeable (Typeable, cast)
    -- loop: Data.Typeable -> GHC.Err -> GHC.Exception
 import GHC.Base
 import GHC.Show
+#if __GLASGOW_HASKELL__ >= 907
+
+import {-# SOURCE #-} GHC.Exception.Trace
+import GHC.OldList
+import GHC.IO.Unsafe
+
+
+-- Needed to add stack to all exceptions
+recentlyEvaledStack :: IO String
+recentlyEvaledStack =
+    do t_msgs <- traceMsgs
+       let nstack = "Recently evaluated locations (from HPC):\n"
+                    ++ (intercalate "\n" $ map ("  " ++) t_msgs)
+           stack = if not (null t_msgs) then "\n" ++ nstack else ""
+       return stack
+#endif
 
 {- |
 The @SomeException@ type is the root of the exception type hierarchy.
@@ -40,7 +60,11 @@ data SomeException = forall e . Exception e => SomeException e
 
 -- | @since 3.0
 instance Show SomeException where
-    showsPrec p (SomeException e) = showsPrec p e
+    showsPrec p (SomeException e) =
+        (showsPrec p e)
+#if __GLASGOW_HASKELL__ >= 907
+        . showString (unsafeDupablePerformIO recentlyEvaledStack)
+#endif
 
 {- |
 Any type that you wish to throw or catch as an exception must be an

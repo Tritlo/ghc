@@ -451,17 +451,7 @@ assertError predicate v
     let
       implicitParamCallStack = prettyCallStackLines ?callStack
       ccsCallStack = showCCSStack ccsStack
-#if __GLASGOW_HASKELL__ >= 907
-    t_msgs <- traceMsgs
-    let
-      ostack = intercalate "\n" $ implicitParamCallStack ++ ccsCallStack
-      nstack = "Recently evaluated locations (from HPC):\n"
-                  ++ (intercalate "\n" $ map ("  " ++) t_msgs)
-      stack = (ostack ++) $ if not (null t_msgs)
-                              then "\n" ++ nstack else ""
-#else
       stack = intercalate "\n" $ implicitParamCallStack ++ ccsCallStack
-#endif
     throwIO (AssertionFailed ("Assertion failed\n" ++ stack))
 
 unsupportedOperation :: IOError
