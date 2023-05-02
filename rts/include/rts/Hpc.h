@@ -21,6 +21,7 @@ typedef struct _HpcModuleInfo {
   StgWord64 *tixArr;            // tix Array; local for this module
   StgWord64 *trxInfo;           // trx Info; local for this module
   StgWord64 *trxArr;            // trx Array; local for this module
+  StgWord64 *rettrxArr;         // rettrx Array; local for this module
   bool from_file;               // data was read from the .tix file
   struct _HpcModuleInfo *next;
 } HpcModuleInfo;
@@ -31,7 +32,9 @@ void hs_hpc_module (char *modName,
                     StgWord32 modTraceLength,
                     StgWord64 *tixArr,
                     StgWord64 *trxInfo,
-                    StgWord64 *trxArr);
+                    StgWord64 *trxArr,
+                    StgWord64 *rettrxArr
+                    );
 
 HpcModuleInfo * hs_hpc_rootModule (void);
 

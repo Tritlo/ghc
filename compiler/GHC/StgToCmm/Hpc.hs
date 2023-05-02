@@ -6,7 +6,9 @@
 --
 -----------------------------------------------------------------------------
 
-module GHC.StgToCmm.Hpc ( initHpc, mkTickBox, mkTraceBox, mkTraceBump ) where
+module GHC.StgToCmm.Hpc ( initHpc, mkTickBox,
+                          mkTraceBox, mkTraceBump,
+                          mkRetTraceBox, mkRetTraceBump ) where
 
 import GHC.Prelude
 import GHC.Platform
@@ -34,18 +36,29 @@ mkTickBox platform mod n
     tick_box = cmmIndex platform W64
                         (CmmLit $ CmmLabel $ mkHpcTicksLabel $ mod)
                         n
-mkTraceBox :: Platform -> Module -> Int -> CmmAGraph
-mkTraceBox platform mod n
+
+
+
+mkTraceBox, mkRetTraceBox :: Platform -> Module -> Int -> CmmAGraph
+mkTraceBox = mkGenTraceBox mkHpcTraceLabel 0
+mkRetTraceBox = mkGenTraceBox mkHpcRetTraceLabel 1
+
+mkTraceBump, mkRetTraceBump :: Platform -> Module -> CmmAGraph
+mkTraceBump = mkGenTraceBump 0
+mkRetTraceBump = mkGenTraceBump 1
+
+mkGenTraceBox :: (Module -> CLabel) -> Int -> Platform -> Module -> Int -> CmmAGraph
+mkGenTraceBox box i platform mod n
   = mkStore box_to_update (CmmLit (CmmInt (fromIntegral n) W64))
     where
         index_box = cmmIndex platform W64
-                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 0
+                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) i
         box_to_update = cmmIndexExpr platform W64
-                         (CmmLit $ CmmLabel $ mkHpcTraceLabel $ mod)
+                         (CmmLit $ CmmLabel $ box $ mod)
                          (CmmLoad index_box b64 NaturallyAligned)
 
-mkTraceBump :: Platform -> Module -> CmmAGraph
-mkTraceBump platform mod
+mkGenTraceBump :: Int -> Platform -> Module -> CmmAGraph
+mkGenTraceBump i platform mod
   = mkStore index_box rem
   where
     add1 = (CmmMachOp (MO_Add W64)
@@ -56,8 +69,9 @@ mkTraceBump platform mod
              , CmmLoad size_box b64 NaturallyAligned])
     infoLabel = cmmIndex platform W64
                 (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod)
-    index_box = infoLabel 0
-    size_box = infoLabel 1
+    index_box = infoLabel i
+    size_box = infoLabel 2
+
 
 -- | Emit top-level tables for HPC and return code to initialise
 initHpc :: Module -> HpcInfo -> FCode ()
@@ -72,8 +86,13 @@ initHpc this_mod (HpcInfo tickCount traceLength _hashNo)
                         ]
            emitDataLits (mkHpcTraceInfoLabel this_mod)
                         [ CmmInt 0 W64,
-                          CmmInt (fromIntegral traceLength) W64 ]
+                          CmmInt 0 W64,
+                          CmmInt (fromIntegral traceLength) W64]
            emitDataLits (mkHpcTraceLabel this_mod)
+                        [ CmmInt (fromIntegral tickCount) W64
+                        | _ <- take traceLength [0 :: Int ..]
+                        ]
+           emitDataLits (mkHpcRetTraceLabel this_mod)
                         [ CmmInt (fromIntegral tickCount) W64
                         | _ <- take traceLength [0 :: Int ..]
                         ]

@@ -99,6 +99,7 @@ module GHC.Cmm.CLabel (
         mkDeadStripPreventer,
         mkHpcTicksLabel,
         mkHpcTraceLabel,
+        mkHpcRetTraceLabel,
         mkHpcTraceInfoLabel,
 
         -- * Predicates
@@ -290,6 +291,8 @@ data CLabel
   | HpcTicksLabel Module
   -- | Per-module table of current trace locations
   | HpcTraceLabel Module
+  -- | Per-module table of current return trace locations
+  | HpcRetTraceLabel Module
   -- | Per-module table of info for trace (cur index and size)
   | HpcTraceInfoLabel Module
 
@@ -400,6 +403,8 @@ instance Ord CLabel where
     compare a1 a2
   compare (HpcTraceLabel a1) (HpcTraceLabel a2) =
     compare a1 a2
+  compare (HpcRetTraceLabel a1) (HpcRetTraceLabel a2) =
+    compare a1 a2
   compare (HpcTraceInfoLabel a1) (HpcTraceInfoLabel a2) =
     compare a1 a2
   compare (SRTLabel u1) (SRTLabel u2) =
@@ -436,6 +441,8 @@ instance Ord CLabel where
   compare _ HpcTicksLabel{} = GT
   compare HpcTraceLabel{} _ = LT
   compare _ HpcTraceLabel{} = GT
+  compare HpcRetTraceLabel{} _ = LT
+  compare _ HpcRetTraceLabel{} = GT
   compare HpcTraceInfoLabel{} _ = LT
   compare _ HpcTraceInfoLabel{} = GT
   compare SRTLabel{} _ = LT
@@ -881,9 +888,10 @@ mkRtsUnpackCStringLabel = RtsLabel RtsUnpackCStringInfoTable
 mkRtsUnpackCStringUtf8Label = RtsLabel RtsUnpackCStringUtf8InfoTable
 
 -- Constructing Code Coverage Labels
-mkHpcTicksLabel, mkHpcTraceLabel, mkHpcTraceInfoLabel :: Module -> CLabel
+mkHpcTicksLabel, mkHpcTraceLabel, mkHpcRetTraceLabel, mkHpcTraceInfoLabel :: Module -> CLabel
 mkHpcTicksLabel                = HpcTicksLabel
 mkHpcTraceLabel                = HpcTraceLabel
+mkHpcRetTraceLabel             = HpcRetTraceLabel
 mkHpcTraceInfoLabel            = HpcTraceInfoLabel
 
 
@@ -1047,6 +1055,7 @@ needsCDecl (IPE_Label {})               = True
 needsCDecl (ModuleLabel _ kind)         = modLabelNeedsCDecl kind
 needsCDecl (HpcTicksLabel _)            = True
 needsCDecl (HpcTraceLabel _)            = True
+needsCDecl (HpcRetTraceLabel _)         = True
 needsCDecl (HpcTraceInfoLabel _)        = True
 needsCDecl (DynamicLinkerLabel {})      = panic "needsCDecl DynamicLinkerLabel"
 needsCDecl PicBaseLabel                 = panic "needsCDecl PicBaseLabel"
@@ -1183,6 +1192,7 @@ externallyVisibleCLabel (ModuleLabel {})        = True
 externallyVisibleCLabel (DynamicLinkerLabel _ _)  = False
 externallyVisibleCLabel (HpcTicksLabel _)       = True
 externallyVisibleCLabel (HpcTraceLabel _)       = True
+externallyVisibleCLabel (HpcRetTraceLabel _)       = True
 externallyVisibleCLabel (HpcTraceInfoLabel _)   = True
 externallyVisibleCLabel (LargeBitmapLabel _)    = False
 externallyVisibleCLabel (SRTLabel _)            = False
@@ -1254,6 +1264,7 @@ labelType PicBaseLabel                          = DataLabel
 labelType (DeadStripPreventer _)                = DataLabel
 labelType (HpcTicksLabel _)                     = DataLabel
 labelType (HpcTraceLabel _)                     = DataLabel
+labelType (HpcRetTraceLabel _)                  = DataLabel
 labelType (HpcTraceInfoLabel _)                 = DataLabel
 labelType (LargeBitmapLabel _)                  = DataLabel
 
@@ -1353,6 +1364,8 @@ labelDynamic this_mod platform external_dynamic_refs lbl =
    HpcTicksLabel m ->
      external_dynamic_refs && this_mod /= m
    HpcTraceLabel m ->
+     external_dynamic_refs && this_mod /= m
+   HpcRetTraceLabel m ->
      external_dynamic_refs && this_mod /= m
    HpcTraceInfoLabel m ->
      external_dynamic_refs && this_mod /= m
@@ -1609,6 +1622,8 @@ pprCLabelStyle !platform !sty lbl = -- see Note [Bangs in CLabel]
       -> maybe_underscore $ text "_hpc_tickboxes_"  <> pprModule mod <> text "_hpc"
    HpcTraceLabel mod
       -> maybe_underscore $ text "_hpc_traceboxes_"  <> pprModule mod <> text "_hpc"
+   HpcRetTraceLabel mod
+      -> maybe_underscore $ text "_hpc_rettraceboxes_"  <> pprModule mod <> text "_hpc"
    HpcTraceInfoLabel mod
       -> maybe_underscore $ text "_hpc_traceinfo_"  <> pprModule mod <> text "_hpc"
 

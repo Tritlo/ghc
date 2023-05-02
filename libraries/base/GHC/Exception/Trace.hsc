@@ -24,22 +24,26 @@ foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
 -- index and the trace itself (the ints refer to boxes in the .mix file).
 -- Reimplemented from libraries/hpc/Trace/Hpc/Reflect.hsc, to avoid a
 -- circular dependency on trace from base.
-traceList :: IO [([Char], Int, Int, [Int])]
+traceList :: IO [([Char], Int, (Int,Int), ([Int], [Int]))]
 traceList = hs_hpc_rootModule >>= hpcTraceList
   where 
-    hpcTraceList :: Ptr () -> IO [([Char], Int, Int, [Int])]
+    hpcTraceList :: Ptr () -> IO [([Char], Int, (Int,Int), ([Int], [Int]))]
     hpcTraceList ptr
       | ptr == nullPtr = return []
       | otherwise = do
               modName <- ((#peek HpcModuleInfo, modName) ptr) >>= peekCString
               trxInfo :: Ptr Word64 <- (#peek HpcModuleInfo, trxInfo) ptr
               hashNo :: Int  <- (#peek HpcModuleInfo, hashNo) ptr
-              info :: [Word64]  <- peekArray 2 trxInfo
+              info :: [Word64]  <- peekArray 3 trxInfo
               trxArr :: Ptr Word64 <- (#peek HpcModuleInfo, trxArr) ptr
-              trx <- map fromIntegral <$> (peekArray (fromIntegral (info !! 1)) trxArr)
+              retArr :: Ptr Word64 <- (#peek HpcModuleInfo, rettrxArr) ptr
+              trx <- map fromIntegral <$> (peekArray (fromIntegral (info !! 2)) trxArr)
+              ret <- map fromIntegral <$> (peekArray (fromIntegral (info !! 2)) retArr)
               rest <- ((#peek HpcModuleInfo, next) ptr) >>= hpcTraceList
               return $ (modName, hashNo,
-                      fromIntegral (info !! 0), trx) : rest
+                        (fromIntegral (info !! 0),
+                         fromIntegral (info !! 1)),
+                        (trx,ret)) : rest
 
 -- | Returns a summary of the current HPC trace if the .mix file is available,
 -- showing which branches and functions have been recently evaluated.
@@ -89,8 +93,8 @@ data BaseCondBox = GuardBinBox
 
 
 -- Report generation for traceMsg
-parseAndReport :: FilePath -> ([Char],Int,Int,[Int]) -> IO [[Char]]
-parseAndReport dir (m, hash, next_index, trx) = do
+parseAndReport :: FilePath -> ([Char],Int,(Int,Int), ([Int],[Int])) -> IO [[Char]]
+parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
     let mixLoc = dir ++ m ++ ".mix" 
     res <- catch @IOException
              (Just <$> readFile mixLoc)
@@ -117,9 +121,16 @@ parseAndReport dir (m, hash, next_index, trx) = do
                         -- the first branching one, and only branching afterwards
                         (nonAlts,mbAlts) = span (not . isJust . look True)
                                             $ filter (< (length p_li))
-                                            $ reverse $ rot next_index trx
-                    in summarize $ align $ mapMaybe (look False) nonAlts
-                                        ++ mapMaybe (look True) mbAlts
+                                            $ reverse $ rot next_trx_index trx
+                        (nonRetAlts,mbRetAlts) = span (not . isJust . look True)
+                                                    $ filter (< (length p_li))
+                                                    $ reverse $ rot next_ret_index ret
+                    in summarize (align $ mapMaybe (look False) nonAlts
+                                        ++ mapMaybe (look True) mbAlts)
+                       -- TODO: Improve
+                       ++ ["Finished evaluating:"]
+                       ++ summarize (align $ mapMaybe (look False) nonRetAlts
+                                           ++ mapMaybe (look True) mbRetAlts)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
       Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
