@@ -1251,10 +1251,12 @@ cgTick tick expr
            HpcTick    m n    -> do { emit $ mkTickBox platform m n
                                          <*> mkTraceBox platform m n
                                          <*> mkTraceBump platform m
-                                   ; r <- cgExpr expr
+                                   ; nt <- newTemp (bWord platform)
+                                   ; r_kind <- withSequel (AssignTo [nt] True) $
+                                                 cgExpr expr
                                    ; emit $ mkRetTraceBox platform m n
-                                         <*> mkRetTraceBump platform m
-                                   ; return r }
+                                            <*> mkRetTraceBump platform m
+                                   ; emitReturn [CmmReg $ CmmLocal nt] }
            SourceNote s n    -> emitTick (SourceNote s n) >> cgExpr expr
            _other            -> cgExpr expr -- ignore
        }

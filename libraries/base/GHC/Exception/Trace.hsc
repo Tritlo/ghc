@@ -20,13 +20,13 @@ import Data.List ( intercalate, elemIndex )
 foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
 
 
--- | Returns the current HPC trace, with the module name, tix hash, next trace 
+-- | Returns the current HPC trace, with the module name, tix hash, next trace
 -- index and the trace itself (the ints refer to boxes in the .mix file).
 -- Reimplemented from libraries/hpc/Trace/Hpc/Reflect.hsc, to avoid a
 -- circular dependency on trace from base.
 traceList :: IO [([Char], Int, (Int,Int), ([Int], [Int]))]
 traceList = hs_hpc_rootModule >>= hpcTraceList
-  where 
+  where
     hpcTraceList :: Ptr () -> IO [([Char], Int, (Int,Int), ([Int], [Int]))]
     hpcTraceList ptr
       | ptr == nullPtr = return []
@@ -48,9 +48,9 @@ traceList = hs_hpc_rootModule >>= hpcTraceList
 -- | Returns a summary of the current HPC trace if the .mix file is available,
 -- showing which branches and functions have been recently evaluated.
 traceMsgs :: IO [[Char]]
-traceMsgs = 
+traceMsgs =
   do traces <- traceList
-     dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR" 
+     dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
      concat <$> mapM (parseAndReport dir) traces
 
 
@@ -95,7 +95,7 @@ data BaseCondBox = GuardBinBox
 -- Report generation for traceMsg
 parseAndReport :: FilePath -> ([Char],Int,(Int,Int), ([Int],[Int])) -> IO [[Char]]
 parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
-    let mixLoc = dir ++ m ++ ".mix" 
+    let mixLoc = dir ++ m ++ ".mix"
     res <- catch @IOException
              (Just <$> readFile mixLoc)
              (\_ -> return Nothing)
@@ -108,7 +108,7 @@ parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
                (_, _:woutcheader) <- span (/= ' ') woutctime, -- utcheader
                (hashstr, _:wohash) <- span (/= ' ') woutcheader,
                (_, _:mix_li) <- span (/= ' ') wohash, -- lenstr
-               p_res <- parseMix mix_li -> 
+               p_res <- parseMix mix_li ->
            if ((read hashstr) :: Word32) /= ((fromIntegral hash) :: Word32)
            then ["** Error: Mixfile hash mismatch **", "File: " ++ hashstr,
                  "Module: " ++ show hash, "Try deleting: " ++ mixLoc]
@@ -116,21 +116,25 @@ parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
                   Just p_li ->
                     let look skipNonAlt i =
                            if i >= length p_li then Nothing
-                           else (display skipNonAlt (fn, p_li !! i))
+                           else (display skipNonAlt (fn, i, p_li !! i))
                         -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
-                        (nonAlts,mbAlts) = span (not . isJust . look True)
-                                            $ filter (< (length p_li))
-                                            $ reverse $ rot next_trx_index trx
-                        (nonRetAlts,mbRetAlts) = span (not . isJust . look True)
-                                                    $ filter (< (length p_li))
-                                                    $ reverse $ rot next_ret_index ret
-                    in summarize (align $ mapMaybe (look False) nonAlts
-                                        ++ mapMaybe (look True) mbAlts)
+                        alts =  filter (< (length p_li))
+                                 $ reverse $ rot next_trx_index trx
+                        (nonAlts,mbAlts) = span (not . isJust . look True) alts
+                        ret_alts = filter (< (length p_li))
+                                   $ reverse $ rot next_ret_index ret
+                        (nonRetAlts,mbRetAlts) = span (not . isJust . look True) ret_alts
+                    -- in summarize (align $ mapMaybe (look False) nonAlts
+                    --                     ++ mapMaybe (look True) mbAlts)
+                    --    -- TODO: Improve
+                    --    ++ ["Finished evaluating:"]
+                    --    ++ summarize (align $ mapMaybe (look False) nonRetAlts
+                    --                        ++ mapMaybe (look True) mbRetAlts)
+                    in summarize (align $ mapMaybe (look False) alts)
                        -- TODO: Improve
                        ++ ["Finished evaluating:"]
-                       ++ summarize (align $ mapMaybe (look False) nonRetAlts
-                                           ++ mapMaybe (look True) mbRetAlts)
+                       ++ summarize (align $ mapMaybe (look False) ret_alts)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
       Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
@@ -140,9 +144,9 @@ parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
           rot :: Int -> [a] -> [a]
           rot n xs = (drop n xs) ++ (take n xs)
           -- takes a paramter whether to ignore false ExpBoxes or not.
-          display :: Bool -> ([Char], (HpcPos, BaseBoxLabel)) -> Maybe ([Char], [Char])
-          display True (_, (_, ExpBox False)) = Nothing
-          display _ (fn, (p,bb)) = Just (fn ++ ":" ++ show p, renderBB bb)
+          display :: Bool -> ([Char], Int, (HpcPos, BaseBoxLabel)) -> Maybe ([Char], [Char])
+          display True (_, _, (_, ExpBox False)) = Nothing
+          display _ (fn, i, (p,bb)) = Just (show i ++ " " ++ fn ++ ":" ++ show p, renderBB bb)
           renderBB bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
                       | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
                       | LocalBox [] <- bb =  "empty local box?"
@@ -181,17 +185,17 @@ summarize = mergeNRepeats 5
     mergeRepeats inp@(loop_head:rest) =
       case elemIndex loop_head rest of
           Nothing -> keepGoing
-          Just i -> 
+          Just i ->
             let (whole_loop, new_rest) = splitAt (i+1) inp
                 chunks = chunkList (i+1) new_rest
                 (same,diff) = span (== whole_loop) chunks
             in if null same then keepGoing
                else let indent = length $ takeWhile (== ' ') loop_head
-                        msg = replicate indent ' ' ++ "repeats (" 
+                        msg = replicate indent ' ' ++ "repeats ("
                                ++ show (1 + length same) ++ " times):"
-                        indented = map ("  "++) whole_loop 
+                        indented = map ("  "++) whole_loop
                     in (msg:indented) ++ mergeRepeats (concat diff)
-      where 
+      where
           keepGoing = loop_head:mergeRepeats rest
           chunkList _ [] = []
           chunkList i xs = let (s,r) = splitAt i xs in s:chunkList i r
