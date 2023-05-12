@@ -118,8 +118,6 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                     let look skipNonAlt (i,r) =
                            if i >= length p_li then Nothing
                            else (display skipNonAlt (fn, i, r, p_li !! i))
-                        -- We want to display non-alternative exprs up until
-                        -- the first branching one, and only branching afterwards
                         both_sides =  filter ((< (length p_li)) . fst) $
                                         rot next_trx_index $ zip trx ret
                         -- We find the evals and the unevals,
@@ -129,33 +127,32 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                                 -> ([(Int, Int)], [Either Int Int])
                         unevals w_indent bth [(n,r)] =
                             if r > final_evals
-                             then unevals ((n,r-1):w_indent) (Left  n:bth) []
-                             else unevals   ((n,r):w_indent) (Right n:bth) []
+                             then unevals ((n,r-1):w_indent) (Right n:bth) []
+                             else unevals   ((n,r):w_indent) (Left  n:bth) []
                         unevals w_indent bth ((n,rn):k@(m,rm):rest)
                            = if rn > rm
-                             then unevals ((n,rn-1):w_indent)  (Left  n:bth) (k:rest)
+                             then unevals ((n,rn-1):w_indent)  (Right n:bth) (k:rest)
                              else if n == m
                                   -- If we see two in a row we just drop it,
                                   -- it finished right away. TODO: is this ok,
                                   -- when a recursive function calls itself
                                   -- immediately?
-                                  then unevals            w_indent   (Right n:bth) (k:rest)
-                                  else unevals    ((n,rn):w_indent)  (Right n:bth) (k:rest)
+                                  then unevals            w_indent   (Left n:bth) (k:rest)
+                                  else unevals    ((n,rn):w_indent)  (Left n:bth) (k:rest)
                         unevals w_indent bth [] =
                            (reverse w_indent, reverse bth)
                         (indented, evals_and_fins) =
                           unevals [] [] $ both_sides
                         (evals, _) = partitionEithers evals_and_fins
 
+                        -- We want to display non-alternative exprs up until
+                        -- the first branching one, and only branching afterwards
+                        (nonAlts,mbAlts) = span (not . isJust . look True) $
+                                            reverse $ zip evals (repeat 0)
 
-                    -- in summarize (align $ mapMaybe (look False) nonAlts
-                    --                     ++ mapMaybe (look True) mbAlts)
-                    --    -- TODO: Improve
-                    --    ++ ["Finished evaluating:"]
-                    --    ++ summarize (align $ mapMaybe (look False) nonRetAlts
-                    --                        ++ mapMaybe (look True) mbRetAlts)
-                    -- in summarize (align $ mapMaybe (look False) $ zip alts ret_alts)
-                    in  summarize (align $ mapMaybe (look True) $ zip evals (repeat 0))
+
+                    in  summarize (align $ mapMaybe (look False) nonAlts
+                                        ++ mapMaybe (look True) mbAlts)
                       ++ ["Eval snake:"]
                       ++ (align $ mapMaybe (look False) indented)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
