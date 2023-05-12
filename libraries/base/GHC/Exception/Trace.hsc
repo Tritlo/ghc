@@ -14,7 +14,7 @@ import System.Environment
 import Control.Exception
 import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
-import Data.List ( intercalate, elemIndex )
+import Data.List ( intercalate, elemIndex, nub )
 import Data.Either (partitionEithers)
 
 #include "Rts.h"
@@ -123,26 +123,26 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                         -- We find the evals and the unevals,
                         -- and also decrease the indent by 1 for the unevals
                         -- to make the printing prettier.
-                        unevals :: [(Int,Int)] -> [Either Int Int] -> [(Int,Int)]
-                                -> ([(Int, Int)], [Either Int Int])
-                        unevals w_indent bth [(n,r)] =
+                        unevals :: [(Int,Int)] -> [Int] -> [Either Int Int] -> [(Int,Int)]
+                                -> ([(Int, Int)], [Int], [Either Int Int])
+                        unevals w_indent terms bth [(n,r)] =
                             if r > final_evals
-                             then unevals ((n,r-1):w_indent) (Right n:bth) []
-                             else unevals   ((n,r):w_indent) (Left  n:bth) []
-                        unevals w_indent bth ((n,rn):k@(m,rm):rest)
+                             then unevals ((n,r-1):w_indent) terms (Right n:bth) []
+                             else unevals   ((n,r):w_indent) terms (Left  n:bth) []
+                        unevals w_indent terms bth ((n,rn):k@(m,rm):rest)
                            = if rn > rm
-                             then unevals ((n,rn-1):w_indent)  (Right n:bth) (k:rest)
+                             then unevals ((n,rn-1):w_indent) terms (Right n:bth) (k:rest)
                              else if n == m
                                   -- If we see two in a row we just drop it,
                                   -- it finished right away. TODO: is this ok,
                                   -- when a recursive function calls itself
                                   -- immediately?
-                                  then unevals            w_indent   (Left n:bth) (k:rest)
-                                  else unevals    ((n,rn):w_indent)  (Left n:bth) (k:rest)
-                        unevals w_indent bth [] =
-                           (reverse w_indent, reverse bth)
-                        (indented, evals_and_fins) =
-                          unevals [] [] $ both_sides
+                                  then unevals            w_indent  (n:terms) (Left n:bth) (k:rest)
+                                  else unevals    ((n,rn):w_indent)    terms  (Left n:bth) (k:rest)
+                        unevals w_indent terms bth [] =
+                           (reverse w_indent, reverse terms, reverse bth)
+                        (indented, terms, evals_and_fins) =
+                          unevals [] [] [] both_sides
                         (evals, _) = partitionEithers evals_and_fins
 
                         -- We want to display non-alternative exprs up until
@@ -153,6 +153,9 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
 
                     in  summarize (align $ mapMaybe (look False) nonAlts
                                         ++ mapMaybe (look True) mbAlts)
+                      ++ ["Terminals:"]
+                      ++ (align $ mapMaybe (look False) $
+                             zip (reverse $ nub terms) (repeat 0))
                       ++ ["Eval snake:"]
                       ++ (align $ mapMaybe (look False) indented)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
