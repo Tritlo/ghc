@@ -8,7 +8,8 @@
 
 module GHC.StgToCmm.Hpc ( initHpc, mkTickBox,
                           mkTraceBox, mkTraceBump,
-                          mkRetTraceBox, mkRetTraceBump ) where
+                          mkRetTraceBox, mkRetTraceBump,
+                          mkRetTraceDump ) where
 
 import GHC.Prelude
 import GHC.Platform
@@ -39,13 +40,8 @@ mkTickBox platform mod n
 
 
 
-mkTraceBox, mkRetTraceBox :: Platform -> Module -> Int -> CmmAGraph
+mkTraceBox :: Platform -> Module -> Int -> CmmAGraph
 mkTraceBox = mkGenTraceBox mkHpcTraceLabel 0
-mkRetTraceBox = mkGenTraceBox mkHpcRetTraceLabel 1
-
-mkTraceBump, mkRetTraceBump :: Platform -> Module -> CmmAGraph
-mkTraceBump = mkGenTraceBump 0
-mkRetTraceBump = mkGenTraceBump 1
 
 mkGenTraceBox :: (Module -> CLabel) -> Int -> Platform -> Module -> Int -> CmmAGraph
 mkGenTraceBox box i platform mod n
@@ -57,8 +53,39 @@ mkGenTraceBox box i platform mod n
                          (CmmLit $ CmmLabel $ box $ mod)
                          (CmmLoad index_box b64 NaturallyAligned)
 
-mkGenTraceBump :: Int -> Platform -> Module -> CmmAGraph
-mkGenTraceBump i platform mod
+-- Write the current number of evals
+mkRetTraceBox :: Platform -> Module -> CmmAGraph
+mkRetTraceBox platform mod
+  = mkStore box_to_update (CmmLoad eval_box b64 NaturallyAligned)
+    where
+        index_box = cmmIndex platform W64
+                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 0
+        eval_box = cmmIndex platform W64
+                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 1
+        box_to_update = cmmIndexExpr platform W64
+                         (CmmLit $ CmmLabel $ mkHpcRetTraceLabel $ mod)
+                         (CmmLoad index_box b64 NaturallyAligned)
+
+
+mkRetTraceBump, mkRetTraceDump :: Platform -> Module -> CmmAGraph
+mkRetTraceBump = mkTraceIndOp (MO_Add W64)
+mkRetTraceDump = mkTraceIndOp (MO_Sub W64)
+
+-- Add or substract, no remainder
+mkTraceIndOp :: MachOp -> Platform -> Module -> CmmAGraph
+mkTraceIndOp op platform mod
+  = mkStore index_box op1
+  where
+    op1 = (CmmMachOp op
+             [ CmmLoad index_box b64 NaturallyAligned
+             , CmmLit (CmmInt 1 W64) ])
+    infoLabel = cmmIndex platform W64
+                (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod)
+    index_box = infoLabel 1
+
+
+mkTraceBump :: Platform -> Module -> CmmAGraph
+mkTraceBump platform mod
   = mkStore index_box rem
   where
     add1 = (CmmMachOp (MO_Add W64)
@@ -69,7 +96,7 @@ mkGenTraceBump i platform mod
              , CmmLoad size_box b64 NaturallyAligned])
     infoLabel = cmmIndex platform W64
                 (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod)
-    index_box = infoLabel i
+    index_box = infoLabel 0
     size_box = infoLabel 2
 
 
@@ -79,6 +106,7 @@ initHpc _ NoHpcInfo{}
   = return ()
 initHpc this_mod (HpcInfo tickCount traceLength _hashNo)
   = do do_hpc <- stgToCmmOptHpc <$> getStgToCmmConfig
+       let max_val = fromIntegral tickCount
        when do_hpc $ do
            emitDataLits (mkHpcTicksLabel this_mod)
                         [ CmmInt 0 W64
@@ -89,11 +117,11 @@ initHpc this_mod (HpcInfo tickCount traceLength _hashNo)
                           CmmInt 0 W64,
                           CmmInt (fromIntegral traceLength) W64]
            emitDataLits (mkHpcTraceLabel this_mod)
-                        [ CmmInt (fromIntegral tickCount) W64
+                        [ CmmInt max_val W64
                         | _ <- take traceLength [0 :: Int ..]
                         ]
            emitDataLits (mkHpcRetTraceLabel this_mod)
-                        [ CmmInt (fromIntegral tickCount) W64
+                        [ CmmInt 0 W64
                         | _ <- take traceLength [0 :: Int ..]
                         ]
 

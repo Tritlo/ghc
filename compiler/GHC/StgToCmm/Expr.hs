@@ -1249,13 +1249,17 @@ cgTick tick expr
        ; case tick of
            ProfNote   cc t p -> emitSetCCC cc t p >> cgExpr expr
            HpcTick    m n    -> do { emit $ mkTickBox platform m n
-                                         <*> mkTraceBox platform m n
-                                         <*> mkTraceBump platform m
+                                        <*> mkTraceBox platform m n
+                                        <*> mkRetTraceBox platform m
+                                        <*> mkRetTraceBump platform m
+                                        <*> mkTraceBump platform m
                                    ; nt <- newTemp (bWord platform)
-                                   ; r_kind <- withSequel (AssignTo [nt] True) $
-                                                 cgExpr expr
-                                   ; emit $ mkRetTraceBox platform m n
-                                            <*> mkRetTraceBump platform m
+                                   ; r_kind <- withSequel (AssignTo [nt] True)
+                                                 (cgExpr expr)
+                                   ; emit $ mkTraceBox platform m n
+                                        <*> mkRetTraceBox platform m
+                                        <*> mkRetTraceDump platform m
+                                        <*> mkTraceBump platform m
                                    ; emitReturn [CmmReg $ CmmLocal nt] }
            SourceNote s n    -> emitTick (SourceNote s n) >> cgExpr expr
            _other            -> cgExpr expr -- ignore

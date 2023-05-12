@@ -15,6 +15,7 @@ import Control.Exception
 import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
 import Data.List ( intercalate, elemIndex )
+import Data.Either (partitionEithers)
 
 #include "Rts.h"
 foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
@@ -94,7 +95,7 @@ data BaseCondBox = GuardBinBox
 
 -- Report generation for traceMsg
 parseAndReport :: FilePath -> ([Char],Int,(Int,Int), ([Int],[Int])) -> IO [[Char]]
-parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
+parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
     let mixLoc = dir ++ m ++ ".mix"
     res <- catch @IOException
              (Just <$> readFile mixLoc)
@@ -114,27 +115,49 @@ parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
                  "Module: " ++ show hash, "Try deleting: " ++ mixLoc]
            else case p_res of
                   Just p_li ->
-                    let look skipNonAlt i =
+                    let look skipNonAlt (i,r) =
                            if i >= length p_li then Nothing
-                           else (display skipNonAlt (fn, i, p_li !! i))
+                           else (display skipNonAlt (fn, i, r, p_li !! i))
                         -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
-                        alts =  filter (< (length p_li))
-                                 $ reverse $ rot next_trx_index trx
-                        (nonAlts,mbAlts) = span (not . isJust . look True) alts
-                        ret_alts = filter (< (length p_li))
-                                   $ reverse $ rot next_ret_index ret
-                        (nonRetAlts,mbRetAlts) = span (not . isJust . look True) ret_alts
+                        both_sides =  filter ((< (length p_li)) . fst) $
+                                        rot next_trx_index $ zip trx ret
+                        -- We find the evals and the unevals,
+                        -- and also decrease the indent by 1 for the unevals
+                        -- to make the printing prettier.
+                        unevals :: [(Int,Int)] -> [Either Int Int] -> [(Int,Int)]
+                                -> ([(Int, Int)], [Either Int Int])
+                        unevals w_indent bth [(n,r)] =
+                            if r > final_evals
+                             then unevals ((n,r-1):w_indent) (Left  n:bth) []
+                             else unevals   ((n,r):w_indent) (Right n:bth) []
+                        unevals w_indent bth ((n,rn):k@(m,rm):rest)
+                           = if rn > rm
+                             then unevals ((n,rn-1):w_indent)  (Left  n:bth) (k:rest)
+                             else if n == m
+                                  -- If we see two in a row we just drop it,
+                                  -- it finished right away. TODO: is this ok,
+                                  -- when a recursive function calls itself
+                                  -- immediately?
+                                  then unevals            w_indent   (Right n:bth) (k:rest)
+                                  else unevals    ((n,rn):w_indent)  (Right n:bth) (k:rest)
+                        unevals w_indent bth [] =
+                           (reverse w_indent, reverse bth)
+                        (indented, evals_and_fins) =
+                          unevals [] [] $ both_sides
+                        (evals, _) = partitionEithers evals_and_fins
+
+
                     -- in summarize (align $ mapMaybe (look False) nonAlts
                     --                     ++ mapMaybe (look True) mbAlts)
                     --    -- TODO: Improve
                     --    ++ ["Finished evaluating:"]
                     --    ++ summarize (align $ mapMaybe (look False) nonRetAlts
                     --                        ++ mapMaybe (look True) mbRetAlts)
-                    in summarize (align $ mapMaybe (look False) alts)
-                       -- TODO: Improve
-                       ++ ["Finished evaluating:"]
-                       ++ summarize (align $ mapMaybe (look False) ret_alts)
+                    -- in summarize (align $ mapMaybe (look False) $ zip alts ret_alts)
+                    in  summarize (align $ mapMaybe (look True) $ zip evals (repeat 0))
+                      ++ ["Eval snake:"]
+                      ++ (align $ mapMaybe (look False) indented)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
       Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
@@ -144,9 +167,10 @@ parseAndReport dir (m, hash, (next_trx_index, next_ret_index), (trx, ret)) = do
           rot :: Int -> [a] -> [a]
           rot n xs = (drop n xs) ++ (take n xs)
           -- takes a paramter whether to ignore false ExpBoxes or not.
-          display :: Bool -> ([Char], Int, (HpcPos, BaseBoxLabel)) -> Maybe ([Char], [Char])
-          display True (_, _, (_, ExpBox False)) = Nothing
-          display _ (fn, i, (p,bb)) = Just (show i ++ " " ++ fn ++ ":" ++ show p, renderBB bb)
+          display :: Bool -> ([Char], Int, Int, (HpcPos, BaseBoxLabel)) -> Maybe ([Char], [Char])
+          display True (_, _, _, (_, ExpBox False)) = Nothing
+          display _ (fn, i, r, (p,bb)) =
+            Just ( (replicate r ' ') ++ show i ++ " " ++ fn ++ ":" ++ show p, renderBB bb)
           renderBB bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
                       | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
                       | LocalBox [] <- bb =  "empty local box?"
