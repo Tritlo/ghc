@@ -45,7 +45,7 @@ import GHC.IO.Unsafe
 recentlyEvaledStack :: IO String
 recentlyEvaledStack =
     do t_msgs <- traceMsgs
-       let nstack = "Recently evaluated locations (from HPC):\n"
+       let nstack = "Recently evaluated involved locations:\n"
                     ++ (intercalate "\n" $ map ("  " ++) t_msgs)
            stack = if not (null t_msgs) then "\n" ++ nstack else ""
        return stack

@@ -123,8 +123,8 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                         -- We find the evals and the unevals,
                         -- and also decrease the indent by 1 for the unevals
                         -- to make the printing prettier.
-                        unevals :: [(Int,Int)] -> [Int] -> [Either Int Int] -> [(Int,Int)]
-                                -> ([(Int, Int)], [Int], [Either Int Int])
+                        unevals :: [(Int,Int)] -> [Int] -> [Either Int Int]
+                                -> [(Int,Int)] -> ([(Int, Int)], [Int], [Either Int Int])
                         unevals w_indent terms bth [(n,r)] =
                             if r > final_evals
                              then unevals ((n,r-1):w_indent) terms (Right n:bth) []
@@ -141,9 +141,26 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                                   else unevals    ((n,rn):w_indent)    terms  (Left n:bth) (k:rest)
                         unevals w_indent terms bth [] =
                            (reverse w_indent, reverse terms, reverse bth)
-                        (indented, terms, evals_and_fins) =
+                        (indented, _, evals_and_fins) =
                           unevals [] [] [] both_sides
-                        (evals, _) = partitionEithers evals_and_fins
+                        -- (evals, _) = partitionEithers evals_and_fins
+
+                        -- Take while but keep the matching value
+                        takeUntil f xs = case span f xs of
+                                          (as, b:_) -> as ++ [b]
+                                          _ -> xs
+
+                        -- We don't show unless they're within the current
+                        -- evaluation depth
+                        evals =
+                          map fst $
+                          reverse $
+                          takeUntil (\(_,i) -> i >= final_evals) $
+                          reverse $ fst $ partitionEithers $
+                          zipWith (\ef i -> case ef of
+                                            Left x -> Left (x,i)
+                                            Right x -> Right (x,i))
+                                 evals_and_fins $ map snd both_sides
 
                         -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
@@ -153,11 +170,11 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
 
                     in  summarize (align $ mapMaybe (look False) nonAlts
                                         ++ mapMaybe (look True) mbAlts)
-                      ++ ["Terminals:"]
-                      ++ (align $ mapMaybe (look False) $
-                             zip (reverse $ nub terms) (repeat 0))
-                      ++ ["Eval snake:"]
-                      ++ (align $ mapMaybe (look False) indented)
+                      -- ++ ["Terminals:"]
+                      -- ++ (align $ mapMaybe (look False) $
+                      --        zip (reverse $ nub terms) (repeat 0))
+                      -- ++ ["Eval snake:"]
+                      -- ++ (align $ mapMaybe (look False) indented)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
       Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
