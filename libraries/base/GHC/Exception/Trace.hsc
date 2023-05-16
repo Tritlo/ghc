@@ -14,7 +14,7 @@ import System.Environment
 import Control.Exception
 import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
-import Data.List ( intercalate, elemIndex, nub )
+import Data.List ( intercalate, elemIndex, nub, intersect )
 import Data.Either (partitionEithers)
 
 #include "Rts.h"
@@ -141,9 +141,9 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                                   else unevals    ((n,rn):w_indent)    terms  (Left n:bth) (k:rest)
                         unevals w_indent terms bth [] =
                            (reverse w_indent, reverse terms, reverse bth)
-                        (indented, _, evals_and_fins) =
+                        (indented, terms, evals_and_fins) =
                           unevals [] [] [] both_sides
-                        -- (evals, _) = partitionEithers evals_and_fins
+                        (evals, _) = partitionEithers evals_and_fins
 
                         -- Take while but keep the matching value
                         takeUntil f xs = case span f xs of
@@ -152,7 +152,7 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
 
                         -- We don't show unless they're within the current
                         -- evaluation depth
-                        evals =
+                        inv_evals =
                           map fst $
                           reverse $
                           takeUntil (\(_,i) -> i >= final_evals) $
@@ -162,17 +162,26 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                                             Right x -> Right (x,i))
                                  evals_and_fins $ map snd both_sides
 
+                        -- Are the terminals useful?
+                        final_terminals = (nub terms) `intersect` evals
+
                         -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
                         (nonAlts,mbAlts) = span (not . isJust . look True) $
                                             reverse $ zip evals (repeat 0)
 
+                        (invNonAlts,invMbAlts) = span (not . isJust . look True) $
+                                            reverse $ zip inv_evals (repeat 0)
+
 
                     in  summarize (align $ mapMaybe (look False) nonAlts
                                         ++ mapMaybe (look True) mbAlts)
-                      -- ++ ["Terminals:"]
-                      -- ++ (align $ mapMaybe (look False) $
-                      --        zip (reverse $ nub terms) (repeat 0))
+                      ++ ["Involved expressions:"]
+                      ++ summarize (align $ mapMaybe (look False) invNonAlts
+                                        ++ mapMaybe (look True) invMbAlts)
+                      -- ++ ["Final terminals:"]
+                      -- ++ (align $ mapMaybe (look True) $
+                      --        zip (reverse $ final_terminals) (repeat 0))
                       -- ++ ["Eval snake:"]
                       -- ++ (align $ mapMaybe (look False) indented)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
