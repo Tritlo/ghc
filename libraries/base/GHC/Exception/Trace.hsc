@@ -143,42 +143,45 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                            (reverse w_indent, reverse terms, reverse bth)
                         (indented, terms, evals_and_fins) =
                           unevals [] [] [] both_sides
-                        (evals, _) = partitionEithers evals_and_fins
 
                         -- Take while but keep the matching value
-                        takeUntil f xs = case span f xs of
-                                          (as, b:_) -> as ++ [b]
-                                          _ -> xs
+                        spanUntil f xs = case span f xs of
+                                          (as, b:bs) -> (as ++ [b], bs)
+                                          (as,bs) -> (as, bs)
 
                         -- We don't show unless they're within the current
                         -- evaluation depth
-                        inv_evals =
-                          map fst $
-                          reverse $
-                          takeUntil (\(_,i) -> i >= final_evals) $
+                        (inv_evals', rest_evals') =
+                          spanUntil (\(_,i) -> i >= final_evals) $
                           reverse $ fst $ partitionEithers $
                           zipWith (\ef i -> case ef of
                                             Left x -> Left (x,i)
                                             Right x -> Right (x,i))
                                  evals_and_fins $ map snd both_sides
 
+                        inv_evals  = map fst $ reverse inv_evals'
+                        rest_evals = map fst $ reverse rest_evals'
+
                         -- Are the terminals useful?
-                        final_terminals = (nub terms) `intersect` evals
+                        final_terminals = (nub terms) `intersect` inv_evals
 
                         -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
                         (nonAlts,mbAlts) = span (not . isJust . look True) $
-                                            reverse $ zip evals (repeat 0)
-
-                        (invNonAlts,invMbAlts) = span (not . isJust . look True) $
                                             reverse $ zip inv_evals (repeat 0)
+
+                        -- (restNonAlts,_) =
+                        --      span (not . isJust . look True) $
+                              -- reverse $ zip rest_evals (repeat 0)
 
 
                     in  summarize (align $ mapMaybe (look False) nonAlts
                                         ++ mapMaybe (look True) mbAlts)
-                      ++ ["Involved expressions:"]
-                      ++ summarize (align $ mapMaybe (look False) invNonAlts
-                                        ++ mapMaybe (look True) invMbAlts)
+                      ++ let rev = mapMaybe (look True) $ reverse $ zip rest_evals (repeat 0)
+                         in  if null rev
+                             then []
+                             else ["Previous expressions:"]
+                                ++ summarize (align rev)
                       -- ++ ["Final terminals:"]
                       -- ++ (align $ mapMaybe (look True) $
                       --        zip (reverse $ final_terminals) (repeat 0))
