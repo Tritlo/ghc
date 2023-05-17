@@ -52,7 +52,7 @@ traceMsgs :: IO [[Char]]
 traceMsgs =
   do traces <- traceList
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
-     concat <$> mapM (parseAndReport dir) traces
+     concat <$> mapM (parseAndReport ((length traces) > 1) dir) traces
 
 
 --- Mix parsing. Taken from libraries/hpc/Trace/Hpc/Mix.hs to avoid circular
@@ -94,8 +94,8 @@ data BaseCondBox = GuardBinBox
 
 
 -- Report generation for traceMsg
-parseAndReport :: FilePath -> ([Char],Int,(Int,Int), ([Int],[Int])) -> IO [[Char]]
-parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
+parseAndReport :: Bool -> FilePath -> ([Char],Int,(Int,Int), ([Int],[Int])) -> IO [[Char]]
+parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
     let mixLoc = dir ++ m ++ ".mix"
     res <- catch @IOException
              (Just <$> readFile mixLoc)
@@ -175,13 +175,18 @@ parseAndReport dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
                               -- reverse $ zip rest_evals (repeat 0)
 
 
-                    in  summarize (align $ mapMaybe (look False) nonAlts
+                    in let m_msg = "in module " ++ m ++ ":"
+                           lns = replicate (length m_msg) '-'
+                           pre = [lns, m_msg, lns]
+                           res = summarize (align $ mapMaybe (look False) nonAlts
                                         ++ mapMaybe (look True) mbAlts)
-                      ++ let rev = mapMaybe (look True) $ reverse $ zip rest_evals (repeat 0)
-                         in  if null rev
-                             then []
-                             else ["Previous expressions:"]
-                                ++ summarize (align rev)
+                                 ++ let rev = mapMaybe (look True) $ reverse $ zip rest_evals (repeat 0)
+                                    in  if null rev then []
+                                    else ["Previous expressions:"]
+                                      ++ summarize (align rev)
+                        in if more_than_1
+                           then if null res then [] else pre ++ res
+                           else res
                       -- ++ ["Final terminals:"]
                       -- ++ (align $ mapMaybe (look True) $
                       --        zip (reverse $ final_terminals) (repeat 0))
