@@ -184,14 +184,14 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, re
                                     in  if null rev then []
                                     else ["Previous expressions:"]
                                       ++ summarize (align rev)
+                                --  ++ ["Eval snake:"]
+                                --  ++ (align $ mapMaybe (look False) indented)
                         in if more_than_1
                            then if null res then [] else pre ++ res
                            else res
                       -- ++ ["Final terminals:"]
                       -- ++ (align $ mapMaybe (look True) $
                       --        zip (reverse $ final_terminals) (repeat 0))
-                      -- ++ ["Eval snake:"]
-                      -- ++ (align $ mapMaybe (look False) indented)
                   Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
       Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
