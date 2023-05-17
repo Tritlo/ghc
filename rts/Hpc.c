@@ -158,7 +158,11 @@ readTix(void) {
     ws();
     expect(',');
     ws();
+    // This is read here, but we want to reset it to 0 on restarts.
+    // We still need to consume it, so we use the expectWord64() anyway,
+    // but then set it to 0.
     tmpModule->trxInfo[1] = expectWord64();
+    tmpModule->trxInfo[1] = 0;
     ws();
     expect(',');
     ws();
