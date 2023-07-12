@@ -15,7 +15,7 @@ import Control.Exception
 import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
 import Data.List ( intercalate, elemIndex, nub, intersect, sortOn)
-import Data.Either (partitionEithers)
+import Data.Either (partitionEithers, rights)
 
 #include "Rts.h"
 foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
@@ -48,40 +48,115 @@ traceList = hs_hpc_rootModule >>= hpcTraceList
                          fromIntegral (info !! 1)),
                         (trx,eval,gbl)) : rest
 
+
+
 -- | Returns a summary of the current HPC trace if the .mix file is available,
 -- showing which branches and functions have been recently evaluated.
 traceMsgs :: IO [[Char]]
 traceMsgs =
   do traces <- traceList
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
-     -- TODO here: compute the global trace.
      let many_traces = length traces > 1
-        -- TODO: cleanup!
-         modOut :: Either [[Char]] ( [[Char]],
-                                     [(Int, [Char], [Char])],
-                                     [(Int, [Char], [Char])]
-                                     ) -> [[Char]]
+         -- TODO: one reviewer (#3) didn't like the HPC terminology here. 
+         -- Should we just not print anything? At least fix the wording.
+         -- Possiblity: get the code from that location and print it out?
+         renderBB m bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
+                       | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
+                       | LocalBox [] <- bb =  "empty local box?"
+                       | ExpBox True <- bb = "alternative branch taken"
+                       | ExpBox False <- bb = ""
+                       | BinBox CondBinBox True <- bb   = "then branch taken"
+                       | BinBox CondBinBox False <- bb  = "else branch taken"
+                       | BinBox QualBinBox True <- bb   = "qualifying branch taken "
+                       | BinBox QualBinBox False <- bb  = "qualifying branch not taken"
+                       | BinBox GuardBinBox True <- bb  = "guarded branch taken"
+                       | BinBox GuardBinBox False <- bb = "guarded branch not taken"
+           where rtlbs lbs = intercalate ":" $ map wrap lbs
+                 wrap :: [Char] -> [Char]
+                 wrap s | (s1:_) <- s, isAlpha s1,
+                          not (any isSpace s) = s
+                        | otherwise = "(" ++ s ++ ")"
+         rm_g :: (((HpcPos, BaseBoxLabel),Int),Int) -> 
+                 ((HpcPos, BaseBoxLabel),Int)
+         rm_g ((b,g),r) = (b,r)
+         display :: [Char]
+                 -> [Char]
+                 -> Bool 
+                 -> ((HpcPos, BaseBoxLabel),Int)
+                 -> Maybe ([Char], [Char])
+         display _ _ True ((_, ExpBox False),_) = Nothing
+         display fn m _ ((p,bb),r) =
+            Just ((replicate r ' ') ++ fn ++ ":" ++ show p, renderBB m bb)
+
+         collect :: [ParseResult] -> ([ ([Char], [Char], (HpcPos,BaseBoxLabel))],
+                                      [ ([Char], [Char], (HpcPos,BaseBoxLabel))])
+         collect prs = collect' [] [] prs
+            where collect' :: [(Int, [Char], [Char], (HpcPos,BaseBoxLabel))]
+                           -> [(Int, [Char], [Char], (HpcPos,BaseBoxLabel))]
+                           -> [ParseResult]
+                           -> ([([Char], [Char], (HpcPos,BaseBoxLabel))],
+                               [([Char], [Char], (HpcPos,BaseBoxLabel))]) 
+                  collect' invs rests [] = (f invs, f rests)
+                    where f = map (\(_,fn,m,e) -> (fn, m, e)) . sortOn (\(g,_,_,_) -> g) 
+                  collect' invs rests ((PR{pr_filename=fn,pr_module=m,
+                                           pr_inv_evals = inv_evals,
+                                           pr_rest_evals = rest_evals}):prs)
+                    = collect' (ni ++ invs) (nr ++ rests) prs
+                        where ni = map f inv_evals
+                              nr = map f rest_evals
+                              f (e,g) = (g, fn, m, e)
+
+
+
+
+
+     results <- mapM (parseAndReport many_traces dir) traces
+
+     let (g_inv_evals, g_rest_evals) = collect $ rights results
+         disp_g b (fn, m, pb) = display fn m b (pb,0)
+         g_res = summarize (align g_alt_disps)
+                    ++ if null g_rev_disp then []
+                    else ["Previous expressions:"] 
+                        ++ summarize (align g_rev_disp)
+         (g_nonAlts,g_mbAlts) =
+            span (not . isJust . disp_g True ) $
+                reverse $ g_inv_evals
+         g_alt_disps = mapMaybe (disp_g False) g_nonAlts 
+                    ++ mapMaybe (disp_g True) g_mbAlts
+         g_rev_disp = mapMaybe (disp_g True) $ reverse $ g_rest_evals
+         global_trace = if many_traces then g_res else []
+
+         -- TODO: do we want to split up per module?
+         show_per_module = False
+
+         modOut :: Either [[Char]] ParseResult -> [[Char]]
          modOut (Left strs) = strs
-         modOut (Right (pre, alt_disps, rev_disp)) =
+         modOut (Right (PR {pr_filename=fn, pr_module=m, 
+                            pr_inv_evals=inv_evals, pr_rest_evals=rest_evals})) =
             if many_traces
             then if null res then []
                  else pre ++ res
             else res
 
-           where res = summarize (align $ map clean alt_disps)
+           where m_msg = "in module " ++ m ++ ":"
+                 lns = replicate (length m_msg) '-'
+                 pre = [lns, m_msg, lns]
+                 res = summarize (align alt_disps)
                         ++ if null rev_disp then []
                         else ["Previous expressions:"] 
-                            ++ summarize (align $ map clean rev_disp)
-         takeRight (Right (_,a,b)) = Just (a ++ b)
-         takeRight _ = Nothing
-         clean (_, a, b) = (a,b)
-     results <- mapM (parseAndReport many_traces dir) traces
-     let rres = mapMaybe takeRight results
-         glob_tr = if many_traces 
-                   then summarize (align $ map clean $ reverse $ sortOn (\(i,_,_) -> i) $ concat rres)
-                   else []
-     return $ glob_tr 
-        -- ++ (concat $ map modOut results)
+                            ++ summarize (align rev_disp)
+                    -- We want to display non-alternative exprs up until
+                        -- the first branching one, and only branching afterwards
+                 (nonAlts,mbAlts) = span (not . isJust . display fn m True . rm_g) $
+                                     reverse $ zip inv_evals (repeat 0)
+                 
+                 alt_disps = mapMaybe (display fn m False . rm_g) nonAlts 
+                          ++ mapMaybe (display fn m True . rm_g) mbAlts
+                 rev_disp = mapMaybe (display fn m True . rm_g) $ 
+                              reverse $ zip rest_evals (repeat 0)
+     return $ global_trace ++ (if show_per_module
+                               then ["","Per Module:"] ++ (concat $ map modOut results)
+                               else [])
 
   where align :: [([Char], [Char])] -> [[Char]]
         align strs = map c strs
@@ -134,11 +209,27 @@ data BaseCondBox = GuardBinBox
                   deriving (Read)
 
 
+data ParseResult = PR {pr_filename :: String, -- Name of the file 
+                       pr_module :: String, -- Name of the module
+                       pr_inv_evals :: [((HpcPos,BaseBoxLabel),Int)],
+                        -- the evaluations up to the final evaluation depth in
+                        -- reverse order, given as
+                       pr_rest_evals :: [((HpcPos,BaseBoxLabel), Int)],
+                        -- the evaluations after the final eval depth
+                        -- in reverse order, given as the
+                        -- (global order, index into pr_li)
+                       pr_indented :: [(((HpcPos,BaseBoxLabel),Int),Int)], 
+                       -- pr_indented is all the entries and the corresponding
+                       -- evaluation depth together. Used to print the
+                       -- the "eval snake"
+                       pr_final_terminals :: [((HpcPos,BaseBoxLabel), Int)]
+                       -- Terminals are values that immediately returned.
+                       }
+
+
 -- Report generation for traceMsg
 parseAndReport :: Bool -> FilePath -> ([Char],Int,(Int,Int), ([Int],[Int],[Int]))
-            -> IO (Either [[Char]] ( [[Char]],
-                                     [(Int, [Char], [Char])],
-                                     [(Int, [Char], [Char])]))
+            -> IO (Either [[Char]] ParseResult)
 parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, eval,gbl)) = do
     let mixLoc = dir ++ m ++ ".mix"
     res <- catch @IOException
@@ -159,9 +250,7 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
                  "Module: " ++ show hash, "Try deleting: " ++ mixLoc]
            else case p_res of
                   Just p_li ->
-                    let look skipNonAlt ((i,g),r) =
-                           if i >= length p_li then Nothing
-                           else (display skipNonAlt (fn, i, g, r, p_li !! i))
+                    let 
                         both_sides =  filter ((< (length p_li)) . fst . fst) $
                                         rot next_trx_index $
                                         zip (zip trx gbl) eval
@@ -210,28 +299,16 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
                         -- Are the terminals useful?
                         final_terminals = (nub terms) `intersect` inv_evals
 
-                        -- We want to display non-alternative exprs up until
-                        -- the first branching one, and only branching afterwards
-                        (nonAlts,mbAlts) = span (not . isJust . look True) $
-                                            reverse $ zip inv_evals (repeat 0)
-
-                        -- (restNonAlts,_) =
-                        --      span (not . isJust . look True) $
-                              -- reverse $ zip rest_evals (repeat 0)
+                        finalize = map (\(i,g) -> (p_li !! i, g)) 
 
 
-                    in let m_msg = "in module " ++ m ++ ":"
-                           lns = replicate (length m_msg) '-'
-                           pre = [lns, m_msg, lns]
-                           alt_disps = mapMaybe (look False) nonAlts 
-                                    ++ mapMaybe (look True) mbAlts
-                           rev_disp = 
-                              mapMaybe (look True) $ reverse $ zip rest_evals (repeat 0)
-                           -- eval_snake = mapMaybe (look False) indented
-                           -- final_terms = mapMaybe (look True) $
-                           --                  zip (reverse $ final_terminals) (repeat 0)
-                        in  Right (pre, alt_disps, rev_disp)
-                                  -- eval_snake, final_terms)
+                    in  Right (PR {pr_filename = fn,
+                                   pr_module = m,
+                                   pr_inv_evals = finalize inv_evals,
+                                   pr_rest_evals = finalize rest_evals,
+                                   pr_indented = map (\((i,g),r) -> ((p_li !! i, g),r)) indented,
+                                   pr_final_terminals = finalize final_terminals })
+                                         
                   Nothing -> Left ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> Left ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
       Nothing -> Left ["** Error: Could not find .mix file for " ++ m ++ " **",
@@ -241,26 +318,6 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
           rot :: Int -> [a] -> [a]
           rot n xs = (drop n xs) ++ (take n xs)
           -- takes a paramter whether to ignore false ExpBoxes or not.
-          display :: Bool -> ([Char], Int, Int, Int, (HpcPos, BaseBoxLabel)) -> Maybe (Int, [Char], [Char])
-          display True (_, _, _, _, (_, ExpBox False)) = Nothing
-          display _ (fn, i, g, r, (p,bb)) =
-            Just (g, (replicate r ' ') ++ show i ++ " " ++ fn ++ ":" ++ show p, renderBB bb)
-          renderBB bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
-                      | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
-                      | LocalBox [] <- bb =  "empty local box?"
-                      | ExpBox True <- bb = "alternative branch taken"
-                      | ExpBox False <- bb = ""
-                      | BinBox CondBinBox True <- bb   = "then branch taken"
-                      | BinBox CondBinBox False <- bb  = "else branch taken"
-                      | BinBox QualBinBox True <- bb   = "qualifying branch taken "
-                      | BinBox QualBinBox False <- bb  = "qualifying branch not taken"
-                      | BinBox GuardBinBox True <- bb  = "guarded branch taken"
-                      | BinBox GuardBinBox False <- bb = "guarded branch not taken"
-            where rtlbs lbs = intercalate ":" $ map wrap lbs
-                  wrap :: [Char] -> [Char]
-                  wrap s | (s1:_) <- s, isAlpha s1,
-                           not (any isSpace s) = s
-                         | otherwise = "(" ++ s ++ ")"
 
 -- summarize is simplistic for now, and just detects repeats in the output.
 summarize :: [[Char]] -> [[Char]]
