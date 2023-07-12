@@ -14,7 +14,7 @@ import System.Environment
 import Control.Exception
 import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
-import Data.List ( intercalate, elemIndex, nub, intersect )
+import Data.List ( intercalate, elemIndex, nub, intersect, sortOn)
 import Data.Either (partitionEithers)
 
 #include "Rts.h"
@@ -25,10 +25,10 @@ foreign import ccall unsafe hs_hpc_rootModule :: IO (Ptr ())
 -- index and the trace itself (the ints refer to boxes in the .mix file).
 -- Reimplemented from libraries/hpc/Trace/Hpc/Reflect.hsc, to avoid a
 -- circular dependency on trace from base.
-traceList :: IO [([Char], Int, (Int,Int), ([Int], [Int]))]
+traceList :: IO [([Char], Int, (Int,Int), ([Int], [Int], [Int]))]
 traceList = hs_hpc_rootModule >>= hpcTraceList
   where
-    hpcTraceList :: Ptr () -> IO [([Char], Int, (Int,Int), ([Int], [Int]))]
+    hpcTraceList :: Ptr () -> IO [([Char], Int, (Int,Int), ([Int], [Int], [Int]))]
     hpcTraceList ptr
       | ptr == nullPtr = return []
       | otherwise = do
@@ -37,14 +37,16 @@ traceList = hs_hpc_rootModule >>= hpcTraceList
               hashNo :: Int  <- (#peek HpcModuleInfo, hashNo) ptr
               info :: [Word64]  <- peekArray 3 trxInfo
               trxArr :: Ptr Word64 <- (#peek HpcModuleInfo, trxArr) ptr
-              retArr :: Ptr Word64 <- (#peek HpcModuleInfo, rettrxArr) ptr
+              evalArr :: Ptr Word64 <- (#peek HpcModuleInfo, evaltrxArr) ptr
+              gblArr :: Ptr Word64 <- (#peek HpcModuleInfo, gbltrxArr) ptr
               trx <- map fromIntegral <$> (peekArray (fromIntegral (info !! 2)) trxArr)
-              ret <- map fromIntegral <$> (peekArray (fromIntegral (info !! 2)) retArr)
+              eval <- map fromIntegral <$> (peekArray (fromIntegral (info !! 2)) evalArr)
+              gbl <- map fromIntegral <$> (peekArray (fromIntegral (info !! 2)) gblArr)
               rest <- ((#peek HpcModuleInfo, next) ptr) >>= hpcTraceList
               return $ (modName, hashNo,
                         (fromIntegral (info !! 0),
                          fromIntegral (info !! 1)),
-                        (trx,ret)) : rest
+                        (trx,eval,gbl)) : rest
 
 -- | Returns a summary of the current HPC trace if the .mix file is available,
 -- showing which branches and functions have been recently evaluated.
@@ -52,7 +54,46 @@ traceMsgs :: IO [[Char]]
 traceMsgs =
   do traces <- traceList
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
-     concat <$> mapM (parseAndReport ((length traces) > 1) dir) traces
+     -- TODO here: compute the global trace.
+     let many_traces = length traces > 1
+        -- TODO: cleanup!
+         modOut :: Either [[Char]] ( [[Char]],
+                                     [(Int, [Char], [Char])],
+                                     [(Int, [Char], [Char])]
+                                     ) -> [[Char]]
+         modOut (Left strs) = strs
+         modOut (Right (pre, alt_disps, rev_disp)) =
+            if many_traces
+            then if null res then []
+                 else pre ++ res
+            else res
+
+           where res = summarize (align $ map clean alt_disps)
+                        ++ if null rev_disp then []
+                        else ["Previous expressions:"] 
+                            ++ summarize (align $ map clean rev_disp)
+         takeRight (Right (_,a,b)) = Just (a ++ b)
+         takeRight _ = Nothing
+         clean (_, a, b) = (a,b)
+     results <- mapM (parseAndReport many_traces dir) traces
+     let rres = mapMaybe takeRight results
+         glob_tr = if many_traces 
+                   then summarize (align $ map clean $ reverse $ sortOn (\(i,_,_) -> i) $ concat rres)
+                   else []
+     return $ glob_tr 
+        -- ++ (concat $ map modOut results)
+
+  where align :: [([Char], [Char])] -> [[Char]]
+        align strs = map c strs
+          where longest :: Int
+                longest = maximum (map (length . fst) strs)
+                al :: [Char] -> [Char]
+                al st = st ++ replicate ((longest - length st) + 1) ' '
+                c :: ([Char], [Char]) -> [Char]
+                c (s,[]) = s
+                c (s,rd) = al s ++ rd
+
+       
 
 
 --- Mix parsing. Taken from libraries/hpc/Trace/Hpc/Mix.hs to avoid circular
@@ -94,8 +135,11 @@ data BaseCondBox = GuardBinBox
 
 
 -- Report generation for traceMsg
-parseAndReport :: Bool -> FilePath -> ([Char],Int,(Int,Int), ([Int],[Int])) -> IO [[Char]]
-parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ret)) = do
+parseAndReport :: Bool -> FilePath -> ([Char],Int,(Int,Int), ([Int],[Int],[Int]))
+            -> IO (Either [[Char]] ( [[Char]],
+                                     [(Int, [Char], [Char])],
+                                     [(Int, [Char], [Char])]))
+parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, eval,gbl)) = do
     let mixLoc = dir ++ m ++ ".mix"
     res <- catch @IOException
              (Just <$> readFile mixLoc)
@@ -111,20 +155,21 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, re
                (_, _:mix_li) <- span (/= ' ') wohash, -- lenstr
                p_res <- parseMix mix_li ->
            if ((read hashstr) :: Word32) /= ((fromIntegral hash) :: Word32)
-           then ["** Error: Mixfile hash mismatch **", "File: " ++ hashstr,
+           then Left ["** Error: Mixfile hash mismatch **", "File: " ++ hashstr,
                  "Module: " ++ show hash, "Try deleting: " ++ mixLoc]
            else case p_res of
                   Just p_li ->
-                    let look skipNonAlt (i,r) =
+                    let look skipNonAlt ((i,g),r) =
                            if i >= length p_li then Nothing
-                           else (display skipNonAlt (fn, i, r, p_li !! i))
-                        both_sides =  filter ((< (length p_li)) . fst) $
-                                        rot next_trx_index $ zip trx ret
+                           else (display skipNonAlt (fn, i, g, r, p_li !! i))
+                        both_sides =  filter ((< (length p_li)) . fst . fst) $
+                                        rot next_trx_index $
+                                        zip (zip trx gbl) eval
                         -- We find the evals and the unevals,
                         -- and also decrease the indent by 1 for the unevals
                         -- to make the printing prettier.
-                        unevals :: [(Int,Int)] -> [Int] -> [Either Int Int]
-                                -> [(Int,Int)] -> ([(Int, Int)], [Int], [Either Int Int])
+                        unevals :: [((Int, Int),Int)] -> [(Int, Int)] -> [Either (Int, Int) (Int,Int)]
+                                -> [((Int,Int),Int)] -> ([((Int,Int), Int)], [(Int,Int)], [Either (Int, Int) (Int,Int)])
                         unevals w_indent terms bth [(n,r)] =
                             if r > final_evals
                              then unevals ((n,r-1):w_indent) terms (Right n:bth) []
@@ -132,7 +177,7 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, re
                         unevals w_indent terms bth ((n,rn):k@(m,rm):rest)
                            = if rn > rm
                              then unevals ((n,rn-1):w_indent) terms (Right n:bth) (k:rest)
-                             else if n == m
+                             else if fst n ==  fst m
                                   -- If we see two in a row we just drop it,
                                   -- it finished right away. TODO: is this ok,
                                   -- when a recursive function calls itself
@@ -178,33 +223,28 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, re
                     in let m_msg = "in module " ++ m ++ ":"
                            lns = replicate (length m_msg) '-'
                            pre = [lns, m_msg, lns]
-                           res = summarize (align $ mapMaybe (look False) nonAlts
-                                        ++ mapMaybe (look True) mbAlts)
-                                 ++ let rev = mapMaybe (look True) $ reverse $ zip rest_evals (repeat 0)
-                                    in  if null rev then []
-                                    else ["Previous expressions:"]
-                                      ++ summarize (align rev)
-                                --  ++ ["Eval snake:"]
-                                --  ++ (align $ mapMaybe (look False) indented)
-                        in if more_than_1
-                           then if null res then [] else pre ++ res
-                           else res
-                      -- ++ ["Final terminals:"]
-                      -- ++ (align $ mapMaybe (look True) $
-                      --        zip (reverse $ final_terminals) (repeat 0))
-                  Nothing -> ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
-      Just _ -> ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
-      Nothing -> ["** Error: Could not find .mix file for " ++ m ++ " **",
-                  "Try setting $HPCDIR (with trailing slash)"]
+                           alt_disps = mapMaybe (look False) nonAlts 
+                                    ++ mapMaybe (look True) mbAlts
+                           rev_disp = 
+                              mapMaybe (look True) $ reverse $ zip rest_evals (repeat 0)
+                           -- eval_snake = mapMaybe (look False) indented
+                           -- final_terms = mapMaybe (look True) $
+                           --                  zip (reverse $ final_terminals) (repeat 0)
+                        in  Right (pre, alt_disps, rev_disp)
+                                  -- eval_snake, final_terms)
+                  Nothing -> Left ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
+      Just _ -> Left ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
+      Nothing -> Left ["** Error: Could not find .mix file for " ++ m ++ " **",
+                      "Try setting $HPCDIR (with trailing slash)"]
     where parseMix :: [Char] -> Maybe [(HpcPos,BaseBoxLabel)]
           parseMix = readMaybe @[(HpcPos,BaseBoxLabel)]
           rot :: Int -> [a] -> [a]
           rot n xs = (drop n xs) ++ (take n xs)
           -- takes a paramter whether to ignore false ExpBoxes or not.
-          display :: Bool -> ([Char], Int, Int, (HpcPos, BaseBoxLabel)) -> Maybe ([Char], [Char])
-          display True (_, _, _, (_, ExpBox False)) = Nothing
-          display _ (fn, i, r, (p,bb)) =
-            Just ( (replicate r ' ') ++ show i ++ " " ++ fn ++ ":" ++ show p, renderBB bb)
+          display :: Bool -> ([Char], Int, Int, Int, (HpcPos, BaseBoxLabel)) -> Maybe (Int, [Char], [Char])
+          display True (_, _, _, _, (_, ExpBox False)) = Nothing
+          display _ (fn, i, g, r, (p,bb)) =
+            Just (g, (replicate r ' ') ++ show i ++ " " ++ fn ++ ":" ++ show p, renderBB bb)
           renderBB bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
                       | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
                       | LocalBox [] <- bb =  "empty local box?"
@@ -221,15 +261,6 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, re
                   wrap s | (s1:_) <- s, isAlpha s1,
                            not (any isSpace s) = s
                          | otherwise = "(" ++ s ++ ")"
-          align :: [([Char], [Char])] -> [[Char]]
-          align strs = map c strs
-            where longest :: Int
-                  longest = maximum (map (length . fst) strs)
-                  al :: [Char] -> [Char]
-                  al st = st ++ replicate ((longest - length st) + 1) ' '
-                  c :: ([Char], [Char]) -> [Char]
-                  c (s,[]) = s
-                  c (s,rd) = al s ++ rd
 
 -- summarize is simplistic for now, and just detects repeats in the output.
 summarize :: [[Char]] -> [[Char]]

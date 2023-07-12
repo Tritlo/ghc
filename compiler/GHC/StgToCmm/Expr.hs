@@ -1250,15 +1250,17 @@ cgTick tick expr
            ProfNote   cc t p -> emitSetCCC cc t p >> cgExpr expr
            HpcTick    m n    -> do { emit $ mkTickBox platform m n
                                         <*> mkTraceBox platform m n
-                                        <*> mkRetTraceBox platform m
-                                        <*> mkRetTraceBump platform m
+                                        <*> mkEvalTraceBox platform m
+                                        <*> mkEvalTraceBump platform m
+                                        <*> mkGlobalTraceBox platform m
+                                        <*> mkGlobalCounterBump platform
                                         <*> mkTraceBump platform m
                                    ; nt <- newTemp (bWord platform)
                                    ; r_kind <- withSequel (AssignTo [nt] True)
                                                  (cgExpr expr)
                                    ; emit $ mkTraceBox platform m n
-                                        <*> mkRetTraceBox platform m
-                                        <*> mkRetTraceDump platform m
+                                        <*> mkEvalTraceBox platform m
+                                        <*> mkEvalTraceDump platform m
                                         <*> mkTraceBump platform m
                                    ; emitReturn [CmmReg $ CmmLocal nt] }
            SourceNote s n    -> emitTick (SourceNote s n) >> cgExpr expr

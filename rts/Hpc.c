@@ -43,6 +43,8 @@ static StrHashTable * moduleHash = NULL;   // module name -> HpcModuleInfo
 
 HpcModuleInfo *modules = 0;
 
+StgWord64 hs_hpc_globalcounter = 1;
+
 static char *tixFilename = NULL;
 
 static void STG_NORETURN
@@ -185,12 +187,27 @@ readTix(void) {
     expect(']');
     ws();
 
-    tmpModule -> rettrxArr = (StgWord64 *)stgCallocBytes(tmpModule->trxInfo[2],sizeof(StgWord64), "readRetTrx");
+    tmpModule -> evaltrxArr = (StgWord64 *)stgCallocBytes(tmpModule->trxInfo[2],sizeof(StgWord64), "readEvalTrx");
     ws();
     expect('[');
     ws();
     for(i = 0;i < tmpModule->trxInfo[2];i++) {
-      tmpModule->rettrxArr[i] = expectWord64();
+      tmpModule->evaltrxArr[i] = expectWord64();
+      ws();
+      if (tix_ch == ',') {
+        expect(',');
+        ws();
+      }
+    }
+    expect(']');
+    ws();
+
+    tmpModule -> gbltrxArr = (StgWord64 *)stgCallocBytes(tmpModule->trxInfo[2],sizeof(StgWord64), "readGblTrx");
+    ws();
+    expect('[');
+    ws();
+    for(i = 0;i < tmpModule->trxInfo[2];i++) {
+      tmpModule->gbltrxArr[i] = expectWord64();
       ws();
       if (tix_ch == ',') {
         expect(',');
@@ -209,7 +226,8 @@ readTix(void) {
         ASSERT(lookup->tixArr != 0);
         ASSERT(lookup->trxInfo != 0);
         ASSERT(lookup->trxArr != 0);
-        ASSERT(lookup->rettrxArr != 0);
+        ASSERT(lookup->evaltrxArr != 0);
+        ASSERT(lookup->gbltrxArr != 0);
         ASSERT(!strcmp(tmpModule->modName, lookup->modName));
         debugTrace(DEBUG_hpc,"readTix: existing HpcModuleInfo for %s",
                    tmpModule->modName);
@@ -239,12 +257,16 @@ readTix(void) {
             lookup->trxArr[i] = tmpModule->trxArr[i];
         }
         for (i=0; i < tmpModule->trxInfo[2]; i++) {
-            lookup->rettrxArr[i] = tmpModule->rettrxArr[i];
+            lookup->evaltrxArr[i] = tmpModule->evaltrxArr[i];
+        }
+        for (i=0; i < tmpModule->trxInfo[2]; i++) {
+            lookup->gbltrxArr[i] = tmpModule->gbltrxArr[i];
         }
         stgFree(tmpModule->tixArr);
         stgFree(tmpModule->trxInfo);
         stgFree(tmpModule->trxArr);
-        stgFree(tmpModule->rettrxArr);
+        stgFree(tmpModule->evaltrxArr);
+        stgFree(tmpModule->gbltrxArr);
         stgFree(tmpModule->modName);
         stgFree(tmpModule);
     }
@@ -310,6 +332,8 @@ startupHpc(void)
   if (init_open(__rts_fopen(tixFilename,"r"))) {
     readTix();
   }
+
+  hs_hpc_globalcounter = 1;
 }
 
 /*
@@ -333,7 +357,8 @@ hs_hpc_module(char *modName,
               StgWord64 *tixArr,
               StgWord64 *trxInfo,
               StgWord64 *trxArr,
-              StgWord64 *rettrxArr
+              StgWord64 *evaltrxArr,
+              StgWord64 *gbltrxArr
               )
 
 {
@@ -357,7 +382,8 @@ hs_hpc_module(char *modName,
       tmpModule->tixArr     = tixArr;
       tmpModule->trxInfo    = trxInfo;
       tmpModule->trxArr     = trxArr;
-      tmpModule->rettrxArr  = rettrxArr;
+      tmpModule->evaltrxArr  = evaltrxArr;
+      tmpModule->gbltrxArr  = gbltrxArr;
       for(i=0;i < modCount;i++) {
           tixArr[i] = 0;
       }
@@ -366,7 +392,8 @@ hs_hpc_module(char *modName,
       trxInfo[2] = modTraceLength;
       for(i=0;i < modTraceLength;i++) {
           trxArr[i] = modCount;
-          rettrxArr[i] = modCount;
+          evaltrxArr[i] = modCount;
+          gbltrxArr[i] = 0;
       }
       tmpModule->next = modules;
       tmpModule->from_file = false;
@@ -381,7 +408,8 @@ hs_hpc_module(char *modName,
       ASSERT(tmpModule->tixArr != 0);
       ASSERT(tmpModule->trxInfo != 0);
       ASSERT(tmpModule->trxArr != 0);
-      ASSERT(tmpModule->rettrxArr != 0);
+      ASSERT(tmpModule->evaltrxArr != 0);
+      ASSERT(tmpModule->gbltrxArr != 0);
       if (tmpModule->hashNo != modHashNo) {
           fprintf(stderr,"in module '%s'\n",tmpModule->modName);
           failure("module mismatch with .tix/.mix file hash number");
@@ -407,7 +435,8 @@ hs_hpc_module(char *modName,
       }
       for(i=0;i < modTraceLength;i++) {
           trxArr[i] = tmpModule->trxArr[i];
-          rettrxArr[i] = tmpModule->rettrxArr[i];
+          evaltrxArr[i] = tmpModule->evaltrxArr[i];
+          gbltrxArr[i] = tmpModule->gbltrxArr[i];
       }
 
       if (tmpModule->from_file) {
@@ -415,7 +444,8 @@ hs_hpc_module(char *modName,
           stgFree(tmpModule->tixArr);
           stgFree(tmpModule->trxInfo);
           stgFree(tmpModule->trxArr);
-          stgFree(tmpModule->rettrxArr);
+          stgFree(tmpModule->evaltrxArr);
+          stgFree(tmpModule->gbltrxArr);
       }
       tmpModule->from_file = false;
   }
@@ -496,10 +526,27 @@ writeTix(FILE *f) {
         inner_comma = 1;
       }
 
-      if (tmpModule->rettrxArr) {
-        fprintf(f,"%" FMT_Word64,tmpModule->rettrxArr[i]);
+      if (tmpModule->evaltrxArr) {
+        fprintf(f,"%" FMT_Word64,tmpModule->evaltrxArr[i]);
       } else {
         fprintf(f,"%u",(uint32_t)tmpModule->tickCount);
+      }
+    }
+
+    fprintf(f,"] [");
+
+    inner_comma = 0;
+    for(i = 0;i < tmpModule->trxInfo[2];i++) {
+      if (inner_comma) {
+        fprintf(f,",");
+      } else {
+        inner_comma = 1;
+      }
+
+      if (tmpModule->gbltrxArr) {
+        fprintf(f,"%" FMT_Word64,tmpModule->gbltrxArr[i]);
+      } else {
+        fprintf(f,"0");
       }
     }
 
@@ -519,7 +566,8 @@ freeHpcModuleInfo (HpcModuleInfo *mod)
         stgFree(mod->tixArr);
         stgFree(mod->trxInfo);
         stgFree(mod->trxArr);
-        stgFree(mod->rettrxArr);
+        stgFree(mod->evaltrxArr);
+        stgFree(mod->gbltrxArr);
     }
     stgFree(mod);
 }
@@ -554,6 +602,7 @@ exitHpc(void) {
 
   stgFree(tixFilename);
   tixFilename = NULL;
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -8,8 +8,9 @@
 
 module GHC.StgToCmm.Hpc ( initHpc, mkTickBox,
                           mkTraceBox, mkTraceBump,
-                          mkRetTraceBox, mkRetTraceBump,
-                          mkRetTraceDump ) where
+                          mkEvalTraceBox, mkEvalTraceBump, mkEvalTraceDump,
+                          mkGenTraceBox, mkGlobalCounterBump, mkGlobalTraceBox
+                          ) where
 
 import GHC.Prelude
 import GHC.Platform
@@ -54,8 +55,8 @@ mkGenTraceBox box i platform mod n
                          (CmmLoad index_box b64 NaturallyAligned)
 
 -- Write the current number of evals
-mkRetTraceBox :: Platform -> Module -> CmmAGraph
-mkRetTraceBox platform mod
+mkEvalTraceBox :: Platform -> Module -> CmmAGraph
+mkEvalTraceBox platform mod
   = mkStore box_to_update (CmmLoad eval_box b64 NaturallyAligned)
     where
         index_box = cmmIndex platform W64
@@ -63,13 +64,35 @@ mkRetTraceBox platform mod
         eval_box = cmmIndex platform W64
                     (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 1
         box_to_update = cmmIndexExpr platform W64
-                         (CmmLit $ CmmLabel $ mkHpcRetTraceLabel $ mod)
+                         (CmmLit $ CmmLabel $ mkHpcEvalTraceLabel $ mod)
                          (CmmLoad index_box b64 NaturallyAligned)
 
 
-mkRetTraceBump, mkRetTraceDump :: Platform -> Module -> CmmAGraph
-mkRetTraceBump = mkTraceIndOp (MO_Add W64)
-mkRetTraceDump = mkTraceIndOp (MO_Sub W64)
+mkEvalTraceBump, mkEvalTraceDump :: Platform -> Module -> CmmAGraph
+mkEvalTraceBump = mkTraceIndOp (MO_Add W64)
+mkEvalTraceDump = mkTraceIndOp (MO_Sub W64)
+
+mkGlobalTraceBox :: Platform -> Module -> CmmAGraph
+mkGlobalTraceBox platform mod
+  = mkStore box_to_update (CmmLoad g_counter b64 NaturallyAligned)
+    where
+        index_box = cmmIndex platform W64
+                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 0
+        g_counter = (CmmLit $ CmmLabel $ mkHpcGlobalCounterLabel)
+        box_to_update = cmmIndexExpr platform W64
+                         (CmmLit $ CmmLabel $ mkHpcGlobalTraceLabel $ mod)
+                         (CmmLoad index_box b64 NaturallyAligned)
+
+-- So hs_hpc_globalcounter is not an array, but this works anyway.
+mkGlobalCounterBump :: Platform -> CmmAGraph
+mkGlobalCounterBump platform
+  = mkStore g_counter add1
+  where
+    add1 = (CmmMachOp (MO_Add W64)
+             [ CmmLoad g_counter b64 NaturallyAligned
+             , CmmLit (CmmInt 1 W64) ])
+    g_counter = (CmmLit $ CmmLabel $ mkHpcGlobalCounterLabel)
+
 
 -- Add or substract, no remainder
 mkTraceIndOp :: MachOp -> Platform -> Module -> CmmAGraph
@@ -120,7 +143,11 @@ initHpc this_mod (HpcInfo tickCount traceLength _hashNo)
                         [ CmmInt max_val W64
                         | _ <- take traceLength [0 :: Int ..]
                         ]
-           emitDataLits (mkHpcRetTraceLabel this_mod)
+           emitDataLits (mkHpcEvalTraceLabel this_mod)
+                        [ CmmInt 0 W64
+                        | _ <- take traceLength [0 :: Int ..]
+                        ]
+           emitDataLits (mkHpcGlobalTraceLabel this_mod)
                         [ CmmInt 0 W64
                         | _ <- take traceLength [0 :: Int ..]
                         ]

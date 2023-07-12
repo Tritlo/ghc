@@ -120,7 +120,8 @@ hpcInitCode platform this_mod (HpcInfo tickCount traceLength hashNo)
     decls = vcat [text "extern StgWord64 " <> tickboxes <> text "[]" <> semi,
                   text "extern StgWord64 " <> traceinfo <> text "[]" <> semi,
                   text "extern StgWord64 " <> traceboxes <> text "[]" <> semi,
-                  text "extern StgWord64 " <> rettraceboxes <> text "[]" <> semi
+                  text "extern StgWord64 " <> evaltraceboxes <> text "[]" <> semi,
+                  text "extern StgWord64 " <> globaltraceboxes <> text "[]" <> semi
                   ]
     body = text "hs_hpc_module" <>
               parens (hcat (punctuate comma [
@@ -131,13 +132,15 @@ hpcInitCode platform this_mod (HpcInfo tickCount traceLength hashNo)
                   tickboxes,
                   traceinfo,
                   traceboxes,
-                  rettraceboxes
+                  evaltraceboxes,
+                  globaltraceboxes
                 ])) <> semi
 
     tickboxes = pprCLabel platform (mkHpcTicksLabel $ this_mod)
     traceinfo = pprCLabel platform (mkHpcTraceInfoLabel $ this_mod)
     traceboxes = pprCLabel platform (mkHpcTraceLabel $ this_mod)
-    rettraceboxes = pprCLabel platform (mkHpcRetTraceLabel $ this_mod)
+    evaltraceboxes = pprCLabel platform (mkHpcEvalTraceLabel $ this_mod)
+    globaltraceboxes = pprCLabel platform (mkHpcGlobalTraceLabel $ this_mod)
 
     module_name  = hcat (map (text.charToC) $ BS.unpack $
                          bytesFS (moduleNameFS (moduleName this_mod)))
