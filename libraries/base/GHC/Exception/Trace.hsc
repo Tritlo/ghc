@@ -109,7 +109,7 @@ traceMsgs =
                                            else ce) last_line
 
                         referred = reverse (last_line':r_lines)
-                    in (head referred, length last_line == length last_line')
+                    in (head referred, ls == le)
                                       
          renderBB :: [Char] -> [Char] -> HpcPos -> BaseBoxLabel -> [Char]
          renderBB fn m p bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
@@ -126,11 +126,10 @@ traceMsgs =
                             -- condition is something like `even n`.
                             | BinBox QualBinBox True <- bb   = "[...|..., " ++ rendered ++ ",...] (was matched)"
                             | BinBox QualBinBox False <- bb  = "[...|..., " ++ rendered ++ ",...] (not matched)"
-           where (rendered_base, was_eol) = renderPos fn p
-                 qual_dots = if was_eol then "]" else ", ...]"
+           where (rendered_base, was_one_line) = renderPos fn p
                  rendered = if length rendered_base >= 28
                             then (take 25 rendered_base) ++ "..."
-                            else rendered_base
+                            else rendered_base ++ (if was_one_line then "..." else [])
                  rtlbs lbs = intercalate ":" $ map wrap lbs
                  wrap :: [Char] -> [Char]
                  wrap s | (s1:_) <- s, isAlpha s1,
