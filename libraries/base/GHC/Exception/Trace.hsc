@@ -14,7 +14,7 @@ import System.Environment
 import Control.Exception
 import Data.Maybe ( mapMaybe, isJust )
 import Data.Char ( isAlpha, isSpace )
-import Data.List ( intercalate, elemIndex, nub, intersect, sortOn)
+import Data.List ( intercalate, elemIndex, nub, intersect, sortOn, lookup)
 import Data.Either (partitionEithers, rights)
 
 #include "Rts.h"
@@ -57,36 +57,12 @@ traceMsgs =
   do traces <- traceList
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
      let many_traces = length traces > 1
-         -- TODO: one reviewer (#3) didn't like the HPC terminology here. 
-         -- Should we just not print anything? At least fix the wording.
-         -- Possiblity: get the code from that location and print it out?
-         renderBB m bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
-                       | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
-                       | LocalBox [] <- bb =  "empty local box?"
-                       | ExpBox True <- bb = "alternative branch taken"
-                       | ExpBox False <- bb = ""
-                       | BinBox CondBinBox True <- bb   = "then branch taken"
-                       | BinBox CondBinBox False <- bb  = "else branch taken"
-                       | BinBox QualBinBox True <- bb   = "qualifying branch taken "
-                       | BinBox QualBinBox False <- bb  = "qualifying branch not taken"
-                       | BinBox GuardBinBox True <- bb  = "guarded branch taken"
-                       | BinBox GuardBinBox False <- bb = "guarded branch not taken"
-           where rtlbs lbs = intercalate ":" $ map wrap lbs
-                 wrap :: [Char] -> [Char]
-                 wrap s | (s1:_) <- s, isAlpha s1,
-                          not (any isSpace s) = s
-                        | otherwise = "(" ++ s ++ ")"
-         rm_g :: (((HpcPos, BaseBoxLabel),Int),Int) -> 
-                 ((HpcPos, BaseBoxLabel),Int)
-         rm_g ((b,g),r) = (b,r)
-         display :: [Char]
-                 -> [Char]
-                 -> Bool 
-                 -> ((HpcPos, BaseBoxLabel),Int)
-                 -> Maybe ([Char], [Char])
-         display _ _ True ((_, ExpBox False),_) = Nothing
-         display fn m _ ((p,bb),r) =
-            Just ((replicate r ' ') ++ fn ++ ":" ++ show p, renderBB m bb)
+
+         -- readFiles :: [[Char]] -> IO (Map [Char] [[Char]])
+         -- readFiles [] = Map.empty
+         -- readLoc :: [Char] -> Map [Char] [[Char]] -> HpcPos -> [Char]
+         -- readLoc file (P ls cs le ce) = 
+            
 
          collect :: [ParseResult] -> ([ ([Char], [Char], (HpcPos,BaseBoxLabel))],
                                       [ ([Char], [Char], (HpcPos,BaseBoxLabel))])
@@ -113,21 +89,84 @@ traceMsgs =
      results <- mapM (parseAndReport many_traces dir) traces
 
      let (g_inv_evals, g_rest_evals) = collect $ rights results
+         files = nub $ map (\(fn,_,_) -> fn) $
+            g_inv_evals ++ g_rest_evals
+
+     all_mods <- (zip files . map lines) <$> mapM readFile files
+         
+     let renderPos :: [Char] -> HpcPos -> ([Char], Bool)
+         renderPos fn (P ls cs le ce) =
+            case lookup fn all_mods of
+                Nothing -> error $ "file not found " ++ fn
+                Just (contents :: [[Char]]) -> 
+                    let (first_line:i_lines) = if ls == le
+                                               then [contents !! (ls -1)]
+                                               else take ((le-ls)+1) $ drop (ls -1) contents
+                        first_line' = drop (cs - 1) first_line
+                        (last_line:r_lines) = reverse (first_line':i_lines)
+                        last_line' = take (if ls == le
+                                           then (ce - cs) +1
+                                           else ce) last_line
+
+                        referred = reverse (last_line':r_lines)
+                    in (head referred, length last_line == length last_line')
+                                      
+         renderBB :: [Char] -> [Char] -> HpcPos -> BaseBoxLabel -> [Char]
+         renderBB fn m p bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
+                            | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
+                            | ExpBox True <- bb = "... = " ++ rendered
+                            | ExpBox False <- bb = rendered
+                            | BinBox CondBinBox True <- bb   = "... then " ++ rendered
+                            | BinBox CondBinBox False <- bb  = "... else " ++ rendered
+                            -- A GuardBinBox comes from a guard guards, i.e.
+                            -- in | <condition> = ..., rendered will be condition
+                            | BinBox GuardBinBox True <- bb  = "|...," ++ rendered ++ ",...=... (was matched)"
+                            | BinBox GuardBinBox False <- bb = "|...," ++ rendered ++ ",...=... (not matched)"
+                            -- These come from lists, i.e. in [ n | n <- [1..], <condition>] where 
+                            -- condition is something like `even n`.
+                            | BinBox QualBinBox True <- bb   = "[...|..., " ++ rendered ++ ",...] (was matched)"
+                            | BinBox QualBinBox False <- bb  = "[...|..., " ++ rendered ++ ",...] (not matched)"
+           where (rendered_base, was_eol) = renderPos fn p
+                 qual_dots = if was_eol then "]" else ", ...]"
+                 rendered = if length rendered_base >= 28
+                            then (take 25 rendered_base) ++ "..."
+                            else rendered_base
+                 rtlbs lbs = intercalate ":" $ map wrap lbs
+                 wrap :: [Char] -> [Char]
+                 wrap s | (s1:_) <- s, isAlpha s1,
+                          not (any isSpace s) = s
+                        | otherwise = "(" ++ s ++ ")"
+         rm_g :: (((HpcPos, BaseBoxLabel),Int),Int) -> 
+                 ((HpcPos, BaseBoxLabel),Int)
+         rm_g ((b,g),r) = (b,r)
+         display :: [Char]
+                 -> [Char]
+                 -> Bool 
+                 -> ((HpcPos, BaseBoxLabel),Int)
+                 -> Maybe ([Char], [Char])
+         display _ _ True ((_, ExpBox False),_) = Nothing
+         display fn m _ ((p,bb),r) =
+            Just ((replicate r ' ') ++ fn ++ ":" ++ show p, renderBB fn m p bb)
+
+
+
          disp_g b (fn, m, pb) = display fn m b (pb,0)
          g_res = summarize (align g_alt_disps)
                     ++ if null g_rev_disp then []
                     else ["Previous expressions:"] 
-                        ++ summarize (align g_rev_disp)
+                        ++ (map (\s -> "  " ++ s) $ summarize (align g_rev_disp))
          (g_nonAlts,g_mbAlts) =
             span (not . isJust . disp_g True ) $
                 reverse $ g_inv_evals
          g_alt_disps = mapMaybe (disp_g False) g_nonAlts 
                     ++ mapMaybe (disp_g True) g_mbAlts
          g_rev_disp = mapMaybe (disp_g True) $ reverse $ g_rest_evals
-         global_trace = if many_traces then g_res else []
 
          -- TODO: do we want to split up per module?
          show_per_module = False
+         global_trace = if many_traces || (not show_per_module)
+                        then g_res
+                        else []
 
          modOut :: Either [[Char]] ParseResult -> [[Char]]
          modOut (Left strs) = strs
@@ -144,7 +183,7 @@ traceMsgs =
                  res = summarize (align alt_disps)
                         ++ if null rev_disp then []
                         else ["Previous expressions:"] 
-                            ++ summarize (align rev_disp)
+                            ++ (map (\s -> "  " ++ s) $ summarize (align rev_disp))
                     -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
                  (nonAlts,mbAlts) = span (not . isJust . display fn m True . rm_g) $
@@ -157,8 +196,10 @@ traceMsgs =
      return $ global_trace ++ (if show_per_module
                                then ["","Per Module:"] ++ (concat $ map modOut results)
                                else [])
+     
 
-  where align :: [([Char], [Char])] -> [[Char]]
+  where flip (a,b) = (b,a)
+        align :: [([Char], [Char])] -> [[Char]]
         align strs = map c strs
           where longest :: Int
                 longest = maximum (map (length . fst) strs)
@@ -166,7 +207,7 @@ traceMsgs =
                 al st = st ++ replicate ((longest - length st) + 1) ' '
                 c :: ([Char], [Char]) -> [Char]
                 c (s,[]) = s
-                c (s,rd) = al s ++ rd
+                c (s,rd) = al s ++ " " ++ rd
 
        
 
