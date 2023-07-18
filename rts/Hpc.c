@@ -44,6 +44,7 @@ static StrHashTable * moduleHash = NULL;   // module name -> HpcModuleInfo
 HpcModuleInfo *modules = 0;
 
 StgWord64 hs_hpc_globalcounter = 1;
+StgWord64 hs_hpc_globalevals = 0;
 
 static char *tixFilename = NULL;
 
@@ -334,6 +335,7 @@ startupHpc(void)
   }
 
   hs_hpc_globalcounter = 1;
+  hs_hpc_globalevals = 0;
 }
 
 /*
@@ -392,7 +394,7 @@ hs_hpc_module(char *modName,
       trxInfo[2] = modTraceLength;
       for(i=0;i < modTraceLength;i++) {
           trxArr[i] = modCount;
-          evaltrxArr[i] = modCount;
+          evaltrxArr[i] = 0;
           gbltrxArr[i] = 0;
       }
       tmpModule->next = modules;

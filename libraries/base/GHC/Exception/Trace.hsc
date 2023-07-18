@@ -58,39 +58,43 @@ traceMsgs =
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
      let many_traces = length traces > 1
 
-         -- readFiles :: [[Char]] -> IO (Map [Char] [[Char]])
-         -- readFiles [] = Map.empty
-         -- readLoc :: [Char] -> Map [Char] [[Char]] -> HpcPos -> [Char]
-         -- readLoc file (P ls cs le ce) = 
-            
 
-         collect :: [ParseResult] -> ([ ([Char], [Char], (HpcPos,BaseBoxLabel))],
-                                      [ ([Char], [Char], (HpcPos,BaseBoxLabel))])
+         collect :: [ParseResult] -> ([(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)],
+                                      [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)])
          collect prs = collect' [] [] prs
-            where collect' :: [(Int, [Char], [Char], (HpcPos,BaseBoxLabel))]
-                           -> [(Int, [Char], [Char], (HpcPos,BaseBoxLabel))]
+            where collect' :: [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)]
+                           -> [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)]
                            -> [ParseResult]
-                           -> ([([Char], [Char], (HpcPos,BaseBoxLabel))],
-                               [([Char], [Char], (HpcPos,BaseBoxLabel))]) 
-                  collect' invs rests [] = (f invs, f rests)
-                    where f = map (\(_,fn,m,e) -> (fn, m, e)) . sortOn (\(g,_,_,_) -> g) 
+                           -> ([(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)],
+                               [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)])
+                  collect' invs rests [] = (invs, rests)
                   collect' invs rests ((PR{pr_filename=fn,pr_module=m,
-                                           pr_inv_evals = inv_evals,
-                                           pr_rest_evals = rest_evals}):prs)
+                                           pr_eval_starts = eval_starts,
+                                           pr_eval_fins = eval_fins}):prs)
                     = collect' (ni ++ invs) (nr ++ rests) prs
-                        where ni = map f inv_evals
-                              nr = map f rest_evals
-                              f (e,g) = (g, fn, m, e)
+                        where ni = map f eval_starts
+                              nr = map f eval_fins
+                              f ((e,g),r) = (g, fn, m, e, r)
 
 
 
 
 
      results <- mapM (parseAndReport many_traces dir) traces
+     -- TODO: re-implement the code that distinguishes a start from a
+     -- return via lvl comparison, see unevals and spanUntil
+     let (gess,gefs) = collect $ rights results
+         g_evals = reverse $ sortOn (\(g,_,_,_,_) -> g) $ gess ++ gefs
+         g_eval_starts_sorted = reverse $
+                                sortOn (\(g,_,_,_,_) -> g) $ gess
+         g_final_eval = case g_evals of
+                            ((_,_,_,_,r):_) -> r
+                            _ -> 0
+         files = nub $ map (\(_,fn,_,_,_) -> fn) $ g_evals
 
-     let (g_inv_evals, g_rest_evals) = collect $ rights results
-         files = nub $ map (\(fn,_,_) -> fn) $
-            g_inv_evals ++ g_rest_evals
+         (g_eval_starts, g_eval_rest) =
+            spanUntil (\(_,_,_,_,r) -> r >= g_final_eval) $
+            g_eval_starts_sorted
 
      all_mods <- (zip files . map lines) <$> mapM readFile files
          
@@ -135,9 +139,6 @@ traceMsgs =
                  wrap s | (s1:_) <- s, isAlpha s1,
                           not (any isSpace s) = s
                         | otherwise = "(" ++ s ++ ")"
-         rm_g :: (((HpcPos, BaseBoxLabel),Int),Int) -> 
-                 ((HpcPos, BaseBoxLabel),Int)
-         rm_g ((b,g),r) = (b,r)
          display :: [Char]
                  -> [Char]
                  -> Bool 
@@ -149,28 +150,31 @@ traceMsgs =
 
 
 
-         disp_g b (fn, m, pb) = display fn m b (pb,0)
+         disp_g b (g, fn, m, pb, r) = (\(l,c) ->(
+                                        -- show g ++ " " ++ show r ++ " " ++
+                                        l,c))
+                                     <$> display fn m b (pb,0)
          g_res = summarize (align g_alt_disps)
                     ++ if null g_rev_disp then []
                     else ["Previous expressions:"] 
                         ++ (map (\s -> "  " ++ s) $ summarize (align g_rev_disp))
          (g_nonAlts,g_mbAlts) =
-            span (not . isJust . disp_g True ) $
-                reverse $ g_inv_evals
+            span (not . isJust . disp_g True ) $ g_eval_starts
          g_alt_disps = mapMaybe (disp_g False) g_nonAlts 
                     ++ mapMaybe (disp_g True) g_mbAlts
-         g_rev_disp = mapMaybe (disp_g True) $ reverse $ g_rest_evals
-
-         -- TODO: do we want to split up per module?
+         g_rev_disp = mapMaybe (disp_g True) g_eval_rest
+         -- TODO: make this a flag!
          show_per_module = False
          global_trace = if many_traces || (not show_per_module)
                         then g_res
                         else []
-
          modOut :: Either [[Char]] ParseResult -> [[Char]]
          modOut (Left strs) = strs
          modOut (Right (PR {pr_filename=fn, pr_module=m, 
-                            pr_inv_evals=inv_evals, pr_rest_evals=rest_evals})) =
+                            pr_eval_starts=eval_starts,
+                            pr_eval_fins=eval_fins,
+                            pr_final_eval_lvl=pr_final_eval
+                            })) =
             if many_traces
             then if null res then []
                  else pre ++ res
@@ -178,6 +182,12 @@ traceMsgs =
 
            where m_msg = "in module " ++ m ++ ":"
                  lns = replicate (length m_msg) '-'
+                 -- TODO: this might need fixing
+                 (inv_evals',rest_evals') =
+                    spanUntil (\(_,i) -> i >= pr_final_eval) $
+                    reverse $ eval_starts
+                 inv_evals = reverse inv_evals'
+                 rest_evals = reverse rest_evals'
                  pre = [lns, m_msg, lns]
                  res = summarize (align alt_disps)
                         ++ if null rev_disp then []
@@ -186,12 +196,15 @@ traceMsgs =
                     -- We want to display non-alternative exprs up until
                         -- the first branching one, and only branching afterwards
                  (nonAlts,mbAlts) = span (not . isJust . display fn m True . rm_g) $
-                                     reverse $ zip inv_evals (repeat 0)
+                                     reverse $ zip (map fst inv_evals) (repeat 0)
                  
                  alt_disps = mapMaybe (display fn m False . rm_g) nonAlts 
                           ++ mapMaybe (display fn m True . rm_g) mbAlts
                  rev_disp = mapMaybe (display fn m True . rm_g) $ 
-                              reverse $ zip rest_evals (repeat 0)
+                              reverse $ zip (map fst rest_evals) (repeat 0)
+                 rm_g :: (((HpcPos, BaseBoxLabel),Int),Int) -> 
+                            ((HpcPos, BaseBoxLabel),Int)
+                 rm_g ((b,g),r) = (b,r)
      return $ global_trace ++ (if show_per_module
                                then ["","Per Module:"] ++ (concat $ map modOut results)
                                else [])
@@ -251,10 +264,11 @@ data BaseCondBox = GuardBinBox
 
 data ParseResult = PR {pr_filename :: String, -- Name of the file 
                        pr_module :: String, -- Name of the module
-                       pr_inv_evals :: [((HpcPos,BaseBoxLabel),Int)],
+                       pr_final_eval_lvl :: Int, -- The final eval depth
+                       -- (expression, global_trace_index, eval_depth)
+                       pr_eval_starts :: [(((HpcPos,BaseBoxLabel),Int), Int)],
                         -- the evaluations up to the final evaluation depth in
-                        -- reverse order, given as
-                       pr_rest_evals :: [((HpcPos,BaseBoxLabel), Int)],
+                       pr_eval_fins :: [(((HpcPos,BaseBoxLabel), Int), Int)],
                         -- the evaluations after the final eval depth
                         -- in reverse order, given as the
                         -- (global order, index into pr_li)
@@ -299,14 +313,16 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
                         -- to make the printing prettier.
                         unevals :: [((Int, Int),Int)] -> [(Int, Int)] -> [Either (Int, Int) (Int,Int)]
                                 -> [((Int,Int),Int)] -> ([((Int,Int), Int)], [(Int,Int)], [Either (Int, Int) (Int,Int)])
-                        unevals w_indent terms bth [(n,r)] =
+                        unevals w_indent terms bth [(n@(gn,vn),r)] =
+                            -- TODO: This might not be the right thing to do
+                            -- for global evals.
                             if r > final_evals
                              then unevals ((n,r-1):w_indent) terms (Right n:bth) []
                              else unevals   ((n,r):w_indent) terms (Left  n:bth) []
-                        unevals w_indent terms bth ((n,rn):k@(m,rm):rest)
+                        unevals w_indent terms bth ((n@(vn,gn),rn):k@(m@(vm,gm),rm):rest)
                            = if rn > rm
                              then unevals ((n,rn-1):w_indent) terms (Right n:bth) (k:rest)
-                             else if fst n ==  fst m
+                             else if vn ==  vm
                                   -- If we see two in a row we just drop it,
                                   -- it finished right away. TODO: is this ok,
                                   -- when a recursive function calls itself
@@ -318,36 +334,34 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
                         (indented, terms, evals_and_fins) =
                           unevals [] [] [] both_sides
 
-                        -- Take while but keep the matching value
-                        spanUntil f xs = case span f xs of
-                                          (as, b:bs) -> (as ++ [b], bs)
-                                          (as,bs) -> (as, bs)
 
                         -- We don't show unless they're within the current
                         -- evaluation depth
-                        (inv_evals', rest_evals') =
-                          spanUntil (\(_,i) -> i >= final_evals) $
-                          reverse $ fst $ partitionEithers $
+                        (eval_starts, eval_fins) =
+                          -- spanUntil (\(_,i) -> i >= final_evals) $
+                          -- reverse $ fst $
+                          partitionEithers $
                           zipWith (\ef i -> case ef of
                                             Left x -> Left (x,i)
                                             Right x -> Right (x,i))
                                  evals_and_fins $ map snd both_sides
 
-                        inv_evals  = map fst $ reverse inv_evals'
-                        rest_evals = map fst $ reverse rest_evals'
 
                         -- Are the terminals useful?
-                        final_terminals = (nub terms) `intersect` inv_evals
+                        final_terminals = (nub terms) `intersect` 
+                                            (map fst eval_starts)
 
-                        finalize = map (\(i,g) -> (p_li !! i, g)) 
+                        finalize = map (\((i,g),r) -> ((p_li !! i, g), r)) 
 
 
                     in  Right (PR {pr_filename = fn,
                                    pr_module = m,
-                                   pr_inv_evals = finalize inv_evals,
-                                   pr_rest_evals = finalize rest_evals,
-                                   pr_indented = map (\((i,g),r) -> ((p_li !! i, g),r)) indented,
-                                   pr_final_terminals = finalize final_terminals })
+                                   pr_final_eval_lvl = final_evals,
+                                   pr_eval_starts = finalize eval_starts,
+                                   pr_eval_fins = finalize eval_fins,
+                                   pr_indented = finalize indented,
+                                   pr_final_terminals = 
+                                    map (\(i,g) -> (p_li !! i,g)) final_terminals })
                                          
                   Nothing -> Left ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> Left ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
@@ -386,3 +400,7 @@ summarize = mergeNRepeats 5
           chunkList _ [] = []
           chunkList i xs = let (s,r) = splitAt i xs in s:chunkList i r
 
+-- Take while but keep the matching value
+spanUntil f xs = case span f xs of
+                    (as, b:bs) -> (as ++ [b], bs)
+                    (as,bs) -> (as, bs)

@@ -9,7 +9,8 @@
 module GHC.StgToCmm.Hpc ( initHpc, mkTickBox,
                           mkTraceBox, mkTraceBump,
                           mkEvalTraceBox, mkEvalTraceBump, mkEvalTraceDump,
-                          mkGenTraceBox, mkGlobalCounterBump, mkGlobalTraceBox
+                          mkGlobalCounterBump, mkGlobalTraceBox,
+                          mkStoreGlobalEval
                           ) where
 
 import GHC.Prelude
@@ -36,41 +37,33 @@ mkTickBox platform mod n
                                 ])
   where
     tick_box = cmmIndex platform W64
-                        (CmmLit $ CmmLabel $ mkHpcTicksLabel $ mod)
-                        n
+                        (CmmLit $ CmmLabel $ mkHpcTicksLabel $ mod) n
 
 
 
 mkTraceBox :: Platform -> Module -> Int -> CmmAGraph
-mkTraceBox = mkGenTraceBox mkHpcTraceLabel 0
-
-mkGenTraceBox :: (Module -> CLabel) -> Int -> Platform -> Module -> Int -> CmmAGraph
-mkGenTraceBox box i platform mod n
+mkTraceBox platform mod n
   = mkStore box_to_update (CmmLit (CmmInt (fromIntegral n) W64))
     where
         index_box = cmmIndex platform W64
-                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) i
+                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 0
         box_to_update = cmmIndexExpr platform W64
-                         (CmmLit $ CmmLabel $ box $ mod)
+                         (CmmLit $ CmmLabel $ mkHpcTraceLabel $ mod)
                          (CmmLoad index_box b64 NaturallyAligned)
 
 -- Write the current number of evals
 mkEvalTraceBox :: Platform -> Module -> CmmAGraph
 mkEvalTraceBox platform mod
-  = mkStore box_to_update (CmmLoad eval_box b64 NaturallyAligned)
+  = mkStore box_to_update (CmmLoad g_eval b64 NaturallyAligned)
     where
         index_box = cmmIndex platform W64
                     (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 0
-        eval_box = cmmIndex platform W64
-                    (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod) 1
+        g_eval = (CmmLit $ CmmLabel $ mkHpcGlobalEvalsLabel)
         box_to_update = cmmIndexExpr platform W64
                          (CmmLit $ CmmLabel $ mkHpcEvalTraceLabel $ mod)
                          (CmmLoad index_box b64 NaturallyAligned)
 
 
-mkEvalTraceBump, mkEvalTraceDump :: Platform -> Module -> CmmAGraph
-mkEvalTraceBump = mkTraceIndOp (MO_Add W64)
-mkEvalTraceDump = mkTraceIndOp (MO_Sub W64)
 
 mkGlobalTraceBox :: Platform -> Module -> CmmAGraph
 mkGlobalTraceBox platform mod
@@ -93,18 +86,34 @@ mkGlobalCounterBump platform
              , CmmLit (CmmInt 1 W64) ])
     g_counter = (CmmLit $ CmmLabel $ mkHpcGlobalCounterLabel)
 
+mkEvalTraceBump, mkEvalTraceDump :: Platform -> Module -> CmmAGraph
+mkEvalTraceBump = mkTraceIndOp (MO_Add W64)
+mkEvalTraceDump = mkTraceIndOp (MO_Sub W64)
+
+
 
 -- Add or substract, no remainder
 mkTraceIndOp :: MachOp -> Platform -> Module -> CmmAGraph
 mkTraceIndOp op platform mod
-  = mkStore index_box op1
+  = mkStore g_eval op1
   where
     op1 = (CmmMachOp op
-             [ CmmLoad index_box b64 NaturallyAligned
+             [ CmmLoad g_eval b64 NaturallyAligned
              , CmmLit (CmmInt 1 W64) ])
+    g_eval = (CmmLit $ CmmLabel $ mkHpcGlobalEvalsLabel)
     infoLabel = cmmIndex platform W64
                 (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod)
     index_box = infoLabel 1
+
+mkStoreGlobalEval :: Platform -> Module -> CmmAGraph
+mkStoreGlobalEval platform mod
+  = mkStore index_box (CmmLoad g_eval b64 NaturallyAligned)
+  where
+    g_eval = (CmmLit $ CmmLabel $ mkHpcGlobalEvalsLabel)
+    infoLabel = cmmIndex platform W64
+                (CmmLit $ CmmLabel $ mkHpcTraceInfoLabel $ mod)
+    index_box = infoLabel 1
+
 
 
 mkTraceBump :: Platform -> Module -> CmmAGraph

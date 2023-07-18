@@ -1255,14 +1255,19 @@ cgTick tick expr
                                         <*> mkGlobalTraceBox platform m
                                         <*> mkGlobalCounterBump platform
                                         <*> mkTraceBump platform m
+                                   -- ; cgExpr expr
                                    ; nt <- newTemp (bWord platform)
                                    ; r_kind <- withSequel (AssignTo [nt] True)
                                                  (cgExpr expr)
                                    ; emit $ mkTraceBox platform m n
                                         <*> mkEvalTraceBox platform m
                                         <*> mkEvalTraceDump platform m
+                                        <*> mkStoreGlobalEval platform m
+                                        <*> mkGlobalTraceBox platform m
+                                        <*> mkGlobalCounterBump platform
                                         <*> mkTraceBump platform m
-                                   ; emitReturn [CmmReg $ CmmLocal nt] }
+                                   ; emitReturn [CmmReg $ CmmLocal nt]
+                                   }
            SourceNote s n    -> emitTick (SourceNote s n) >> cgExpr expr
            _other            -> cgExpr expr -- ignore
        }

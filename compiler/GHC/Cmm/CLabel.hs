@@ -102,6 +102,7 @@ module GHC.Cmm.CLabel (
         mkHpcEvalTraceLabel,
         mkHpcGlobalTraceLabel,
         mkHpcGlobalCounterLabel,
+        mkHpcGlobalEvalsLabel,
         mkHpcTraceInfoLabel,
 
         -- * Predicates
@@ -299,6 +300,8 @@ data CLabel
   | HpcGlobalTraceLabel Module
   -- | Current global trace counter 
   | HpcGlobalCounterLabel
+  -- | Current global evals counter
+  | HpcGlobalEvalsLabel
   -- | Per-module table of info for trace (cur index and size)
   | HpcTraceInfoLabel Module
 
@@ -414,6 +417,7 @@ instance Ord CLabel where
   compare (HpcGlobalTraceLabel a1) (HpcGlobalTraceLabel a2) =
     compare a1 a2
   compare HpcGlobalCounterLabel HpcGlobalCounterLabel = EQ
+  compare HpcGlobalEvalsLabel HpcGlobalEvalsLabel = EQ
   compare (HpcTraceInfoLabel a1) (HpcTraceInfoLabel a2) =
     compare a1 a2
   compare (SRTLabel u1) (SRTLabel u2) =
@@ -456,6 +460,8 @@ instance Ord CLabel where
   compare _ HpcGlobalTraceLabel{} = GT
   compare HpcGlobalCounterLabel _ = LT
   compare _ HpcGlobalCounterLabel = GT
+  compare HpcGlobalEvalsLabel _ = LT
+  compare _ HpcGlobalEvalsLabel = GT
   compare HpcTraceInfoLabel{} _ = LT
   compare _ HpcTraceInfoLabel{} = GT
   compare SRTLabel{} _ = LT
@@ -913,6 +919,9 @@ mkHpcTraceInfoLabel            = HpcTraceInfoLabel
 mkHpcGlobalCounterLabel :: CLabel
 mkHpcGlobalCounterLabel        = HpcGlobalCounterLabel
 
+mkHpcGlobalEvalsLabel :: CLabel
+mkHpcGlobalEvalsLabel        = HpcGlobalEvalsLabel
+
 
 -- Constructing labels used for dynamic linking
 mkDynamicLinkerLabel :: DynamicLinkerLabelInfo -> CLabel -> CLabel
@@ -1077,6 +1086,7 @@ needsCDecl (HpcTraceLabel _)            = True
 needsCDecl (HpcEvalTraceLabel _)        = True
 needsCDecl (HpcGlobalTraceLabel _)      = True
 needsCDecl HpcGlobalCounterLabel        = True
+needsCDecl HpcGlobalEvalsLabel        = True
 needsCDecl (HpcTraceInfoLabel _)        = True
 needsCDecl (DynamicLinkerLabel {})      = panic "needsCDecl DynamicLinkerLabel"
 needsCDecl PicBaseLabel                 = panic "needsCDecl PicBaseLabel"
@@ -1216,6 +1226,7 @@ externallyVisibleCLabel (HpcTraceLabel _)       = True
 externallyVisibleCLabel (HpcEvalTraceLabel _)   = True
 externallyVisibleCLabel (HpcGlobalTraceLabel _) = True
 externallyVisibleCLabel  HpcGlobalCounterLabel  = True
+externallyVisibleCLabel  HpcGlobalEvalsLabel  = True
 externallyVisibleCLabel (HpcTraceInfoLabel _)   = True
 externallyVisibleCLabel (LargeBitmapLabel _)    = False
 externallyVisibleCLabel (SRTLabel _)            = False
@@ -1290,6 +1301,7 @@ labelType (HpcTraceLabel _)                     = DataLabel
 labelType (HpcEvalTraceLabel _)                 = DataLabel
 labelType (HpcGlobalTraceLabel _)               = DataLabel
 labelType HpcGlobalCounterLabel                 = DataLabel
+labelType HpcGlobalEvalsLabel                   = DataLabel
 labelType (HpcTraceInfoLabel _)                 = DataLabel
 labelType (LargeBitmapLabel _)                  = DataLabel
 
@@ -1395,7 +1407,9 @@ labelDynamic this_mod platform external_dynamic_refs lbl =
    HpcGlobalTraceLabel m ->
      external_dynamic_refs && this_mod /= m
    HpcGlobalCounterLabel ->
-     external_dynamic_refs 
+     external_dynamic_refs
+   HpcGlobalEvalsLabel ->
+     external_dynamic_refs
    HpcTraceInfoLabel m ->
      external_dynamic_refs && this_mod /= m
 
@@ -1655,10 +1669,10 @@ pprCLabelStyle !platform !sty lbl = -- see Note [Bangs in CLabel]
       -> maybe_underscore $ text "_hpc_evaltraceboxes_"  <> pprModule mod <> text "_hpc"
    HpcGlobalTraceLabel mod
       -> maybe_underscore $ text "_hpc_globaltraceboxes_"  <> pprModule mod <> text "_hpc"
-   -- HpcGlobalCounterLabel
-   --    -> maybe_underscore $ text "_hpc_globalcounter_hpc"
    HpcGlobalCounterLabel
       -> maybe_underscore $ text "hs_hpc_globalcounter"
+   HpcGlobalEvalsLabel
+      -> maybe_underscore $ text "hs_hpc_globalevals"
    HpcTraceInfoLabel mod
       -> maybe_underscore $ text "_hpc_traceinfo_"  <> pprModule mod <> text "_hpc"
 
