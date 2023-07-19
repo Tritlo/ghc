@@ -1261,8 +1261,8 @@ cgTick tick expr
                                                  (cgExpr expr)
                                    ; emit $ mkTraceBox platform m n
                                         <*> mkEvalTraceBox platform m
-                                        <*> mkStoreGlobalEval platform m
                                         <*> mkEvalTraceDump platform m
+                                        <*> mkStoreGlobalEval platform m
                                         <*> mkGlobalTraceBox platform m
                                         <*> mkGlobalCounterBump platform
                                         <*> mkTraceBump platform m

@@ -78,7 +78,7 @@ traceMsgs =
          renderPos fn (P ls cs le ce) =
             case lookup fn all_mods of
                 Nothing -> error $ "file not found " ++ fn
-                Just (contents :: [[Char]]) -> 
+                Just (contents :: [[Char]]) ->
                     let (first_line:i_lines) = if ls == le
                                                then [contents !! (ls -1)]
                                                else take ((le-ls)+1) $ drop (ls -1) contents
@@ -127,16 +127,16 @@ traceMsgs =
          g_final_eval = case g_evals of
                             (CR{cr_fe=fe}:_) -> fe
                             _ -> 0
-         g_eval_starts = starts g_evals
+         g_eval_starts = starts $ reverse g_evals
           where starts [] = []
                 starts [(n@CR{cr_r=rn})]
                     | rn > g_final_eval = []
                     | otherwise = [n]
                 starts ((n@CR{cr_r=rn}):(m@CR{cr_r=rm}):rs)
-                    | rn > rm = n:(starts (m:rs))
+                    | rn < rm = n:(starts (m:rs))
                     | otherwise = starts (m:rs)
          (g_evals_in_lvl, g_evals_rest) =
-            spanUntil (\c -> (cr_r c) > g_final_eval) $ g_eval_starts
+            spanUntil (\c -> (cr_r c) >= g_final_eval) $ reverse $ g_eval_starts
 
          disp_g b (CR{cr_g=g, cr_i=i, cr_fn=fn,
                       cr_m=m, cr_e=pb,cr_r=r}) = (\(l,c) ->(
@@ -144,61 +144,19 @@ traceMsgs =
                                         -- show (g,i,r) ++ " " ++ show g_final_eval ++ " " ++
                                         l,c))
                                      <$> display fn m b (pb,0)
-         g_res = summarize (align g_alt_disps)
-                    ++ if null g_rev_disp then []
-                    else ["Previous expressions:"] 
-                        ++ (map (\s -> "  " ++ s) $ summarize (align g_rev_disp))
          (g_nonAlts,g_mbAlts) =
             span (not . isJust . disp_g True ) $ g_evals_in_lvl
-         g_alt_disps = mapMaybe (disp_g False) g_nonAlts 
+         g_alt_disps = mapMaybe (disp_g False) g_nonAlts
                     ++ mapMaybe (disp_g True) g_mbAlts
          g_rev_disp = mapMaybe (disp_g True) g_evals_rest
-         -- g_rev_disp = mapMaybe (disp_g False) g_evals_rest
-         -- TODO: make this a flag!
-         show_per_module = False
-         global_trace = if many_traces || (not show_per_module)
-                        then g_res else []
-         modOut :: Either [[Char]] ParseResult -> [[Char]]
-         modOut (Left strs) = strs
-         modOut (Right (PR {pr_filename=fn, pr_module=m, 
-                            pr_eval_starts=eval_starts,
-                            pr_eval_fins=eval_fins,
-                            pr_final_eval_lvl=pr_final_eval
-                            })) =
-            if many_traces
-            then if null res then [] else pre ++ res
-            else res
 
-           where m_msg = "in module " ++ m ++ ":"
-                 lns = replicate (length m_msg) '-'
-                 -- TODO: this might need fixing
-                 (inv_evals',rest_evals') =
-                    spanUntil (\(_,i) -> i >= pr_final_eval) $
-                    reverse $ eval_starts
-                 inv_evals = reverse inv_evals'
-                 rest_evals = reverse rest_evals'
-                 pre = [lns, m_msg, lns]
-                 res = summarize (align alt_disps)
-                        ++ if null rev_disp then []
-                        else ["Previous expressions:"] 
-                            ++ (map (\s -> "  " ++ s) $ summarize (align rev_disp))
-                    -- We want to display non-alternative exprs up until
-                        -- the first branching one, and only branching afterwards
-                 (nonAlts,mbAlts) = span (not . isJust . display fn m True . rm_g) $
-                                     reverse $ zip (map fst inv_evals) (repeat 0)
-                 
-                 alt_disps = mapMaybe (display fn m False . rm_g) nonAlts 
-                          ++ mapMaybe (display fn m True . rm_g) mbAlts
-                 rev_disp = mapMaybe (display fn m True . rm_g) $ 
-                              reverse $ zip (map fst rest_evals) (repeat 0)
-                 rm_g :: ((Int,(HpcPos, BaseBoxLabel),Int),Int) ->
-                            ((HpcPos, BaseBoxLabel),Int)
-                 rm_g ((i,b,g),r) = (b,r)
-     return $ global_trace ++
-                (if show_per_module
-                    then ["","Per Module:"] ++ (concat $ map modOut results)
-                    else [])
-     
+         g_res = summarize (align g_alt_disps)
+                    ++ if null g_rev_disp then []
+                    else ["Previous expressions:"]
+                        ++ (map (\s -> "  " ++ s) $ summarize (align g_rev_disp))
+
+
+     return g_res
 
   where flip (a,b) = (b,a)
         align :: [([Char], [Char])] -> [[Char]]
@@ -210,8 +168,6 @@ traceMsgs =
                 c :: ([Char], [Char]) -> [Char]
                 c (s,[]) = s
                 c (s,rd) = al s ++ " " ++ rd
-
-       
 
 
 --- Mix parsing. Taken from libraries/hpc/Trace/Hpc/Mix.hs to avoid circular
