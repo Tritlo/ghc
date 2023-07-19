@@ -49,6 +49,14 @@ traceList = hs_hpc_rootModule >>= hpcTraceList
                         (trx,eval,gbl)) : rest
 
 
+data CollectResult = CR {cr_g :: Int, -- global index of this result
+                         cr_i :: Int, -- the index in the mix file of is expr
+                         cr_fe :: Int, -- the final eval depth in this module
+                         cr_fn :: [Char], -- Filename of this expr
+                         cr_m :: [Char], -- module name of the expr
+                         cr_e :: (HpcPos, BaseBoxLabel), -- the expr
+                         cr_r :: Int } -- eval depth of this expr
+
 
 -- | Returns a summary of the current HPC trace if the .mix file is available,
 -- showing which branches and functions have been recently evaluated.
@@ -56,48 +64,16 @@ traceMsgs :: IO [[Char]]
 traceMsgs =
   do traces <- traceList
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
+
      let many_traces = length traces > 1
-
-
-         collect :: [ParseResult] -> ([(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)],
-                                      [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)])
-         collect prs = collect' [] [] prs
-            where collect' :: [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)]
-                           -> [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)]
-                           -> [ParseResult]
-                           -> ([(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)],
-                               [(Int, [Char], [Char], (HpcPos,BaseBoxLabel),Int)])
-                  collect' invs rests [] = (invs, rests)
-                  collect' invs rests ((PR{pr_filename=fn,pr_module=m,
-                                           pr_eval_starts = eval_starts,
-                                           pr_eval_fins = eval_fins}):prs)
-                    = collect' (ni ++ invs) (nr ++ rests) prs
-                        where ni = map f eval_starts
-                              nr = map f eval_fins
-                              f ((e,g),r) = (g, fn, m, e, r)
-
-
-
-
-
      results <- mapM (parseAndReport many_traces dir) traces
-     -- TODO: re-implement the code that distinguishes a start from a
-     -- return via lvl comparison, see unevals and spanUntil
-     let (gess,gefs) = collect $ rights results
-         g_evals = reverse $ sortOn (\(g,_,_,_,_) -> g) $ gess ++ gefs
-         g_eval_starts_sorted = reverse $
-                                sortOn (\(g,_,_,_,_) -> g) $ gess
-         g_final_eval = case g_evals of
-                            ((_,_,_,_,r):_) -> r
-                            _ -> 0
-         files = nub $ map (\(_,fn,_,_,_) -> fn) $ g_evals
 
-         (g_eval_starts, g_eval_rest) =
-            spanUntil (\(_,_,_,_,r) -> r >= g_final_eval) $
-            g_eval_starts_sorted
+     let (gess,gefs) = collect $ rights results
+         g_evals = reverse $ sortOn (cr_g) $ gess ++ gefs
+         files = nub $ map cr_fn $ g_evals
 
      all_mods <- (zip files . map lines) <$> mapM readFile files
-         
+
      let renderPos :: [Char] -> HpcPos -> ([Char], Bool)
          renderPos fn (P ls cs le ce) =
             case lookup fn all_mods of
@@ -114,44 +90,58 @@ traceMsgs =
 
                         referred = reverse (last_line':r_lines)
                     in (head referred, ls == le)
-                                      
          renderBB :: [Char] -> [Char] -> HpcPos -> BaseBoxLabel -> [Char]
-         renderBB fn m p bb | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
-                            | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
-                            | ExpBox True <- bb = "... = " ++ rendered
-                            | ExpBox False <- bb = rendered
-                            | BinBox CondBinBox True <- bb   = "... then " ++ rendered
-                            | BinBox CondBinBox False <- bb  = "... else " ++ rendered
-                            -- A GuardBinBox comes from a guard guards, i.e.
-                            -- in | <condition> = ..., rendered will be condition
-                            | BinBox GuardBinBox True <- bb  = "|...," ++ rendered ++ ",...=... (was matched)"
-                            | BinBox GuardBinBox False <- bb = "|...," ++ rendered ++ ",...=... (not matched)"
-                            -- These come from lists, i.e. in [ n | n <- [1..], <condition>] where 
-                            -- condition is something like `even n`.
-                            | BinBox QualBinBox True <- bb   = "[...|..., " ++ rendered ++ ",...] (was matched)"
-                            | BinBox QualBinBox False <- bb  = "[...|..., " ++ rendered ++ ",...] (not matched)"
+         renderBB fn m p bb
+            | TopLevelBox lbs <- bb = m ++ ":" ++ rtlbs lbs
+            | LocalBox (tl:lbs) <- bb = m ++ ":" ++ (wrap tl) ++ ">" ++ rtlbs lbs
+            -- ExpBoxes are expressions. If c is true, it is the result of
+            -- a pattern match.
+            | ExpBox c <- bb = (if c then "... = " else []) ++ rendered
+            | BinBox CondBinBox c <- bb =
+                "..." ++ (if c then "then" else "else") ++ " " ++ rendered
+            -- A GuardBinBox comes from a guard guards, i.e.
+            -- in | <condition> = ..., rendered will be condition
+            | BinBox GuardBinBox c <- bb =
+                "|...," ++ rendered ++ ",...=... " ++ show_mtch c
+            -- These come from lists, i.e. in [ n | n <- [1..], <condition>] where
+            -- condition is something like `even n`.
+            | BinBox QualBinBox c <- bb =
+                "[...|..., " ++ rendered ++ ",...] " ++ show_mtch c
            where (rendered_base, was_one_line) = renderPos fn p
                  rendered = if length rendered_base >= 28
                             then (take 25 rendered_base) ++ "..."
-                            else rendered_base ++ (if was_one_line then "..." else [])
+                            else rendered_base ++ (if was_one_line then [] else "...")
                  rtlbs lbs = intercalate ":" $ map wrap lbs
+                 show_mtch True  = "(was matched)"
+                 show_mtch False = "(not matched)"
                  wrap :: [Char] -> [Char]
                  wrap s | (s1:_) <- s, isAlpha s1,
                           not (any isSpace s) = s
                         | otherwise = "(" ++ s ++ ")"
-         display :: [Char]
-                 -> [Char]
-                 -> Bool 
-                 -> ((HpcPos, BaseBoxLabel),Int)
+         display :: [Char] -> [Char] -> Bool -> ((HpcPos, BaseBoxLabel),Int)
                  -> Maybe ([Char], [Char])
          display _ _ True ((_, ExpBox False),_) = Nothing
          display fn m _ ((p,bb),r) =
             Just ((replicate r ' ') ++ fn ++ ":" ++ show p, renderBB fn m p bb)
 
+         g_final_eval = case g_evals of
+                            (CR{cr_fe=fe}:_) -> fe
+                            _ -> 0
+         g_eval_starts = starts g_evals
+          where starts [] = []
+                starts [(n@CR{cr_r=rn})]
+                    | rn > g_final_eval = []
+                    | otherwise = [n]
+                starts ((n@CR{cr_r=rn}):(m@CR{cr_r=rm}):rs)
+                    | rn > rm = n:(starts (m:rs))
+                    | otherwise = starts (m:rs)
+         (g_evals_in_lvl, g_evals_rest) =
+            spanUntil (\c -> (cr_r c) > g_final_eval) $ g_eval_starts
 
-
-         disp_g b (g, fn, m, pb, r) = (\(l,c) ->(
-                                        -- show g ++ " " ++ show r ++ " " ++
+         disp_g b (CR{cr_g=g, cr_i=i, cr_fn=fn,
+                      cr_m=m, cr_e=pb,cr_r=r}) = (\(l,c) ->(
+                                        -- TODO: add debug flag here?
+                                        -- show (g,i,r) ++ " " ++ show g_final_eval ++ " " ++
                                         l,c))
                                      <$> display fn m b (pb,0)
          g_res = summarize (align g_alt_disps)
@@ -159,15 +149,15 @@ traceMsgs =
                     else ["Previous expressions:"] 
                         ++ (map (\s -> "  " ++ s) $ summarize (align g_rev_disp))
          (g_nonAlts,g_mbAlts) =
-            span (not . isJust . disp_g True ) $ g_eval_starts
+            span (not . isJust . disp_g True ) $ g_evals_in_lvl
          g_alt_disps = mapMaybe (disp_g False) g_nonAlts 
                     ++ mapMaybe (disp_g True) g_mbAlts
-         g_rev_disp = mapMaybe (disp_g True) g_eval_rest
+         g_rev_disp = mapMaybe (disp_g True) g_evals_rest
+         -- g_rev_disp = mapMaybe (disp_g False) g_evals_rest
          -- TODO: make this a flag!
          show_per_module = False
          global_trace = if many_traces || (not show_per_module)
-                        then g_res
-                        else []
+                        then g_res else []
          modOut :: Either [[Char]] ParseResult -> [[Char]]
          modOut (Left strs) = strs
          modOut (Right (PR {pr_filename=fn, pr_module=m, 
@@ -176,8 +166,7 @@ traceMsgs =
                             pr_final_eval_lvl=pr_final_eval
                             })) =
             if many_traces
-            then if null res then []
-                 else pre ++ res
+            then if null res then [] else pre ++ res
             else res
 
            where m_msg = "in module " ++ m ++ ":"
@@ -202,12 +191,13 @@ traceMsgs =
                           ++ mapMaybe (display fn m True . rm_g) mbAlts
                  rev_disp = mapMaybe (display fn m True . rm_g) $ 
                               reverse $ zip (map fst rest_evals) (repeat 0)
-                 rm_g :: (((HpcPos, BaseBoxLabel),Int),Int) -> 
+                 rm_g :: ((Int,(HpcPos, BaseBoxLabel),Int),Int) ->
                             ((HpcPos, BaseBoxLabel),Int)
-                 rm_g ((b,g),r) = (b,r)
-     return $ global_trace ++ (if show_per_module
-                               then ["","Per Module:"] ++ (concat $ map modOut results)
-                               else [])
+                 rm_g ((i,b,g),r) = (b,r)
+     return $ global_trace ++
+                (if show_per_module
+                    then ["","Per Module:"] ++ (concat $ map modOut results)
+                    else [])
      
 
   where flip (a,b) = (b,a)
@@ -266,17 +256,17 @@ data ParseResult = PR {pr_filename :: String, -- Name of the file
                        pr_module :: String, -- Name of the module
                        pr_final_eval_lvl :: Int, -- The final eval depth
                        -- (expression, global_trace_index, eval_depth)
-                       pr_eval_starts :: [(((HpcPos,BaseBoxLabel),Int), Int)],
+                       pr_eval_starts :: [((Int, (HpcPos,BaseBoxLabel),Int), Int)],
                         -- the evaluations up to the final evaluation depth in
-                       pr_eval_fins :: [(((HpcPos,BaseBoxLabel), Int), Int)],
+                       pr_eval_fins :: [((Int, (HpcPos,BaseBoxLabel), Int), Int)],
                         -- the evaluations after the final eval depth
                         -- in reverse order, given as the
                         -- (global order, index into pr_li)
-                       pr_indented :: [(((HpcPos,BaseBoxLabel),Int),Int)], 
+                       pr_indented :: [((Int, (HpcPos,BaseBoxLabel),Int),Int)],
                        -- pr_indented is all the entries and the corresponding
                        -- evaluation depth together. Used to print the
                        -- the "eval snake"
-                       pr_final_terminals :: [((HpcPos,BaseBoxLabel), Int)]
+                       pr_final_terminals :: [(Int,(HpcPos,BaseBoxLabel), Int)]
                        -- Terminals are values that immediately returned.
                        }
 
@@ -351,7 +341,7 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
                         final_terminals = (nub terms) `intersect` 
                                             (map fst eval_starts)
 
-                        finalize = map (\((i,g),r) -> ((p_li !! i, g), r)) 
+                        finalize = map (\((i,g),r) -> ((i,p_li !! i, g), r))
 
 
                     in  Right (PR {pr_filename = fn,
@@ -361,7 +351,7 @@ parseAndReport more_than_1 dir (m, hash, (next_trx_index, final_evals), (trx, ev
                                    pr_eval_fins = finalize eval_fins,
                                    pr_indented = finalize indented,
                                    pr_final_terminals = 
-                                    map (\(i,g) -> (p_li !! i,g)) final_terminals })
+                                    map (\(i,g) -> (i,p_li !! i,g)) final_terminals })
                                          
                   Nothing -> Left ["** Error: could not parse Mix file" ++ mixLoc ++ " **"]
       Just _ -> Left ["** Error: Mix file " ++ mixLoc ++ " could not be read **"]
@@ -404,3 +394,21 @@ summarize = mergeNRepeats 5
 spanUntil f xs = case span f xs of
                     (as, b:bs) -> (as ++ [b], bs)
                     (as,bs) -> (as, bs)
+
+collect :: [ParseResult] -> ([CollectResult], [CollectResult])
+collect prs = collect' [] [] prs
+   where collect' :: [CollectResult] -> [CollectResult]
+                  -> [ParseResult]
+                  -> ([CollectResult], [CollectResult])
+         collect' invs rests [] = (invs, rests)
+         collect' invs rests ((PR{pr_filename=fn,pr_module=m,
+                                  pr_eval_starts = eval_starts,
+                                  pr_eval_fins = eval_fins,
+                                  pr_final_eval_lvl = prfe
+                                  }):prs)
+           = collect' (ni ++ invs) (nr ++ rests) prs
+               where ni = map f eval_starts
+                     nr = map f eval_fins
+                     f ((i,e,g),r) = CR{cr_g=g, cr_i=i, cr_fe=prfe,
+                                        cr_fn=fn, cr_m=m, cr_e=e,
+                                        cr_r=r}
