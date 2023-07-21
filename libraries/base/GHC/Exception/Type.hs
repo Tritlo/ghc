@@ -44,9 +44,9 @@ import GHC.IO.Unsafe
 -- Needed to add stack to all exceptions
 recentlyEvaledStack :: IO String
 recentlyEvaledStack =
-    do t_msgs <- traceMsgs
-       let nstack = "Recently evaluated involved locations:\n"
-                    ++ (intercalate "\n" $ map ("  " ++) t_msgs)
+    do (t_msgs,t_more) <- traceMsgs
+       let nstack = "Recently evaluated locations:\n"
+                    ++ (intercalate "\n" $ map (" " ++) $ (t_msgs ++ t_more))
            stack = if not (null t_msgs) then "\n" ++ nstack else ""
        return stack
 #endif

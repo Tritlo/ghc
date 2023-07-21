@@ -12,7 +12,7 @@ import Data.Word
 import Text.Read ( readMaybe )
 import System.Environment
 import Control.Exception
-import Data.Maybe ( mapMaybe, isJust )
+import Data.Maybe ( mapMaybe, isJust, catMaybes )
 import Data.Char ( isAlpha, isSpace )
 import Data.List ( intercalate, elemIndex, nub, intersect, sortOn, lookup)
 import Data.Either (partitionEithers, rights)
@@ -58,9 +58,11 @@ data CollectResult = CR {cr_g :: Int, -- global index of this result
                          cr_r :: Int } -- eval depth of this expr
 
 
--- | Returns a summary of the current HPC trace if the .mix file is available,
--- showing which branches and functions have been recently evaluated.
-traceMsgs :: IO [[Char]]
+-- | First element is a summary of the current HPC trace if the .mix file is
+-- available, showing which branches and functions have been recently evaluated.
+-- The second element is additional info, such e.g. whether the trace needs
+-- to be longer or not.
+traceMsgs :: IO ([[Char]],[[Char]])
 traceMsgs =
   do traces <- traceList
      dir <- maybe ".hpc/" id <$> lookupEnv "HPCDIR"
@@ -69,7 +71,7 @@ traceMsgs =
      results <- mapM (parseAndReport many_traces dir) traces
 
      let (gess,gefs) = collect $ rights results
-         g_evals = reverse $ sortOn (cr_g) $ gess ++ gefs
+         g_evals = reverse $ sortOn cr_g $ gess ++ gefs
          files = nub $ map cr_fn $ g_evals
 
      all_mods <- (zip files . map lines) <$> mapM readFile files
@@ -124,9 +126,9 @@ traceMsgs =
          display fn m _ ((p,bb),r) =
             Just ((replicate r ' ') ++ fn ++ ":" ++ show p, renderBB fn m p bb)
 
-         g_final_eval = case g_evals of
-                            (CR{cr_fe=fe}:_) -> fe
-                            _ -> 0
+         (g_final_eval, g_total_evals) = case g_evals of
+                            (CR{cr_fe=fe,cr_g=g}:_) -> (fe,g)
+                            _ -> (0,0)
          g_eval_starts = starts $ reverse g_evals
           where starts [] = []
                 starts [(n@CR{cr_r=rn})]
@@ -149,14 +151,23 @@ traceMsgs =
          g_alt_disps = mapMaybe (disp_g False) g_nonAlts
                     ++ mapMaybe (disp_g True) g_mbAlts
          g_rev_disp = mapMaybe (disp_g True) g_evals_rest
+        
+         g_prev_exp = if null g_rev_disp then []
+                        else ["Previous expressions:"]
+                          ++ (map (\s -> " " ++ s) $ summarize (align g_rev_disp))
+         g_more_left =if g_total_evals > length g_evals
+                       then ["There were " ++ show g_total_evals ++ " evaluations" ++
+                             " in total but only " ++ show (length g_evals) ++
+                             " were recorded.",
+                             "Re-run again with a bigger trace length" ++
+                             " for better coverage."]
+                       else []
+        
+         g_res = (map (\s -> " " ++ s) $ summarize (align g_alt_disps))
 
-         g_res = summarize (align g_alt_disps)
-                    ++ if null g_rev_disp then []
-                    else ["Previous expressions:"]
-                        ++ (map (\s -> "  " ++ s) $ summarize (align g_rev_disp))
 
 
-     return g_res
+     return (g_res ++ g_prev_exp, g_more_left)
 
   where flip (a,b) = (b,a)
         align :: [([Char], [Char])] -> [[Char]]
@@ -338,7 +349,7 @@ summarize = mergeNRepeats 5
             in if null same then keepGoing
                else let indent = length $ takeWhile (== ' ') loop_head
                         msg = replicate indent ' ' ++ "repeats ("
-                               ++ show (1 + length same) ++ " times):"
+                               ++ show (1 + length same) ++ " times in window):"
                         indented = map ("  "++) whole_loop
                     in (msg:indented) ++ mergeRepeats (concat diff)
       where
