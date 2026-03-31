@@ -65,7 +65,8 @@ module GHC.Internal.Exception
     , SrcLoc(..), prettySrcLoc
     ) where
 
-import GHC.Internal.Base (String, otherwise, return, ($))
+import GHC.Internal.Base (String, otherwise, return, ($), (++))
+import GHC.Internal.List (null)
 import GHC.Internal.Classes (Eq, Ord)
 import GHC.Internal.Err (error)
 import GHC.Internal.Magic (noinline)
@@ -76,6 +77,7 @@ import GHC.Internal.Types (IO, RuntimeRep)
 import GHC.Internal.IO.Unsafe
 import {-# SOURCE #-} GHC.Internal.Stack (prettyCallStackLines, prettyCallStack, prettySrcLoc, withFrozenCallStack)
 import {-# SOURCE #-} GHC.Internal.Exception.Backtrace (collectExceptionAnnotation)
+import {-# SOURCE #-} GHC.Internal.Exception.Trace (traceMsgs)
 import GHC.Internal.Exception.Context (SomeExceptionAnnotation(..))
 import GHC.Internal.Exception.Type
 
@@ -208,6 +210,12 @@ errorCallException s = toException (ErrorCall s)
 
 errorCallWithCallStackException :: String -> CallStack -> SomeException
 errorCallWithCallStackException s stk = unsafeDupablePerformIO $ do
-    withFrozenCallStack $ toExceptionWithBacktrace (ErrorCall s)
+    msgs <- traceMsgs
+    let traceStr
+          | null msgs = ""
+          | otherwise = "\nHPC Trace:\n" ++ unlines msgs
+        unlines [] = ""
+        unlines (l:ls) = l ++ "\n" ++ unlines ls
+    withFrozenCallStack $ toExceptionWithBacktrace (ErrorCall (s ++ traceStr))
   where ?callStack = stk
 

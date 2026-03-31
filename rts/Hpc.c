@@ -265,7 +265,10 @@ void
 hs_hpc_module(char *modName,
               StgWord32 modCount,
               StgWord32 modHashNo,
-              StgWord64 *tixArr)
+              StgWord32 traceLength,
+              StgWord64 *tixArr,
+              StgWord64 *trxInfo,
+              StgWord64 *trxArr)
 {
   HpcModuleInfo *tmpModule;
   uint32_t i;
@@ -285,6 +288,8 @@ hs_hpc_module(char *modName,
       tmpModule->hashNo = modHashNo;
 
       tmpModule->tixArr = tixArr;
+      tmpModule->trxInfo = trxInfo;
+      tmpModule->trxArr = trxArr;
       for(i=0;i < modCount;i++) {
           tixArr[i] = 0;
       }
@@ -318,6 +323,8 @@ hs_hpc_module(char *modName,
           stgFree(tmpModule->modName);
           stgFree(tmpModule->tixArr);
       }
+      tmpModule->trxInfo = trxInfo;
+      tmpModule->trxArr = trxArr;
       tmpModule->from_file = false;
   }
 }

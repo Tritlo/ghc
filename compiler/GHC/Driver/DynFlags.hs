@@ -334,6 +334,7 @@ data DynFlags = DynFlags {
   rtsOptsSuggestions    :: Bool,
 
   hpcDir                :: String,      -- ^ Path to store the .mix files
+  hpcTraceLength        :: Int,         -- ^ How long the hpcTrace should be
 
   -- Plugins
   pluginModNames        :: [ModuleName],
@@ -664,6 +665,7 @@ defaultDynFlags mySettings =
         rtsOptsSuggestions      = True,
 
         hpcDir                  = ".hpc",
+        hpcTraceLength          = 1,
 
         packageDBFlags          = [],
         packageFlags            = [],

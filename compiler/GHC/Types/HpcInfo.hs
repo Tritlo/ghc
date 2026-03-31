@@ -11,6 +11,7 @@ import GHC.Prelude
 data HpcInfo
   = HpcInfo
      { hpcInfoTickCount :: Int
+     , hpcTraceLength   :: Int
      , hpcInfoHash      :: Int
      }
   | NoHpcInfo

@@ -215,6 +215,7 @@ Library
         GHC.Internal.Exception
         GHC.Internal.Exception.Backtrace
         GHC.Internal.Exception.Context
+        GHC.Internal.Exception.Trace
         GHC.Internal.Exception.Type
         GHC.Internal.ExecutionStack
         GHC.Internal.ExecutionStack.Internal

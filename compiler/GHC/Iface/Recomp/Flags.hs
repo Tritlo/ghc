@@ -149,8 +149,9 @@ fingerprintHpcFlags dflags@DynFlags{..} nameio =
         -- -fhpc, see https://gitlab.haskell.org/ghc/ghc/issues/11798
         -- hpcDir is output-only, so we should recompile if it changes
         hpc = if gopt Opt_Hpc dflags then Just hpcDir else Nothing
+        hpcTrace = if gopt Opt_Hpc dflags then Just hpcTraceLength else Nothing
 
-      in computeFingerprint nameio hpc
+      in computeFingerprint nameio (hpc, hpcTrace)
 
 
 {- Note [path flags and recompilation]

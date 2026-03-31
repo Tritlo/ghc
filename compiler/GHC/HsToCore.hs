@@ -176,7 +176,8 @@ deSugar hsc_env
               hashNo <- if gopt Opt_Hpc $ hsc_dflags hsc_env
                 then writeMixEntries (hpcDir dflags) mod ticks orig_file2
                 else return 0 -- dummy hash when none are written
-              pure $ HpcInfo (fromIntegral $ sizeSS ticks) hashNo
+              let traceLength = GHC.Driver.DynFlags.hpcTraceLength (hsc_dflags hsc_env)
+              pure $ HpcInfo (fromIntegral $ sizeSS ticks) traceLength hashNo
             _ -> pure $ emptyHpcInfo
 
         ; (msgs, mb_res) <- initDs hsc_env tcg_env $

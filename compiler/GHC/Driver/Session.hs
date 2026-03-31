@@ -1374,6 +1374,12 @@ dynamic_flags_deps = [
   , make_ord_flag defGhcFlag "no-haddock"           (NoArg (unSetGeneralFlag Opt_Haddock))
   , make_ord_flag defGhcFlag "haddock-opts"         (hasArg addHaddockOpts)
   , make_ord_flag defGhcFlag "hpcdir"               (SepArg setOptHpcDir)
+  , make_ord_flag defGhcFlag "hpc-trace"            (OptIntSuffix
+             (\n -> case n of
+                      Just t | t > 0     -> upd (\d -> d { hpcTraceLength = t })
+                             | otherwise -> addErr "Syntax: -hpc-trace[t] where t > 0"
+                       -- we default to 100 if there is no number.
+                      Nothing ->  upd $ \d -> d {hpcTraceLength = 100} ))
   , make_ord_flag defGhciFlag "ghci-script"         (hasArg addGhciScript)
   , make_ord_flag defGhciFlag "interactive-print"   (hasArg setInteractivePrint)
   , make_ord_flag defGhcFlag "ticky-allocd"
