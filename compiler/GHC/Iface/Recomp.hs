@@ -1259,10 +1259,7 @@ addFingerprints hsc_env iface0 = do
   --   - the things which can affect whether a module is recompiled
   --   - the module level annotations,
   --   - deps (home and external packages, dependent files)
-  let !iface_hash = computeFingerprint putNameLiterally
-                        (mi_abi_mod_hash abiHashes,
-                         mi_self_recomp_info iface0,
-                         mi_deps iface0)
+  let !iface_hash = computeIfaceHash (mi_abi_mod_hash abiHashes) iface0
 
   let final_iface = completePartialModIface iface0 iface_hash
                      sorted_decls sorted_extra_decls abiHashes caches

@@ -1,5 +1,5 @@
 module CommandLine (
-    optDescrs, cmdLineArgsMap, cmdFlavour, lookupFreeze1, lookupFreeze2, lookupSkipDepends,
+    optDescrs, cmdLineArgsMap, argumentSettingsSnapshot, cmdFlavour, lookupFreeze1, lookupFreeze2, lookupSkipDepends,
     lookupBignum,
     cmdBignum, cmdProgressInfo, cmdCompleteSetting,
     cmdDocsArgs, cmdUnitIdHash, lookupBuildRoot, TestArgs(..), TestSpeed(..), defaultTestArgs,
@@ -378,6 +378,10 @@ cmdLineArgsMap = do
            $ insertExtra (docsArgs                   args) -- Accessed by Rules.Documentation
            $ insertExtra allSettings                       -- Accessed by Settings
            $ insertExtra args Map.empty
+
+argumentSettingsSnapshot :: Map.HashMap TypeRep Dynamic -> String
+argumentSettingsSnapshot extra =
+    show (lookupExtra defaultCommandLineArgs extra, lookupExtra ([] :: [KeyVal]) extra)
 
 cmdLineArgs :: Action CommandLineArgs
 cmdLineArgs = userSetting defaultCommandLineArgs

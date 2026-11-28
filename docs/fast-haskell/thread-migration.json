@@ -1,0 +1,1064 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "order": [
+        "stock",
+        "qm",
+        "combined"
+      ],
+      "measurements": {
+        "stock": {
+          "prime": {
+            "wall": 41.11,
+            "user": 27.46,
+            "sys": 17.8,
+            "rss_kib": 544452,
+            "actions": 8,
+            "allocation_bytes": 12618926264
+          },
+          "edit": {
+            "wall": 40.04,
+            "user": 28.44,
+            "sys": 17.23,
+            "rss_kib": 510480,
+            "actions": 8,
+            "allocation_bytes": 13100649208
+          },
+          "noop": {
+            "wall": 26.34,
+            "user": 16.65,
+            "sys": 13.14,
+            "rss_kib": 596312,
+            "actions": 0,
+            "allocation_bytes": 10965088792
+          }
+        },
+        "qm": {
+          "prime": {
+            "wall": 22.81,
+            "user": 18.68,
+            "sys": 5.36,
+            "rss_kib": 546404,
+            "actions": 8,
+            "allocation_bytes": 11755208392
+          },
+          "edit": {
+            "wall": 24.94,
+            "user": 20.17,
+            "sys": 5.7,
+            "rss_kib": 523432,
+            "actions": 8,
+            "allocation_bytes": 11913715184
+          },
+          "noop": {
+            "wall": 6.0,
+            "user": 5.45,
+            "sys": 0.64,
+            "rss_kib": 467888,
+            "actions": 0,
+            "allocation_bytes": 11407576592
+          }
+        },
+        "combined": {
+          "prime": {
+            "wall": 57.98,
+            "user": 9.8,
+            "sys": 5.9,
+            "rss_kib": 592484,
+            "actions": 43,
+            "allocation_bytes": 12437020960
+          },
+          "edit": {
+            "wall": 13.63,
+            "user": 9.35,
+            "sys": 4.74,
+            "rss_kib": 563648,
+            "actions": 8,
+            "allocation_bytes": 12401408464
+          },
+          "noop": {
+            "wall": 5.39,
+            "user": 4.93,
+            "sys": 0.55,
+            "rss_kib": 549212,
+            "actions": 0,
+            "allocation_bytes": 11897124120
+          }
+        }
+      }
+    },
+    {
+      "round": 2,
+      "order": [
+        "combined",
+        "qm",
+        "stock"
+      ],
+      "measurements": {
+        "stock": {
+          "prime": {
+            "wall": 39.98,
+            "user": 27.56,
+            "sys": 17.27,
+            "rss_kib": 577164,
+            "actions": 8,
+            "allocation_bytes": 12456882240
+          },
+          "edit": {
+            "wall": 38.13,
+            "user": 27.09,
+            "sys": 16.65,
+            "rss_kib": 547424,
+            "actions": 8,
+            "allocation_bytes": 12617520104
+          },
+          "noop": {
+            "wall": 27.18,
+            "user": 16.83,
+            "sys": 13.67,
+            "rss_kib": 499684,
+            "actions": 0,
+            "allocation_bytes": 12445015224
+          }
+        },
+        "qm": {
+          "prime": {
+            "wall": 29.37,
+            "user": 29.03,
+            "sys": 10.24,
+            "rss_kib": 508228,
+            "actions": 43,
+            "allocation_bytes": 12040845712
+          },
+          "edit": {
+            "wall": 24.83,
+            "user": 20.86,
+            "sys": 5.13,
+            "rss_kib": 463120,
+            "actions": 8,
+            "allocation_bytes": 12082676536
+          },
+          "noop": {
+            "wall": 6.3,
+            "user": 5.79,
+            "sys": 0.6,
+            "rss_kib": 602064,
+            "actions": 0,
+            "allocation_bytes": 11575489000
+          }
+        },
+        "combined": {
+          "prime": {
+            "wall": 38.59,
+            "user": 9.15,
+            "sys": 4.95,
+            "rss_kib": 493808,
+            "actions": 8,
+            "allocation_bytes": 13081798720
+          },
+          "edit": {
+            "wall": 14.27,
+            "user": 9.32,
+            "sys": 5.21,
+            "rss_kib": 594772,
+            "actions": 8,
+            "allocation_bytes": 11573446896
+          },
+          "noop": {
+            "wall": 5.74,
+            "user": 5.11,
+            "sys": 0.71,
+            "rss_kib": 555020,
+            "actions": 0,
+            "allocation_bytes": 11079695968
+          }
+        }
+      }
+    }
+  ],
+  "medians": {
+    "stock": {
+      "prime": {
+        "wall": 40.545,
+        "user": 27.509999999999998,
+        "sys": 17.535,
+        "rss_kib": 560808.0,
+        "actions": 8.0,
+        "allocation_bytes": 12537904252.0
+      },
+      "edit": {
+        "wall": 39.085,
+        "user": 27.765,
+        "sys": 16.939999999999998,
+        "rss_kib": 528952.0,
+        "actions": 8.0,
+        "allocation_bytes": 12859084656.0
+      },
+      "noop": {
+        "wall": 26.759999999999998,
+        "user": 16.74,
+        "sys": 13.405000000000001,
+        "rss_kib": 547998.0,
+        "actions": 0.0,
+        "allocation_bytes": 11705052008.0
+      }
+    },
+    "qm": {
+      "prime": {
+        "wall": 26.09,
+        "user": 23.855,
+        "sys": 7.800000000000001,
+        "rss_kib": 527316.0,
+        "actions": 25.5,
+        "allocation_bytes": 11898027052.0
+      },
+      "edit": {
+        "wall": 24.884999999999998,
+        "user": 20.515,
+        "sys": 5.415,
+        "rss_kib": 493276.0,
+        "actions": 8.0,
+        "allocation_bytes": 11998195860.0
+      },
+      "noop": {
+        "wall": 6.15,
+        "user": 5.62,
+        "sys": 0.62,
+        "rss_kib": 534976.0,
+        "actions": 0.0,
+        "allocation_bytes": 11491532796.0
+      }
+    },
+    "combined": {
+      "prime": {
+        "wall": 48.285,
+        "user": 9.475000000000001,
+        "sys": 5.425000000000001,
+        "rss_kib": 543146.0,
+        "actions": 25.5,
+        "allocation_bytes": 12759409840.0
+      },
+      "edit": {
+        "wall": 13.95,
+        "user": 9.335,
+        "sys": 4.975,
+        "rss_kib": 579210.0,
+        "actions": 8.0,
+        "allocation_bytes": 11987427680.0
+      },
+      "noop": {
+        "wall": 5.5649999999999995,
+        "user": 5.02,
+        "sys": 0.63,
+        "rss_kib": 552116.0,
+        "actions": 0.0,
+        "allocation_bytes": 11488410044.0
+      }
+    }
+  },
+  "paired_wall_seconds_saved": {
+    "stock->qm": {
+      "prime": [
+        18.3,
+        10.61
+      ],
+      "edit": [
+        15.1,
+        13.3
+      ],
+      "noop": [
+        20.34,
+        20.88
+      ]
+    },
+    "stock->combined": {
+      "prime": [
+        -16.87,
+        1.39
+      ],
+      "edit": [
+        26.41,
+        23.86
+      ],
+      "noop": [
+        20.95,
+        21.44
+      ]
+    },
+    "qm->combined": {
+      "prime": [
+        -35.17,
+        -9.22
+      ],
+      "edit": [
+        11.31,
+        10.56
+      ],
+      "noop": [
+        0.61,
+        0.56
+      ]
+    }
+  },
+  "a_artifacts_matched": 17,
+  "rts_revision": "902339d332fb4ce2b3c87dcac1ee6495d41ad886",
+  "ghc_revision": "945ea7a737",
+  "worker_revision": "55f502b",
+  "args": [
+    "-j3",
+    "--flavour=quick",
+    "--docs=none",
+    "--freeze1",
+    "stage2:exe:ghc-bin"
+  ],
+  "cpu_affinity": [
+    20,
+    21,
+    22,
+    23
+  ],
+  "no_op_migration_experiment": {
+    "cpus": [
+      12,
+      14,
+      16,
+      18
+    ],
+    "core_ids": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "jobs": 3,
+    "samples": [
+      {
+        "mode": "stock",
+        "profile": true,
+        "elapsed": 25.7922,
+        "actions": 0,
+        "cpu": 28.833891,
+        "gc": 0.64143,
+        "allocated_bytes": 10974675096,
+        "wait": 710635,
+        "signal": 711991,
+        "broadcast": 2292,
+        "kernel_cpu_s": 13.3,
+        "voluntary_context_switches": 716270,
+        "pool_high_water": 3
+      },
+      {
+        "mode": "qm",
+        "profile": true,
+        "elapsed": 5.0743,
+        "actions": 0,
+        "cpu": 5.112206,
+        "gc": 1.334923,
+        "allocated_bytes": 11076703032,
+        "wait": 9434,
+        "signal": 12071,
+        "broadcast": 5256,
+        "kernel_cpu_s": 0.67,
+        "voluntary_context_switches": 10041,
+        "pool_high_water": 3
+      },
+      {
+        "mode": "cap",
+        "profile": true,
+        "elapsed": 4.8979,
+        "actions": 0,
+        "cpu": 4.935235,
+        "gc": 1.189044,
+        "allocated_bytes": 11232463200,
+        "wait": 9464,
+        "signal": 12144,
+        "broadcast": 5332,
+        "kernel_cpu_s": 0.67,
+        "voluntary_context_switches": 10045,
+        "pool_high_water": 3
+      },
+      {
+        "mode": "cap",
+        "profile": true,
+        "elapsed": 4.6716,
+        "actions": 0,
+        "cpu": 4.719968,
+        "gc": 1.132529,
+        "allocated_bytes": 11401127824,
+        "wait": 9444,
+        "signal": 12163,
+        "broadcast": 5412,
+        "kernel_cpu_s": 0.53,
+        "voluntary_context_switches": 9969,
+        "pool_high_water": 3
+      },
+      {
+        "mode": "qm",
+        "profile": true,
+        "elapsed": 4.9919,
+        "actions": 0,
+        "cpu": 5.020194,
+        "gc": 1.330803,
+        "allocated_bytes": 11567020368,
+        "wait": 9453,
+        "signal": 12208,
+        "broadcast": 5493,
+        "kernel_cpu_s": 0.66,
+        "voluntary_context_switches": 9997,
+        "pool_high_water": 3
+      },
+      {
+        "mode": "stock",
+        "profile": true,
+        "elapsed": 26.3838,
+        "actions": 0,
+        "cpu": 29.64547,
+        "gc": 0.712522,
+        "allocated_bytes": 11798166952,
+        "wait": 710205,
+        "signal": 711802,
+        "broadcast": 2669,
+        "kernel_cpu_s": 13.51,
+        "voluntary_context_switches": 714805,
+        "pool_high_water": 3
+      }
+    ],
+    "matched_outputs": {
+      "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+      "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+      "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+      "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+      "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+      "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+      "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+      "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+      "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+      "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+      "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+      "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+      "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+      "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+      "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+      "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7"
+    },
+    "medians": {
+      "stock": {
+        "elapsed": 26.088,
+        "cpu": 29.2396805,
+        "gc": 0.676976,
+        "kernel_cpu_s": 13.405000000000001,
+        "voluntary_context_switches": 715537.5,
+        "wait": 710420.0,
+        "signal": 711896.5,
+        "broadcast": 2480.5
+      },
+      "qm": {
+        "elapsed": 5.0331,
+        "cpu": 5.0662,
+        "gc": 1.3328630000000001,
+        "kernel_cpu_s": 0.665,
+        "voluntary_context_switches": 10019.0,
+        "wait": 9443.5,
+        "signal": 12139.5,
+        "broadcast": 5374.5
+      },
+      "cap": {
+        "elapsed": 4.78475,
+        "cpu": 4.8276015,
+        "gc": 1.1607865,
+        "kernel_cpu_s": 0.6000000000000001,
+        "voluntary_context_switches": 10007.0,
+        "wait": 9454.0,
+        "signal": 12153.5,
+        "broadcast": 5372.0
+      }
+    }
+  },
+  "condition_probe": {
+    "2-cap": {
+      "thread_count": 10,
+      "modules": [
+        "/tmp/hadrian-single-cap-H6T1KB/dist/build/x86_64-linux/ghc-9.14.1/hadrian-0.1.0.0/x/hadrian/build/hadrian/hadrian"
+      ],
+      "exact": [
+        {
+          "operation": "signal",
+          "address": "0x16a3bed",
+          "symbol": "signalCondition+0xc",
+          "calls": 12288
+        },
+        {
+          "operation": "wait",
+          "address": "0x16a3c1d",
+          "symbol": "waitCondition+0xc",
+          "calls": 9450
+        },
+        {
+          "operation": "broadcast",
+          "address": "0x16a3bbd",
+          "symbol": "broadcastCondition+0xc",
+          "calls": 5651
+        }
+      ],
+      "sampled": [
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x1683f12",
+              "suspendThread+0xe1"
+            ],
+            [
+              "0x1486acd",
+              "directoryzm1zi3zi10zi0zmf140_SystemziDirectoryziInternalziPosix_getAppUserDataDirectoryInternal1_info+0x104"
+            ]
+          ],
+          "samples": 17
+        },
+        {
+          "operation": "wait",
+          "frames": [
+            [
+              "0x16a3c1d",
+              "waitCondition+0xc"
+            ],
+            [
+              "0x1679da3",
+              "yieldCapability+0x162"
+            ],
+            [
+              "0x16853a7",
+              "schedule+0x386"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 17
+        },
+        {
+          "operation": "broadcast",
+          "frames": [
+            [
+              "0x16a3bbd",
+              "broadcastCondition+0xc"
+            ],
+            [
+              "0x16946f2",
+              "scavenge_until_all_done+0x241"
+            ],
+            [
+              "0x1695e71",
+              "GarbageCollect+0x9a0"
+            ],
+            [
+              "0x1684b9a",
+              "scheduleDoGC+0x689"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 6
+        },
+        {
+          "operation": "broadcast",
+          "frames": [
+            [
+              "0x16a3bbd",
+              "broadcastCondition+0xc"
+            ],
+            [
+              "0x16946f2",
+              "scavenge_until_all_done+0x241"
+            ],
+            [
+              "0x1695f2e",
+              "GarbageCollect+0xa5d"
+            ],
+            [
+              "0x1684b9a",
+              "scheduleDoGC+0x689"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 3
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1684b7b",
+              "scheduleDoGC+0x66a"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 3
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x1683f12",
+              "suspendThread+0xe1"
+            ],
+            [
+              "0x15bfa98",
+              "ghczminternal_GHCziInternalziIOziFD_zdwwriteRawBufferPtr_slow+0x267"
+            ]
+          ],
+          "samples": 2
+        },
+        {
+          "operation": "broadcast",
+          "frames": [
+            [
+              "0x16a3bbd",
+              "broadcastCondition+0xc"
+            ],
+            [
+              "0x16946f2",
+              "scavenge_until_all_done+0x241"
+            ],
+            [
+              "0x1695e71",
+              "GarbageCollect+0x9a0"
+            ],
+            [
+              "0x1684b9a",
+              "scheduleDoGC+0x689"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686335",
+              "scheduleWaitThread+0xa4"
+            ],
+            [
+              "0x16818de",
+              "hs_main+0xbd"
+            ]
+          ],
+          "samples": 1
+        }
+      ]
+    },
+    "3-stock": {
+      "thread_count": 12,
+      "modules": [
+        "/tmp/hadrian-single-cap-H6T1KB/dist/build/x86_64-linux/ghc-9.14.1/hadrian-0.1.0.0/x/hadrian/build/hadrian/hadrian"
+      ],
+      "exact": [
+        {
+          "operation": "signal",
+          "address": "0x16a3bed",
+          "symbol": "signalCondition+0xc",
+          "calls": 707896
+        },
+        {
+          "operation": "wait",
+          "address": "0x16a3c1d",
+          "symbol": "waitCondition+0xc",
+          "calls": 706171
+        },
+        {
+          "operation": "broadcast",
+          "address": "0x16a3bbd",
+          "symbol": "broadcastCondition+0xc",
+          "calls": 2965
+        }
+      ],
+      "sampled": [
+        {
+          "operation": "wait",
+          "frames": [
+            [
+              "0x16a3c1d",
+              "waitCondition+0xc"
+            ],
+            [
+              "0x1679da3",
+              "yieldCapability+0x162"
+            ],
+            [
+              "0x16853a7",
+              "schedule+0x386"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 1376
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x167d531",
+              "sendMessage+0x100"
+            ],
+            [
+              "0x16a8a80",
+              "stg_putMVarzh+0x1af"
+            ]
+          ],
+          "samples": 1370
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x167999f",
+              "releaseCapability+0x3e"
+            ],
+            [
+              "0x1684d9c",
+              "scheduleDoGC+0x88b"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 3
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x167999f",
+              "releaseCapability+0x3e"
+            ],
+            [
+              "0x1685e4b",
+              "schedule+0xe2a"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 3
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x1679f5c",
+              "yieldCapability+0x31b"
+            ],
+            [
+              "0x16853a7",
+              "schedule+0x386"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 2
+        },
+        {
+          "operation": "broadcast",
+          "frames": [
+            [
+              "0x16a3bbd",
+              "broadcastCondition+0xc"
+            ],
+            [
+              "0x16946f2",
+              "scavenge_until_all_done+0x241"
+            ],
+            [
+              "0x1695e71",
+              "GarbageCollect+0x9a0"
+            ],
+            [
+              "0x1684b9a",
+              "scheduleDoGC+0x689"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686335",
+              "scheduleWaitThread+0xa4"
+            ],
+            [
+              "0x16818de",
+              "hs_main+0xbd"
+            ]
+          ],
+          "samples": 1
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1684b7b",
+              "scheduleDoGC+0x66a"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686335",
+              "scheduleWaitThread+0xa4"
+            ],
+            [
+              "0x16818de",
+              "hs_main+0xbd"
+            ],
+            [
+              "0x67db15",
+              "main+0x16a"
+            ]
+          ],
+          "samples": 1
+        },
+        {
+          "operation": "broadcast",
+          "frames": [
+            [
+              "0x16a3bbd",
+              "broadcastCondition+0xc"
+            ],
+            [
+              "0x16946f2",
+              "scavenge_until_all_done+0x241"
+            ],
+            [
+              "0x1695f2e",
+              "GarbageCollect+0xa5d"
+            ],
+            [
+              "0x1684b9a",
+              "scheduleDoGC+0x689"
+            ],
+            [
+              "0x1685812",
+              "schedule+0x7f1"
+            ],
+            [
+              "0x1686335",
+              "scheduleWaitThread+0xa4"
+            ],
+            [
+              "0x16818de",
+              "hs_main+0xbd"
+            ]
+          ],
+          "samples": 1
+        },
+        {
+          "operation": "broadcast",
+          "frames": [
+            [
+              "0x16a3bbd",
+              "broadcastCondition+0xc"
+            ],
+            [
+              "0x16946f2",
+              "scavenge_until_all_done+0x241"
+            ],
+            [
+              "0x1695e71",
+              "GarbageCollect+0x9a0"
+            ],
+            [
+              "0x1684b9a",
+              "scheduleDoGC+0x689"
+            ],
+            [
+              "0x16850d8",
+              "schedule+0xb7"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 1
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1684b7b",
+              "scheduleDoGC+0x66a"
+            ],
+            [
+              "0x16850d8",
+              "schedule+0xb7"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 1
+        },
+        {
+          "operation": "signal",
+          "frames": [
+            [
+              "0x16a3bed",
+              "signalCondition+0xc"
+            ],
+            [
+              "0x1678de5",
+              "giveCapabilityToTask.isra.0+0x44"
+            ],
+            [
+              "0x1679cba",
+              "yieldCapability+0x79"
+            ],
+            [
+              "0x16853a7",
+              "schedule+0x386"
+            ],
+            [
+              "0x1686370",
+              "scheduleWorker+0xf"
+            ],
+            [
+              "0x1689a50",
+              "workerStart+0xcf"
+            ]
+          ],
+          "samples": 1
+        }
+      ]
+    }
+  }
+}

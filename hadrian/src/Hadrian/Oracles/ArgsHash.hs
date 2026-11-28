@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module Hadrian.Oracles.ArgsHash (
-    TrackArgument, trackAllArguments, trackArgsHash, argsHashOracle
+    TrackArgument, trackAllArguments, trackArgsHash, argsHashOracle,
+    ArgsInvocation(..)
     ) where
 
 import Control.Monad
@@ -9,6 +10,7 @@ import Development.Shake.Classes
 
 import Hadrian.Expression hiding (inputs, outputs)
 import Hadrian.Target
+import Hadrian.Utilities (userSetting)
 
 -- | 'TrackArgument' is used to specify the arguments that should be tracked by
 -- the @ArgsHash@ oracle. The safest option is to track all arguments, but some
@@ -41,11 +43,47 @@ newtype ArgsHash c b = ArgsHash (Target c b)
     deriving (Binary, Eq, Hashable, NFData, Show)
 type instance RuleResult (ArgsHash c b) = Int
 
+{- Note [Persistent argument hashes]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The public ArgsHash oracle checks each argument list every build. This
+keeps the stored dependencies of callers valid when a user changes
+invocation settings. For an eligible target, a cached inner oracle can
+reuse that hash. Shake still checks the dependencies read by the
+argument expression. The invocation witness covers inputs that Hadrian
+reads outside Shake.
+
+A missing witness makes the inner oracle return Nothing. This also
+prevents the inner oracle from computing hashes when Shake checks old
+dependencies during an ordinary build. The public oracle then
+interprets the arguments as usual.
+-}
+
+-- | Input witness for one Hadrian invocation.
+data ArgsInvocation = ArgsInvocation Bool (Action (Maybe String))
+
+newtype ArgsInvocationKey = ArgsInvocationKey ()
+    deriving (Binary, Eq, Hashable, NFData, Show)
+type instance RuleResult ArgsInvocationKey = Maybe String
+
+newtype PersistentArgsHash c b = PersistentArgsHash (Target c b)
+    deriving (Binary, Eq, Hashable, NFData, Show)
+type instance RuleResult (PersistentArgsHash c b) = Maybe Int
+
 -- | This oracle stores per-target argument list hashes in the Shake database,
 -- allowing the user to track them between builds using 'trackArgsHash' queries.
-argsHashOracle :: (ShakeValue c, ShakeValue b) => TrackArgument c b -> Args c b -> Rules ()
-argsHashOracle trackArgument args = void $
-    addOracle $ \(ArgsHash target) -> do
-        argList <- interpret target args
-        let trackedArgList = filter (trackArgument target) argList
-        return $ hash trackedArgList
+argsHashOracle :: (ShakeValue c, ShakeValue b)
+               => TrackArgument c b -> Args c b -> (Target c b -> Bool) -> Rules ()
+argsHashOracle trackArgument args eligible = do
+    let invocation = askOracle (ArgsInvocationKey ())
+        compute t = hash . filter (trackArgument t) <$> interpret t args
+    void $ addOracle $ \(ArgsInvocationKey ()) -> do
+        ArgsInvocation enabled witness <- userSetting (ArgsInvocation False (pure Nothing))
+        if enabled then witness else pure Nothing
+    void $ addOracleCache $ \(PersistentArgsHash t) ->
+        invocation >>= traverse (const (compute t))
+    void $ addOracle $ \(ArgsHash t) -> do
+        ArgsInvocation enabled _ <- userSetting (ArgsInvocation False (pure Nothing))
+        cached <- if enabled && eligible t
+            then askOracle (PersistentArgsHash t)
+            else pure Nothing
+        maybe (compute t) pure cached

@@ -1,4 +1,4 @@
-{-# LANGUAGE InstanceSigs, TypeOperators #-}
+{-# LANGUAGE InstanceSigs, TypeFamilies, TypeOperators #-}
 module Builder (
     -- * Data types
     ArMode (..), CcMode (..), ConfigurationInfo (..), DependencyType (..),
@@ -8,10 +8,15 @@ module Builder (
     -- * Builder properties
     builderProvenance, systemBuilderPath, builderPath, isSpecified, needBuilders,
     runBuilder, runBuilderWith, runBuilderWithCmdOptions, getBuilderPath,
-    builderEnvironment, remBuilderEnvironment
+    builderEnvironment, remBuilderEnvironment, dependencyWorkerRules,
+    normalizedIfaceWorker, ifaceWorkerQuery, fileSHA256
     ) where
 
+import Control.Exception (IOException, evaluate)
 import Control.Exception.Extra (Partial)
+import qualified Crypto.Hash.SHA256 as SHA256
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Development.Shake.Classes
 import Development.Shake.Command
@@ -25,8 +30,11 @@ import Hadrian.Builder.Tar
 import Hadrian.Oracles.Path
 import Hadrian.Oracles.TextFile
 import Hadrian.Utilities
+import qualified System.Directory as Dir
+import System.Environment (lookupEnv)
+import System.IO.Error (tryIOError)
 import System.Exit
-import System.IO (stderr)
+import System.IO (IOMode(ReadMode), stderr, withBinaryFile)
 
 import Base
 import Context
@@ -211,6 +219,196 @@ builderProvenance = \case
   where
     context s p = Just $ vanillaContext s p
 
+-- | Shake key for the dependency worker selected for this invocation.
+data DependencyWorker = DependencyWorker deriving (Eq, Generic, Show)
+instance Binary DependencyWorker
+instance Hashable DependencyWorker
+instance NFData DependencyWorker
+type instance RuleResult DependencyWorker = Maybe (FilePath, FilePath, String)
+
+-- | Shake key for the optional single-file recompilation check worker.
+data CompileCheckWorker = CompileCheckWorker deriving (Eq, Generic, Show)
+instance Binary CompileCheckWorker
+instance Hashable CompileCheckWorker
+instance NFData CompileCheckWorker
+type instance RuleResult CompileCheckWorker = Maybe (FilePath, FilePath, String)
+
+-- | Stage compiler selected for the opt-in normalized import rules.
+newtype IfaceWorker = IfaceWorker FilePath deriving (Eq, Generic, Show)
+instance Binary IfaceWorker
+instance Hashable IfaceWorker
+instance NFData IfaceWorker
+type instance RuleResult IfaceWorker = Maybe (FilePath, FilePath, String)
+
+-- | Shake key for the SHA-256 digest of a stage compiler executable.
+newtype CompilerHash = CompilerHash FilePath deriving (Eq, Generic, Show)
+instance Binary CompilerHash
+instance Hashable CompilerHash
+instance NFData CompilerHash
+type instance RuleResult CompilerHash = Maybe String
+
+{- Note [Dependency worker selection]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+HADRIAN_DEPENDENCY_WORKER is an absolute path to a prepared worker shim.
+Resolve it once per Hadrian invocation. A change to the release selector
+during a build cannot change the worker.
+Match the release compiler path and executable hash to the stage compiler.
+Keep the ordinary dependency on the stage compiler. The hash does not cover
+shared libraries. The release must use libraries that match the stage compiler.
+-}
+
+-- | Track the opt-in, selected release and stage compiler hashes.
+dependencyWorkerRules :: Rules ()
+dependencyWorkerRules = do
+    void $ addOracle $ \DependencyWorker -> do
+        getEnv "HADRIAN_DEPENDENCY_WORKER" >>= maybe (pure Nothing) (preparedWorker False)
+    void $ addOracle $ \CompileCheckWorker ->
+        getEnv "HADRIAN_COMPILE_CHECK_WORKER" >>= maybe (pure Nothing) (preparedWorker True)
+    void $ addOracle $ \(IfaceWorker compiler) -> do
+        getEnv "HADRIAN_NORMALIZED_IFACE_WORKER" >>= maybe (pure Nothing) (prepareIface compiler)
+    void $ addOracleCache $ \(CompilerHash compiler) -> do
+        need [compiler]
+        liftIO $ fileSHA256 compiler
+
+-- | SHA-256 of the bytes read from a file.
+fileSHA256 :: FilePath -> IO (Maybe String)
+fileSHA256 file =
+    either (const Nothing) Just <$> tryIOError
+        (withBinaryFile file ReadMode $ \handle -> do
+            digest <- evaluate . SHA256.hashlazy =<< BSL.hGetContents handle
+            pure . BSC.unpack $ Base16.encode digest)
+
+-- | Match the helper to the stage compiler and the compiler's actual target libdir.
+normalizedIfaceWorker :: FilePath -> Action (Maybe (FilePath, FilePath, String))
+normalizedIfaceWorker = askOracle . IfaceWorker
+
+prepareIface :: FilePath -> FilePath -> Action (Maybe (FilePath, FilePath, String))
+prepareIface compiler requested = do
+    opt <- preparedWorker False requested >>= matchWorker compiler
+    case opt of
+      Nothing -> pure Nothing
+      Just worker -> do
+        let release = takeDirectory worker
+            daemon = release -/- "ghc-worker-daemon"
+            verified = release -/- "verified"
+            metadata = release -/- "metadata"
+        available <- allM doesFileExist [daemon, verified]
+        if not available then pure Nothing else do
+          need [daemon, verified]
+          fields <- readFileLines metadata
+          case (filter (isPrefixOf "iface_capability=") fields,
+                mapMaybe (stripPrefix "compiler_libdir=") fields) of
+            (["iface_capability=yes"], [expected]) | isAbsolute expected -> do
+              executable <- liftIO $ tryIOError (Dir.executable <$> Dir.getPermissions daemon)
+              case executable of
+                Right True -> do
+                  reported <- queryCommand compiler ["--print-libdir"]
+                  case reported of
+                    [actual] | isAbsolute actual -> do
+                      paths <- liftIO $ tryIOError $
+                        (,) <$> Dir.canonicalizePath actual <*> Dir.canonicalizePath expected
+                      case paths of
+                        Right (actual', expected') | actual' == expected' -> do
+                          version <- ifaceWorkerQuery daemon ["--iface-capability-version"]
+                          if version == ["2"]
+                            then fmap (\digest -> (daemon, actual', digest)) <$> askOracle (CompilerHash daemon)
+                            else pure Nothing
+                        _ -> pure Nothing
+                    _ -> pure Nothing
+                _ -> pure Nothing
+            _ -> pure Nothing
+
+-- | Run a read-only interface capability request.
+ifaceWorkerQuery :: FilePath -> [String] -> Action [String]
+ifaceWorkerQuery daemon args = queryCommand daemon (["+RTS", "-N1", "--RTS"] ++ args)
+
+queryCommand :: FilePath -> [String] -> Action [String]
+queryCommand program args =
+    actionCatch (do
+      (Exit code, Stdout out, Stderr err) <- command [Timeout 20] program args
+      pure $ if code == ExitSuccess && null (err :: String) then lines out else [])
+      (\(_ :: IOException) -> pure [])
+
+-- | Read the selected release and require the check capability when requested.
+preparedWorker :: Bool -> FilePath -> Action (Maybe (FilePath, FilePath, String))
+preparedWorker checkOnly requested
+    | not (isAbsolute requested) = pure Nothing
+    | otherwise = do
+        resolved <- liftIO $ tryIOError $ Dir.canonicalizePath requested
+        case resolved of
+          Left _ -> pure Nothing
+          Right worker -> do
+            let metadata = takeDirectory worker -/- "metadata"
+                realGhc = worker ++ ".real-ghc"
+                files = [worker, metadata, realGhc]
+            available <- allM doesFileExist files
+            if available
+            then do
+                need (requested : files)
+                liftIO $ either (const Nothing) id <$> tryIOError (do
+                    real <- lines . BSC.unpack <$> BS.readFile realGhc
+                    fields <- lines . BSC.unpack <$> BS.readFile metadata
+                    permissions <- Dir.getPermissions worker
+                    let capability = filter (isPrefixOf "compile_check_only=") fields
+                    pure $ case (real, mapMaybe (stripPrefix "compiler_sha256=") fields) of
+                      ([compiler], [digest])
+                        | Dir.executable permissions, isAbsolute compiler, length digest == 64
+                        , not checkOnly || capability == ["compile_check_only=yes"] ->
+                            Just (worker, compiler, digest)
+                      _ -> Nothing)
+            else pure Nothing
+
+-- | Use the dependency scan worker configured for this invocation.
+dependencyWorker :: FilePath -> Action (Maybe FilePath)
+dependencyWorker stageCompiler =
+    askOracle DependencyWorker >>= matchWorker stageCompiler
+
+{- Note [Compile check worker dependencies]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+HADRIAN_COMPILE_CHECK_WORKER selects a prepared worker for single-file
+recompilation checks. The worker checks output from the stage compiler.
+Any request that requires compilation runs the stage compiler.
+Selecting or removing a worker release must leave clean objects alone.
+Use an order-only action for the selection. Keep the ordinary dependency
+on the stage compiler.
+-}
+
+-- | Set the compiler nursery for the standard Hadrian RTS block.
+-- Apply this at launch so changing the nursery does not invalidate build products.
+compileNurseryArgs :: [String] -> [String]
+compileNurseryArgs args =
+    case break isRtsMarker args of
+      (before, "+RTS" : "-O64M" : "-RTS" : after)
+        | not (any isRtsMarker after) -> before ++ ["+RTS", "-O64M", "-A64m", "-RTS"] ++ after
+      _ -> args
+  where
+    isRtsMarker arg = arg `elem` ["+RTS", "-RTS", "--RTS", "--"]
+
+-- | Select the check worker. See Note [Compile check worker dependencies].
+compileCheckWorker :: FilePath -> Action (Maybe FilePath)
+compileCheckWorker stageCompiler =
+    orderOnlyAction $ askOracle CompileCheckWorker >>= matchWorker stageCompiler
+
+-- | Check the release against the actual compiler for this stage.
+matchWorker :: FilePath -> Maybe (FilePath, FilePath, String) -> Action (Maybe FilePath)
+matchWorker stageCompiler selection =
+    case selection of
+      Just (worker, compiler, digest) -> do
+        paths <- liftIO $ tryIOError $
+            (,) <$> Dir.canonicalizePath stageCompiler <*> Dir.canonicalizePath compiler
+        case paths of
+          Right (stagePath, releasePath) | stagePath == releasePath -> do
+            currentHash <- askOracle (CompilerHash stagePath)
+            pure $ if currentHash == Just digest then Just worker else Nothing
+          _ -> pure Nothing
+      Nothing -> pure Nothing
+
+-- | Use the prepared release's compiler, daemon and libdir settings.
+dependencyWorkerOptions :: Maybe FilePath -> [CmdOption]
+dependencyWorkerOptions Nothing = []
+dependencyWorkerOptions (Just _) =
+    map RemEnv ["GHC_WORKER_REAL_GHC", "GHC_WORKER_DAEMON", "GHC_WORKER_LIBDIR"]
+
 instance H.Builder Builder where
     builderPath :: Builder -> Action FilePath
     builderPath builder = case builderProvenance builder of
@@ -289,7 +487,24 @@ instance H.Builder Builder where
     runBuilderWith :: Builder -> BuildInfo -> Action ()
     runBuilderWith builder BuildInfo {..} = do
         path <- builderPath builder
-        prog <- exeSpawnPath path
+        worker <- case (builder, buildInputs) of
+            (Ghc FindHsDependencies _, _) -> dependencyWorker path
+            (Ghc CompileHs _, [source])
+              | ".hs" `isSuffixOf` source ->
+                  compileCheckWorker path
+            _ -> pure Nothing
+        let modeOptions = case (builder, worker) of
+                (Ghc FindHsDependencies _, Just _) -> [RemEnv "GHC_WORKER_CHECK_ONLY"]
+                (Ghc CompileHs _, Just _) ->
+                    [RemEnv "GHC_WORKER_DEPS_ONLY", AddEnv "GHC_WORKER_CHECK_ONLY" "1"]
+                _ -> []
+        launchArgs <- case (builder, buildInputs) of
+            (Ghc CompileHs Stage1, [source])
+              | "compiler/" `isPrefixOf` source, ".hs" `isSuffixOf` source -> do
+                  enabled <- liftIO $ lookupEnv "HADRIAN_GHC_COMPILE_NURSERY"
+                  pure $ if enabled == Just "1" then compileNurseryArgs buildArgs else buildArgs
+            _ -> pure buildArgs
+        prog <- exeSpawnPath (fromMaybe path worker)
         withResources buildResources $ do
             verbosity <- getVerbosity
             let input  = fromSingleton msgIn buildInputs
@@ -356,9 +571,10 @@ instance H.Builder Builder where
                   withResponseFileIfLongCmd
                     output
                     prog
-                    (toCmdArgument buildArgs)
+                    (toCmdArgument launchArgs)
                     buildInputs
-                    (toCmdArgument buildOptions)
+                    (toCmdArgument (buildOptions ++ dependencyWorkerOptions worker ++ modeOptions
+                        ++ [RemEnv "HADRIAN_GHC_COMPILE_NURSERY"]))
 
                 HsCpp {}    -> captureStdout
 

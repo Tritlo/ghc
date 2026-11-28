@@ -50,6 +50,17 @@ Using the build system
 Once your first build is successful, simply run `build` to rebuild after some
 changes. Build results are placed into `_build` by default.
 
+#### Checking dependencies with one RTS capability
+
+For incremental builds, set `HADRIAN_SINGLE_CAPABILITY=1` to run Hadrian's
+target action with one GHC RTS capability. The `-j` option still sets the
+number of concurrent Shake jobs. For example, this command allows three
+jobs, including external compiler processes:
+
+```sh
+HADRIAN_SINGLE_CAPABILITY=1 hadrian/build -j3
+```
+
 #### Choosing a build flavour
 
 There are many different ways to build a compiler, each way is called a flavour.
@@ -430,3 +441,58 @@ projects), as well as Well-Typed.
 [dynamic-windows-issue]: https://github.com/snowleopard/hadrian/issues/343
 [bin-dist-issue]: https://github.com/snowleopard/hadrian/issues/219
 [contributors]: https://github.com/snowleopard/hadrian/graphs/contributors
+
+### Experimental normalized interface dependencies
+
+For a local Stage1 compiler library rebuild, set
+`HADRIAN_NORMALIZED_IFACE_WORKER` to the absolute path of a prepared `ghc`
+worker shim with interface capability version 2. The release must match
+the stage compiler's executable and target library directory. This setting
+does not change which command compiles a module.
+
+This experiment applies to regular vanilla Haskell module builds that
+produce both static and dynamic interfaces. Hadrian considers providers
+with at least 64 distinct regular vanilla importers in the compiler package's
+dependency file. After the normal compilation action succeeds, a compatible
+worker checks both consumer interfaces and the current source and options.
+Hadrian uses a normalized receipt only for providers the consumer records
+in both ways. Other dependencies keep their ordinary paths.
+
+Leave the setting unset for final builds. A previously used receipt
+reverts to raw content when the release is disabled or no longer matches.
+The rule still tracks the available static and dynamic interfaces. A missing
+dynamic interface is represented explicitly in the raw receipt.
+
+### Compiler nursery for development builds
+
+Set `HADRIAN_GHC_COMPILE_NURSERY=1` to give Stage1 compiler-package
+compilations of regular Haskell source files under `compiler/` a 64 MiB
+nursery. Hadrian adds `-A64m` to its standard `+RTS -O64M -RTS` block at
+launch. The option can be toggled on a clean target without rebuilding it.
+Use a worker with support for this RTS block, such as `fd8d51d` or later,
+if the build also uses `HADRIAN_COMPILE_CHECK_WORKER`. Fallback compiles
+use the same tuned command. Dependency scans keep their existing RTS block.
+
+
+
+### Concurrent compiler package registration for development builds
+
+Set `HADRIAN_GHC_OVERLAP_REGISTRATION=1` to run the Stage1 compiler library's
+package copy and ABI calculation in parallel. Hadrian writes the package
+configuration and recaches the database after both operations finish.
+Leave the setting unset for final builds.
+
+### Persistent argument hashes for development builds
+
+Set `HADRIAN_PERSISTENT_ARGS=1` with the explicit flavour
+`perf+no_profiled_libs` to reuse tracked argument hashes for selected Stage1
+compile and C dependency rules. Keep the option unset for final builds.
+This option requires Linux and a build without hashed unit IDs, a bignum
+override, user-defined packages, or Shake shared caches. It uses the built-in
+flavour and falls back to ordinary argument resolution if a custom flavour can
+replace it.
+
+Reuse requires the same Hadrian executable, invocation arguments, settings,
+working directories, and effective environment. Changes to tracked build inputs
+can also invalidate a hash. Queue launchers can add a different environment to
+each job. Hadrian includes those fields in the witness if they reach the build.

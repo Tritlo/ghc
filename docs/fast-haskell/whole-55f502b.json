@@ -1,0 +1,57 @@
+{
+  "worker": "55f502b328e7348b544a446cf92a6a26dd1bc17f",
+  "compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+  "compiler_sha256": "5611e965dc74a909eb5968b9f2be4d320904db6e0bd68e5e89ed5b01864ddd1b",
+  "toolchain": "10.1.20261115.1",
+  "source_revision": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+  "hadrian_hook": "7574facc5c",
+  "args": [
+    "--flavour=quick",
+    "--docs=none",
+    "--freeze1",
+    "-j3",
+    "stage2:exe:ghc-bin"
+  ],
+  "cpu_affinity": [
+    20,
+    21,
+    22,
+    23
+  ],
+  "source_sha256": {
+    "A": "e28ae69ab5413e3ff4c6f4d0cd56d623413d9755f15ddab203ab2e42e0d70928",
+    "B": "9c0e2521bba3087ea6bbf9b96dff7383a24111cbdfd6e07833e641e68c0a5ca1"
+  },
+  "elapsed_seconds": {
+    "stock-prime": 46.7,
+    "worker-prime": 62.88,
+    "stock-edit": 42.46,
+    "worker-edit": 32.28,
+    "stock-noop": 26.66,
+    "worker-noop": 25.9
+  },
+  "edited_artifacts_sha256": {
+    "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+    "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+    "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+    "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+    "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+    "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+    "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+    "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+    "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+    "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+    "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+    "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+    "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+    "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+    "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a"
+  },
+  "consumer_sha256": {
+    "Main.o": "69fca69861abfa1f76cc5bf2d541caf6e2cfce2adffc3256aeff9cef00b96b3f",
+    "Main.hi": "aa12c325cbeda0c1909f13b19b26d588b9200cabaff37b4333c1c1131b49d7ca",
+    "observe": "d39a8ef123641bbd8174ff19fd9cbe43a5db81a189d06e257c6e874d51e70e66"
+  },
+  "consumer_stdout": "156\n",
+  "dependency_file_sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7"
+}

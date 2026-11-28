@@ -1,0 +1,303 @@
+{
+  "release": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T011313Z.8X1Bc8",
+  "daemon": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T011313Z.8X1Bc8/ghc-worker-daemon",
+  "stock": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+  "affinity": [
+    0,
+    2,
+    4,
+    6
+  ],
+  "modules": [
+    "GHC/Cmm/Pipeline",
+    "GHC/Cmm/Sink",
+    "GHC/Data/Graph/Directed",
+    "GHC/Utils/Misc"
+  ],
+  "stock_hashes": [
+    {
+      "o": "75242fc80a942f4933321a7cace0403fe03e27ae24215624579861eb8a2dc119",
+      "hi": "82fa0f5aaf50a071992edd1d76ecae049c4574f49d8c84c75fcfb365e8db9b1d"
+    },
+    {
+      "o": "e88cd3a75b9541d89c81ed326b72cef8e9eb0f68b5c441cb41d2b4f5845ee5e2",
+      "hi": "ca6dc6b08eed62ca5e70b68d9d9e2ace7375817eeafb817cfd480a66f239636f"
+    },
+    {
+      "o": "73ee29989152d4c7a38bbe014428b42db55d60b8e19c36347dc703348e4fd522",
+      "hi": "7184d894faed0006d6576cfdea21e0989cfa307b6a47c4e6ad9610a85285ea39"
+    },
+    {
+      "o": "793455300108e34f3c85c794090ead4dc37d95d2aa2f43e51a32424c07352aa7",
+      "hi": "14fd8f9bbcc4a9667dd110bfa769d1d2c1d44353f2bd2fa4e8af916ac66315ce"
+    }
+  ],
+  "rows": [
+    {
+      "setting": "default",
+      "clients": 1,
+      "round": 0,
+      "seconds": 11.562452660989948,
+      "per_module_seconds": [
+        1.132215725025162,
+        1.6915970569825731,
+        2.180354530981276,
+        6.556763355969451
+      ],
+      "pre_rss_kib": 576136,
+      "peak_rss_kib": 591124,
+      "post_rss_kib": 591124,
+      "samples": 750,
+      "pid": 350941,
+      "pre_threads": 16,
+      "post_threads": 16
+    },
+    {
+      "setting": "default",
+      "clients": 4,
+      "round": 0,
+      "seconds": 7.419309188029729,
+      "per_module_seconds": [
+        2.501952346006874,
+        3.2575305280042812,
+        3.3465155090088956,
+        7.4161165520199575
+      ],
+      "pre_rss_kib": 591124,
+      "peak_rss_kib": 719844,
+      "post_rss_kib": 719844,
+      "samples": 480,
+      "pid": 350941,
+      "pre_threads": 16,
+      "post_threads": 17
+    },
+    {
+      "setting": "N1",
+      "clients": 1,
+      "round": 0,
+      "seconds": 13.046573356026784,
+      "per_module_seconds": [
+        1.4274304400314577,
+        1.8788068059948273,
+        2.464947275002487,
+        7.274082428019028
+      ],
+      "pre_rss_kib": 403052,
+      "peak_rss_kib": 436700,
+      "post_rss_kib": 436700,
+      "samples": 851,
+      "pid": 351868,
+      "pre_threads": 7,
+      "post_threads": 7
+    },
+    {
+      "setting": "N1",
+      "clients": 4,
+      "round": 0,
+      "seconds": 17.541539020021446,
+      "per_module_seconds": [
+        17.02817250904627,
+        17.53983528498793,
+        11.11000193998916,
+        13.136633903952315
+      ],
+      "pre_rss_kib": 436700,
+      "peak_rss_kib": 540688,
+      "post_rss_kib": 540688,
+      "samples": 1138,
+      "pid": 351868,
+      "pre_threads": 7,
+      "post_threads": 9
+    },
+    {
+      "setting": "N2",
+      "clients": 1,
+      "round": 0,
+      "seconds": 17.153602539969143,
+      "per_module_seconds": [
+        1.8617845900007524,
+        2.665938047983218,
+        3.426794280996546,
+        9.197135891008656
+      ],
+      "pre_rss_kib": 466172,
+      "peak_rss_kib": 467704,
+      "post_rss_kib": 467704,
+      "samples": 1104,
+      "pid": 353691,
+      "pre_threads": 10,
+      "post_threads": 10
+    },
+    {
+      "setting": "N2",
+      "clients": 4,
+      "round": 0,
+      "seconds": 14.116579961962998,
+      "per_module_seconds": [
+        8.884680000017397,
+        8.529357118997723,
+        5.960771918005776,
+        14.110700226039626
+      ],
+      "pre_rss_kib": 467704,
+      "peak_rss_kib": 635572,
+      "post_rss_kib": 635572,
+      "samples": 905,
+      "pid": 353691,
+      "pre_threads": 10,
+      "post_threads": 13
+    },
+    {
+      "setting": "default",
+      "clients": 4,
+      "round": 1,
+      "seconds": 10.576487448008265,
+      "per_module_seconds": [
+        4.580531018960755,
+        5.386773751000874,
+        5.722418267047033,
+        10.570288155053277
+      ],
+      "pre_rss_kib": 719960,
+      "peak_rss_kib": 720384,
+      "post_rss_kib": 716392,
+      "samples": 673,
+      "pid": 350941,
+      "pre_threads": 17,
+      "post_threads": 18
+    },
+    {
+      "setting": "default",
+      "clients": 1,
+      "round": 1,
+      "seconds": 16.31400983396452,
+      "per_module_seconds": [
+        1.3214029159862548,
+        1.9386966900201514,
+        3.651968570018653,
+        9.400189721956849
+      ],
+      "pre_rss_kib": 716392,
+      "peak_rss_kib": 734728,
+      "post_rss_kib": 723784,
+      "samples": 1048,
+      "pid": 350941,
+      "pre_threads": 18,
+      "post_threads": 18
+    },
+    {
+      "setting": "N2",
+      "clients": 4,
+      "round": 1,
+      "seconds": 13.555189856968354,
+      "per_module_seconds": [
+        7.9346783139626496,
+        8.216370220994577,
+        5.823020077019464,
+        13.547664245998021
+      ],
+      "pre_rss_kib": 635572,
+      "peak_rss_kib": 643704,
+      "post_rss_kib": 643704,
+      "samples": 874,
+      "pid": 353691,
+      "pre_threads": 13,
+      "post_threads": 14
+    },
+    {
+      "setting": "N2",
+      "clients": 1,
+      "round": 1,
+      "seconds": 16.64554070698796,
+      "per_module_seconds": [
+        1.8696423099609092,
+        2.4273912149947137,
+        3.24411588703515,
+        9.10276736196829
+      ],
+      "pre_rss_kib": 643704,
+      "peak_rss_kib": 643712,
+      "post_rss_kib": 643712,
+      "samples": 1077,
+      "pid": 353691,
+      "pre_threads": 14,
+      "post_threads": 14
+    },
+    {
+      "setting": "N1",
+      "clients": 4,
+      "round": 1,
+      "seconds": 18.43328555795597,
+      "per_module_seconds": [
+        18.024471656011883,
+        18.431028892984614,
+        12.94025544298347,
+        15.163956676027738
+      ],
+      "pre_rss_kib": 540884,
+      "peak_rss_kib": 553360,
+      "post_rss_kib": 553360,
+      "samples": 1197,
+      "pid": 351868,
+      "pre_threads": 9,
+      "post_threads": 9
+    },
+    {
+      "setting": "N1",
+      "clients": 1,
+      "round": 1,
+      "seconds": 18.059522273018956,
+      "per_module_seconds": [
+        2.0078184599988163,
+        2.7057104780105874,
+        3.5019251360208727,
+        9.84243051102385
+      ],
+      "pre_rss_kib": 553360,
+      "peak_rss_kib": 553360,
+      "post_rss_kib": 553360,
+      "samples": 1172,
+      "pid": 351868,
+      "pre_threads": 9,
+      "post_threads": 9
+    },
+    {
+      "setting": "N2",
+      "clients": 1,
+      "round": 2,
+      "seconds": 16.814982640033122,
+      "per_module_seconds": [
+        1.9939899330493063,
+        2.6374653200036846,
+        3.212903165956959,
+        8.969037555973046
+      ],
+      "pre_rss_kib": 643712,
+      "peak_rss_kib": 643712,
+      "post_rss_kib": 643564,
+      "samples": 1090,
+      "pid": 353691,
+      "pre_threads": 14,
+      "post_threads": 14
+    },
+    {
+      "setting": "N2",
+      "clients": 4,
+      "round": 2,
+      "seconds": 13.818839429004584,
+      "per_module_seconds": [
+        9.352200394961983,
+        9.275752730027307,
+        5.931034484994598,
+        13.811333997990005
+      ],
+      "pre_rss_kib": 643564,
+      "peak_rss_kib": 645836,
+      "post_rss_kib": 645836,
+      "samples": 892,
+      "pid": 353691,
+      "pre_threads": 14,
+      "post_threads": 14
+    }
+  ]
+}

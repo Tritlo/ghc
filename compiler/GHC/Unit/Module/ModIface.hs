@@ -68,6 +68,8 @@ module GHC.Unit.Module.ModIface
    , set_mi_fix_fn
    , set_mi_hash_fn
    , completePartialModIface
+   , computeIfaceHash
+   , normalizeIfaceSourceHash
    , IfaceBinHandle(..)
    , PartialModIface
    , IfaceAbiHashes (..)
@@ -120,6 +122,7 @@ import GHC.Hs
 import GHC.Iface.Syntax
 import GHC.Iface.Flags
 import GHC.Iface.Ext.Fields
+import GHC.Iface.Recomp.Binary (computeFingerprint, putNameLiterally)
 import GHC.Iface.Recomp.Types
 
 import GHC.HsToCore.Breakpoints.Types
@@ -1079,6 +1082,37 @@ set_mi_mod_info_field f iface = clear_mi_hi_bytes $ iface { mi_mod_info_ = f (mi
 
 
 
+
+-- | Compute the derived interface fingerprint from the ABI fingerprint,
+-- self-recompilation metadata and dependencies.
+computeIfaceHash :: Fingerprint -> ModIface_ phase -> Fingerprint
+computeIfaceHash abiHash iface =
+  computeFingerprint putNameLiterally
+    (abiHash, mi_self_recomp_info iface, mi_deps iface)
+{-# INLINE computeIfaceHash #-}
+
+{- Note [Comparing interfaces without the source hash]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A source edit can change a module's implementation without affecting its
+importers. To compare interfaces, clear the source fingerprint and the
+derived fingerprint that includes it. Clear the cached bytes so the writer
+serializes the new values. Keep usage records because a re-export can retain
+its ABI when an importer uses a changed unfolding from another module.
+
+Compare only interfaces from the same compiler and way. An importer can use
+the provider's code during compilation. The caller must check separately
+whether it can use the normalized fingerprint for that importer.
+-}
+
+-- | Remove a module's own source fingerprint from a copy for comparison.
+-- See Note [Comparing interfaces without the source hash].
+normalizeIfaceSourceHash :: ModIface -> Maybe ModIface
+normalizeIfaceSourceHash iface = do
+  self <- mi_self_recomp_info iface
+  pure $ clear_mi_hi_bytes $ iface
+    { mi_iface_hash_ = fingerprint0
+    , mi_self_recomp_ = Just self { mi_sr_src_hash = fingerprint0 }
+    }
 
 -- | Invalidate any byte array buffer we might have.
 clear_mi_hi_bytes :: ModIface_ phase -> ModIface_ phase

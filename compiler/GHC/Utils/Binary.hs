@@ -48,6 +48,7 @@ module GHC.Utils.Binary
 
    writeBinMem,
    readBinMem,
+   readBinMemWithBuffer,
    readBinMemN,
 
    putAt, getAt,
@@ -553,6 +554,13 @@ readBinMem filename = do
     filesize' <- hFileSize h
     let filesize = fromIntegral filesize'
     readBinMem_ filesize h
+
+-- | Read a file once. The handle and byte string use the same initialized
+-- buffer. Keep the handle read-only while the byte string is in use.
+readBinMemWithBuffer :: FilePath -> IO (ReadBinHandle, ByteString)
+readBinMemWithBuffer path = do
+  bh@(ReadBinMem _ _ size bytes) <- readBinMem path
+  pure (bh, BS.fromForeignPtr bytes 0 size)
 
 readBinMemN :: Int -> FilePath -> IO (Maybe ReadBinHandle)
 readBinMemN size filename = do

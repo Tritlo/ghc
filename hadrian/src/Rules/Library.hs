@@ -20,7 +20,6 @@ import Target
 import Utilities
 import Data.Time.Clock
 import Rules.Generate (generatedDependencies)
-import Oracles.Flag
 import Way.Type (wayToUnits)
 
 
@@ -118,6 +117,11 @@ The format for a stamp file is defined in `pkgStampFile`. The stamp file is name
 By using stamp files you can easily say you want to build a library in a certain
 way by needing the stamp file for that context.
 
+Each stamp rule writes only the stamp for its own way. The package registration
+rule needs the stamps for all configured ways in parallel. If the vanilla rule
+also writes the dynamic stamp after the dynamic rule finishes, Shake detects
+the modified output on the next build and repeats package registration.
+
 Before these stamp files existed the way to declare that all objects in a certain way
 were build was by needing the .conf file for the package. Stamp files decouple this
 decision from creating the .conf file which does extra stuff such as linking, copying
@@ -128,7 +132,7 @@ files etc.
 
 buildPackage :: FilePath -> FilePath -> Action ()
 buildPackage root fp = do
-  l@(BuildPath _ stage _ (PkgStamp _ _ _ way)) <- parsePath (parseStampPath root) "<.stamp parser>" fp
+  l <- parsePath (parseStampPath root) "<.stamp parser>" fp
   let ctx = stampContext l
   srcs <- hsSources ctx
   gens <- interpretInContext ctx generatedDependencies
@@ -141,14 +145,6 @@ buildPackage root fp = do
   -- we restamp it because a dependency changes.
   time <- liftIO $ getCurrentTime
   writeFileAtomic fp (show time)
-  ways <- interpretInContext ctx getLibraryWays
-  let hasVanilla = elem vanilla ways
-      hasDynamic = elem dynamic ways
-  support <- targetSupportsSharedLibs stage
-  when ((hasVanilla && hasDynamic) &&
-        support && way == vanilla) $ do
-    stamp <- (pkgStampFile (ctx { way = dynamic }))
-    writeFileAtomic stamp (show time)
 
 
 

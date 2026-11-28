@@ -1,0 +1,2665 @@
+{
+  "ghc_revision": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+  "worker_revision": "c33551f1d3201580fe04bae0325987f932ae1723",
+  "stage0": {
+    "release": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T025749Z.HjEVcx",
+    "metadata": {
+      "compiler_sha256": "5611e965dc74a909eb5968b9f2be4d320904db6e0bd68e5e89ed5b01864ddd1b",
+      "compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+      "version": "10.1.20261115.1",
+      "libdir": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib/.",
+      "daemon_build_mode": "stage0-static",
+      "daemon_build_compiler": "/home/tritlo/.ghcup/ghc/9.14.1/bin/ghc-9.14.1",
+      "daemon_build_compiler_version": "9.14.1",
+      "daemon_ghc_package_db": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib/package.conf.d",
+      "daemon_ghc_archive": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib/x86_64-linux-ghc-9.14.1-c6c3/ghc-10.1-inplace/libHSghc-10.1-inplace.a",
+      "daemon_ghc_archive_sha256": "3b425a89a2060391cfe4c9f016e3efb8e27074d98d48ddb9e67769d917de0ec4",
+      "worker_revision": "c33551f1d3201580fe04bae0325987f932ae1723",
+      "worker_source_modified": "no"
+    },
+    "correctness": [
+      "haskell-open exact mem /tmp/gutf.j9tmpkha warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: partial 1/1') removed (0, False, 'ghc-worker-deps: partial 1/1')",
+      "haskell-open exact disk /tmp/gutf.3sqkpa40 warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/0') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1 cpp-cache 0/0') removed (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/0')",
+      "haskell-open exact no-cache-restart /tmp/gutf.2232cgn1 warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1') removed (0, False, 'ghc-worker-deps: full 1')",
+      "nested-hash exact mem /tmp/gutf.3xosbxbf warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: partial 1/1') removed (0, False, 'ghc-worker-deps: partial 1/1')",
+      "nested-hash exact disk /tmp/gutf.848gs8cp warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/0') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1 cpp-cache 0/0') removed (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/0')",
+      "nested-hash exact no-cache-restart /tmp/gutf.wfkzux2g warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1') removed (0, False, 'ghc-worker-deps: full 1')"
+    ],
+    "prior_stage0": [
+      "haskell-open prev mem /tmp/gutf.fe3pjuqv warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: hit 1')",
+      "haskell-open prev disk /tmp/gutf.j2lsohnq warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: full 1 cpp-cache 1/1')",
+      "haskell-open prev no-cache-restart /tmp/gutf.dz6cmxut warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1')",
+      "haskell-open new mem /tmp/gutf.mgdv34_n warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: partial 1/1')",
+      "haskell-open new disk /tmp/gutf.0hji65wa warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/0') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1 cpp-cache 0/0')",
+      "haskell-open new no-cache-restart /tmp/gutf.1_z08a_0 warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1')",
+      "nested-hash prev mem /tmp/gutf.6ggqfgw5 warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: hit 1')",
+      "nested-hash prev disk /tmp/gutf.54cuwhg5 warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: full 1 cpp-cache 1/1')",
+      "nested-hash prev no-cache-restart /tmp/gutf.shlesd6d warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1')",
+      "nested-hash new mem /tmp/gutf.vzhieiw6 warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: partial 1/1')",
+      "nested-hash new disk /tmp/gutf.otk8i6r3 warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/0') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1 cpp-cache 0/0')",
+      "nested-hash new no-cache-restart /tmp/gutf.68lrvr3o warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1')"
+    ],
+    "prior_stage1": [
+      "haskell-open stage1-prev mem /tmp/gutf.s2axurov warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: hit 1')",
+      "haskell-open stage1-prev disk /tmp/gutf.hjnrak9z warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: full 1 cpp-cache 1/1')",
+      "haskell-open stage1-prev no-cache-restart /tmp/gutf.y6ttz0dm warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1')",
+      "nested-hash stage1-prev mem /tmp/gutf.8hl42qif warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: hit 1')",
+      "nested-hash stage1-prev disk /tmp/gutf.ea2junpc warmup (0, False, 'ghc-worker-deps: full 1 cpp-cache 0/1') stock (0, True, '') worker (0, False, 'ghc-worker-deps: full 1 cpp-cache 1/1')",
+      "nested-hash stage1-prev no-cache-restart /tmp/gutf.ppot62x2 warmup (0, False, 'ghc-worker-deps: full 1') stock (0, True, '') worker (0, True, 'ghc-worker-deps: full 1')"
+    ],
+    "paired": {
+      "candidate_commit": "8308b2878817777fe1d28ad321106f9ba8f871e9",
+      "baseline_commit": "fa68e8955b8e7502e1a0c0d449dc367b21c26d2a",
+      "profile": "/tmp/worker-cold-profile.Dil3HUJf/profile/profile.json",
+      "provenance": {
+        "cpus": [
+          10,
+          12,
+          14,
+          16
+        ],
+        "workers": {
+          "current": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T023410Z.r12Xe7/ghc",
+          "candidate": "/tmp/worker-cold-profile.Dil3HUJf/bin-v2/ghc"
+        },
+        "stock": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+        "argv_sha256": "cfdc676fc48950f2e1e2a14032643e6156d9243f2d719a187a4146af2a9e3fec",
+        "tree": "/tmp/worker-final-stage1.5EwQyxht/tree"
+      },
+      "stock": {
+        "seconds": [
+          10.11151,
+          9.85774,
+          10.10746,
+          9.28865
+        ],
+        "median_seconds": 9.9826
+      },
+      "workers": {
+        "current": {
+          "cold_fill": {
+            "seconds": [
+              10.69275,
+              10.18458,
+              10.47176
+            ],
+            "median_seconds": 10.47176,
+            "median_sampled_rss_mib": 557.54,
+            "traces": [
+              [
+                "ghc-worker-deps: full 956 cpp-cache 0/828"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 0/828"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 0/828"
+              ]
+            ]
+          },
+          "prefilled": {
+            "seconds": [
+              7.27009,
+              7.46011,
+              7.41059
+            ],
+            "median_seconds": 7.41059,
+            "median_sampled_rss_mib": 548.74,
+            "traces": [
+              [
+                "ghc-worker-deps: full 956 cpp-cache 828/828"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 828/828"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 828/828"
+              ]
+            ]
+          },
+          "warm": {
+            "seconds": [
+              0.56344
+            ],
+            "median_seconds": 0.56344,
+            "median_sampled_rss_mib": 554.07,
+            "traces": [
+              [
+                "ghc-worker-deps: hit 956"
+              ]
+            ]
+          },
+          "disabled": {
+            "seconds": [
+              9.7387
+            ],
+            "median_seconds": 9.7387,
+            "median_sampled_rss_mib": 564.03,
+            "traces": [
+              [
+                "ghc-worker-deps: full 956"
+              ]
+            ]
+          }
+        },
+        "candidate": {
+          "cold_fill": {
+            "seconds": [
+              9.42691,
+              9.94503,
+              9.79848
+            ],
+            "median_seconds": 9.79848,
+            "median_sampled_rss_mib": 571.02,
+            "traces": [
+              [
+                "ghc-worker-deps: full 956 cpp-cache 0/848"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 0/848"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 0/848"
+              ]
+            ]
+          },
+          "prefilled": {
+            "seconds": [
+              6.14627,
+              6.28309,
+              5.98107
+            ],
+            "median_seconds": 6.14627,
+            "median_sampled_rss_mib": 571.04,
+            "traces": [
+              [
+                "ghc-worker-deps: full 956 cpp-cache 848/848"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 848/848"
+              ],
+              [
+                "ghc-worker-deps: full 956 cpp-cache 848/848"
+              ]
+            ]
+          },
+          "warm": {
+            "seconds": [
+              0.54399
+            ],
+            "median_seconds": 0.54399,
+            "median_sampled_rss_mib": 570.91,
+            "traces": [
+              [
+                "ghc-worker-deps: hit 956"
+              ]
+            ]
+          },
+          "disabled": {
+            "seconds": [
+              9.03905
+            ],
+            "median_seconds": 9.03905,
+            "median_sampled_rss_mib": 575.16,
+            "traces": [
+              [
+                "ghc-worker-deps: full 956"
+              ]
+            ]
+          }
+        }
+      },
+      "makefile_sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7"
+    },
+    "exact_corpus": [
+      {
+        "cpus": [
+          10,
+          12,
+          14,
+          16
+        ],
+        "worker": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T025749Z.HjEVcx/ghc",
+        "stock": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+        "argv_sha256": "cfdc676fc48950f2e1e2a14032643e6156d9243f2d719a187a4146af2a9e3fec",
+        "tree": "/tmp/worker-final-stage1.5EwQyxht/tree"
+      },
+      {
+        "label": "stock-start",
+        "mode": null,
+        "use_disk": false,
+        "warm": false,
+        "seconds": 9.70615,
+        "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+        "size": 5244968,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [],
+        "pid": null,
+        "rts": null,
+        "peak_rss_mib": 296.66,
+        "max_threads": 5
+      },
+      {
+        "label": "seed",
+        "mode": "default",
+        "use_disk": true,
+        "warm": false,
+        "seconds": 10.40519,
+        "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+        "size": 5244968,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: full 956 cpp-cache 0/848"
+        ],
+        "pid": 797139,
+        "rts": [
+          "+RTS",
+          "-O64M",
+          "-RTS"
+        ],
+        "peak_rss_mib": 569.96,
+        "max_threads": 16
+      },
+      {
+        "cache_bytes": 28041,
+        "cache_sha256": "3b5bc44266d7970ecd5181ab7f3aa8b1211dba5914464a1cdf1fc378e20e0449"
+      },
+      {
+        "label": "default-none",
+        "mode": "default",
+        "use_disk": false,
+        "warm": false,
+        "seconds": 10.30603,
+        "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+        "size": 5244968,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: full 956"
+        ],
+        "pid": 797577,
+        "rts": [
+          "+RTS",
+          "-O64M",
+          "-RTS"
+        ],
+        "peak_rss_mib": 575.22,
+        "max_threads": 16
+      },
+      {
+        "label": "default-disk",
+        "mode": "default",
+        "use_disk": true,
+        "warm": false,
+        "seconds": 6.37302,
+        "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+        "size": 5244968,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: full 956 cpp-cache 848/848"
+        ],
+        "pid": 798273,
+        "rts": [
+          "+RTS",
+          "-O64M",
+          "-RTS"
+        ],
+        "peak_rss_mib": 570.0,
+        "max_threads": 16
+      },
+      {
+        "label": "default-warm",
+        "mode": "default",
+        "use_disk": true,
+        "warm": true,
+        "seconds": 0.59433,
+        "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+        "size": 5244968,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: hit 956"
+        ],
+        "pid": 798273,
+        "rts": [
+          "+RTS",
+          "-O64M",
+          "-RTS"
+        ],
+        "peak_rss_mib": 570.32,
+        "max_threads": 16
+      },
+      {
+        "label": "stock-end",
+        "mode": null,
+        "use_disk": false,
+        "warm": false,
+        "seconds": 11.26171,
+        "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+        "size": 5244968,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [],
+        "pid": null,
+        "rts": null,
+        "peak_rss_mib": 301.7,
+        "max_threads": 5
+      }
+    ]
+  },
+  "stage1": {
+    "pairs": [
+      {
+        "stock": 26.843,
+        "restart": 11.9258,
+        "edit_stock": 25.2131,
+        "edit_worker": 0.6178,
+        "edit_repeat": 0.6526
+      },
+      {
+        "stock": 24.4503,
+        "restart": 11.4287,
+        "edit_stock": 24.2244,
+        "edit_worker": 0.7037,
+        "edit_repeat": 0.6985
+      }
+    ],
+    "medians": {
+      "stock": 25.64665,
+      "restart": 11.67725,
+      "edit_stock": 24.71875,
+      "edit_worker": 0.66075,
+      "edit_repeat": 0.67555
+    },
+    "provenance": {
+      "release": "/home/tritlo/Code/ghc-persistent-worker/_build/releases/ghc-10.1.20261115.1-20261127T025713Z.6LqWJn",
+      "metadata": "compiler_sha256=bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a\ncompiler=/home/tritlo/Code/ghc/_build/current/source/_build/stage1/bin/ghc\nversion=10.1.20261115.1\nlibdir=/home/tritlo/Code/ghc/_build/current/source/_build/stage1/lib/.\ndaemon_build_mode=dynamic\ndaemon_build_compiler=/home/tritlo/Code/ghc/_build/current/source/_build/stage1/bin/ghc\ndaemon_build_compiler_version=10.1.20261115.1\nworker_revision=c33551f1d3201580fe04bae0325987f932ae1723\nworker_source_modified=no\n",
+      "underlying": "/home/tritlo/Code/ghc/_build/current/source/_build/stage1/bin/ghc",
+      "version": "10.1.20261115.1",
+      "libdir": "/home/tritlo/Code/ghc/_build/current/source/_build/stage1/lib/.",
+      "cwd": "/tmp/hadrian-object-o2.Zv5jIN/source",
+      "source_path": "/tmp/hadrian-object-o2.Zv5jIN/source/compiler/GHC/Cmm/Pipeline.hs",
+      "baseline_source_sha256": "e28ae69ab5413e3ff4c6f4d0cd56d623413d9755f15ddab203ab2e42e0d70928",
+      "edited_source_sha256": "6044cf0dd2c366bac77579dd5e27a8f7299df9df9e21cceee2ac7e23cc21617a",
+      "source_revision": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+      "target_count": 887,
+      "cpu_ids": [
+        10,
+        12,
+        14,
+        16
+      ]
+    },
+    "runs": [
+      {
+        "label": "prefill",
+        "seconds": 24.2609,
+        "makefile_sha256": "71ea84d5af0e6333bce85e8081f33595d393ba2279dc135b881338b1a9f3a315",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: full 956 cpp-cache 0/848"
+        ],
+        "makefile_bytes": 5245033
+      },
+      {
+        "label": "round-1-stock",
+        "seconds": 26.843,
+        "makefile_sha256": "71ea84d5af0e6333bce85e8081f33595d393ba2279dc135b881338b1a9f3a315",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [],
+        "makefile_bytes": 5245033
+      },
+      {
+        "label": "round-1-restart",
+        "seconds": 11.9258,
+        "makefile_sha256": "71ea84d5af0e6333bce85e8081f33595d393ba2279dc135b881338b1a9f3a315",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: full 956 cpp-cache 848/848"
+        ],
+        "makefile_bytes": 5245033
+      },
+      {
+        "label": "round-1-edit-stock",
+        "seconds": 25.2131,
+        "makefile_sha256": "9cc67de9ab17178108d454c646e9a6fbae6a9236bcef24baa68b498f6f8d1787",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [],
+        "makefile_bytes": 5245233
+      },
+      {
+        "label": "round-1-edit-worker",
+        "seconds": 0.6178,
+        "makefile_sha256": "9cc67de9ab17178108d454c646e9a6fbae6a9236bcef24baa68b498f6f8d1787",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: partial 1/956 cpp-cache 0/1"
+        ],
+        "makefile_bytes": 5245233
+      },
+      {
+        "label": "round-1-edit-repeat",
+        "seconds": 0.6526,
+        "makefile_sha256": "9cc67de9ab17178108d454c646e9a6fbae6a9236bcef24baa68b498f6f8d1787",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: hit 956"
+        ],
+        "makefile_bytes": 5245233
+      },
+      {
+        "label": "round-2-restart",
+        "seconds": 11.4287,
+        "makefile_sha256": "71ea84d5af0e6333bce85e8081f33595d393ba2279dc135b881338b1a9f3a315",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: full 956 cpp-cache 848/848"
+        ],
+        "makefile_bytes": 5245033
+      },
+      {
+        "label": "round-2-stock",
+        "seconds": 24.4503,
+        "makefile_sha256": "71ea84d5af0e6333bce85e8081f33595d393ba2279dc135b881338b1a9f3a315",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [],
+        "makefile_bytes": 5245033
+      },
+      {
+        "label": "round-2-edit-stock",
+        "seconds": 24.2244,
+        "makefile_sha256": "9cc67de9ab17178108d454c646e9a6fbae6a9236bcef24baa68b498f6f8d1787",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [],
+        "makefile_bytes": 5245233
+      },
+      {
+        "label": "round-2-edit-worker",
+        "seconds": 0.7037,
+        "makefile_sha256": "9cc67de9ab17178108d454c646e9a6fbae6a9236bcef24baa68b498f6f8d1787",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: partial 1/956 cpp-cache 0/1"
+        ],
+        "makefile_bytes": 5245233
+      },
+      {
+        "label": "round-2-edit-repeat",
+        "seconds": 0.6985,
+        "makefile_sha256": "9cc67de9ab17178108d454c646e9a6fbae6a9236bcef24baa68b498f6f8d1787",
+        "backup_sha256": "3b3313721ce8502d8381f76b6c202656f543a7c53a680e97b839097879843b3c",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "diagnostics_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "trace": [
+          "ghc-worker-deps: hit 956"
+        ],
+        "makefile_bytes": 5245233
+      }
+    ],
+    "artifact_parity": [
+      "Makefile",
+      "pre-run backup",
+      "standard output",
+      "standard error with worker trace removed"
+    ],
+    "workload": "Captured Hadrian Stage1 compiler dependency argv, replayed with matched dynamic Stage1 GHC and paired worker. One import edit to GHC.Cmm.Pipeline. 887 roots and 956 modules. Timing excludes certificate prefill and includes daemon start for restart arms.",
+    "overlong_marker_oracle": [
+      "haskell-open mem missing /tmp/sgutf-nhgyl4vx ghc-worker-deps: full 1",
+      "haskell-open mem present /tmp/sgutf-nhgyl4vx ghc-worker-deps: partial 1/1",
+      "haskell-open mem deleted /tmp/sgutf-nhgyl4vx ghc-worker-deps: partial 1/1",
+      "haskell-open disk missing /tmp/sgutf-a4jfcfe0 ghc-worker-deps: full 1 cpp-cache 0/0",
+      "haskell-open disk present /tmp/sgutf-a4jfcfe0 ghc-worker-deps: full 1 cpp-cache 0/0",
+      "haskell-open disk deleted /tmp/sgutf-a4jfcfe0 ghc-worker-deps: full 1 cpp-cache 0/0",
+      "haskell-open no-cache-restart missing /tmp/sgutf-4tg9axjg ghc-worker-deps: full 1",
+      "haskell-open no-cache-restart present /tmp/sgutf-4tg9axjg ghc-worker-deps: full 1",
+      "haskell-open no-cache-restart deleted /tmp/sgutf-4tg9axjg ghc-worker-deps: full 1",
+      "nested-hash mem missing /tmp/sgutf-g937sy6l ghc-worker-deps: full 1",
+      "nested-hash mem present /tmp/sgutf-g937sy6l ghc-worker-deps: partial 1/1",
+      "nested-hash mem deleted /tmp/sgutf-g937sy6l ghc-worker-deps: partial 1/1",
+      "nested-hash disk missing /tmp/sgutf-2o68ubx9 ghc-worker-deps: full 1 cpp-cache 0/0",
+      "nested-hash disk present /tmp/sgutf-2o68ubx9 ghc-worker-deps: full 1 cpp-cache 0/0",
+      "nested-hash disk deleted /tmp/sgutf-2o68ubx9 ghc-worker-deps: full 1 cpp-cache 0/0",
+      "nested-hash no-cache-restart missing /tmp/sgutf-ls90jo_k ghc-worker-deps: full 1",
+      "nested-hash no-cache-restart present /tmp/sgutf-ls90jo_k ghc-worker-deps: full 1",
+      "nested-hash no-cache-restart deleted /tmp/sgutf-ls90jo_k ghc-worker-deps: full 1"
+    ]
+  },
+  "uncertified_modules": {
+    "corpus": {
+      "argv_sha256": "cfdc676fc48950f2e1e2a14032643e6156d9243f2d719a187a4146af2a9e3fec",
+      "compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+      "libdir": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib",
+      "modules": 108,
+      "cpp_count": 104,
+      "raw_matches": [
+        "compiler/GHC/Iface/Ext/Utils.hs",
+        "compiler/GHC/SysTools.hs",
+        "compiler/GHC/Types/SrcLoc.hs",
+        "compiler/GHC/Unit/Module/WholeCoreBindings.hs"
+      ],
+      "equal_ordered_prerequisite_lists": 108,
+      "temporary_marker_only_matches": 104,
+      "parse_seconds": [
+        1.292949828,
+        1.332809839
+      ],
+      "residual": [],
+      "residual_raw_match_details": {
+        "compiler/GHC/Iface/Ext/Utils.hs": {
+          "hash": "b5cc865e32d8c98d7691aae88f4ea5b2",
+          "files": [],
+          "index": "38",
+          "cpp": false,
+          "time_ns": 6428224,
+          "path": "compiler/GHC/Iface/Ext/Utils.hs"
+        },
+        "compiler/GHC/SysTools.hs": {
+          "hash": "3186ab57e6bb821212ffd7eb5db902fd",
+          "files": [],
+          "index": "80",
+          "cpp": false,
+          "time_ns": 352091,
+          "path": "compiler/GHC/SysTools.hs"
+        },
+        "compiler/GHC/Types/SrcLoc.hs": {
+          "hash": "e0e55e8d4208ab7d7222d3185d203a30",
+          "files": [],
+          "index": "94",
+          "cpp": false,
+          "time_ns": 4669543,
+          "path": "compiler/GHC/Types/SrcLoc.hs"
+        },
+        "compiler/GHC/Unit/Module/WholeCoreBindings.hs": {
+          "hash": "d9c688c13bf25ea38add8f766c215fe0",
+          "files": [],
+          "index": "97",
+          "cpp": false,
+          "time_ns": 1514112,
+          "path": "compiler/GHC/Unit/Module/WholeCoreBindings.hs"
+        }
+      },
+      "whole_capture_process_wall_seconds": [
+        3.278373148001265,
+        3.4471574259805493
+      ],
+      "depanal_seconds": [
+        1.760045721,
+        1.902755882
+      ],
+      "diagnostic_bytes": [
+        0,
+        0
+      ],
+      "exact_raw_repeated_parse_upper_bound_seconds": 0.01296397
+    },
+    "fixtures": {
+      "marker_missing": {
+        "hash": "d010e62be4a77416018d577fda00225b",
+        "headers": [],
+        "diagnostics": "",
+        "stock_diagnostics": ""
+      },
+      "marker_present": {
+        "hash": "d010e62be4a77416018d577fda00225b",
+        "headers": [
+          "ghost"
+        ],
+        "diagnostics": "",
+        "stock_diagnostics": ""
+      },
+      "marker_other_cwd": {
+        "hash": "d010e62be4a77416018d577fda00225b",
+        "headers": [],
+        "diagnostics": "",
+        "stock_diagnostics": ""
+      },
+      "marker_removed": {
+        "hash": "d010e62be4a77416018d577fda00225b",
+        "headers": [],
+        "diagnostics": "",
+        "stock_diagnostics": ""
+      },
+      "header_before": {
+        "hash": "59d9aa61932d34294e9036fc2440e787",
+        "headers": [
+          "payload.h",
+          "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib/../../stage1/lib/../lib/x86_64-linux-ghc-10.1.20261115.1-inplace/rts-1.0.3/include/ghcversion.h",
+          "/usr/include/stdc-predef.h"
+        ],
+        "diagnostics": "",
+        "stock_diagnostics": "",
+        "expanded_assignment": "x = \"before\""
+      },
+      "header_after": {
+        "hash": "8bf3887f503ae1a21296fddbe633318d",
+        "headers": [
+          "payload.h",
+          "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib/../../stage1/lib/../lib/x86_64-linux-ghc-10.1.20261115.1-inplace/rts-1.0.3/include/ghcversion.h",
+          "/usr/include/stdc-predef.h"
+        ],
+        "diagnostics": "",
+        "stock_diagnostics": "",
+        "expanded_assignment": "x = \"after\""
+      },
+      "header_deleted": {
+        "status": 1,
+        "diagnostics": "A.hs:4:2: error:  fatal error: payload.h: No such file or directory\n\ncompilation terminated.\nwitness: Uncaught exception ghc-10.1-inplace:GHC.Types.SourceError.SourceError:\n\nA.hs:1:1: error:\n    `gcc' failed in phase `Haskell C pre-processor'. (Exit code: 1)\n\nHasCallStack backtrace:\n  throwIO, called at compiler/GHC/Types/SourceError.hs:36:28 in ghc-10.1-inplace:GHC.Types.SourceError\n\n",
+        "stock_diagnostics": "A.hs:4:2: error:  fatal error: payload.h: No such file or directory\n\ncompilation terminated.\nA.hs:1:1: error:\n    `gcc' failed in phase `Haskell C pre-processor'. (Exit code: 1)\n  |\n1 | {-# LANGUAGE CPP #-}\n  | ^\n\n"
+      },
+      "tab_quiet": {
+        "hash": "b342d42187fa28651ceaa5d548bb039a",
+        "headers": [],
+        "diagnostics": "",
+        "stock_diagnostics": ""
+      },
+      "tab_warn": {
+        "hash": "b342d42187fa28651ceaa5d548bb039a",
+        "headers": [],
+        "diagnostics": "A.hs:3:1: warning: [GHC-94817] [-Wtabs]\n    Tab character found here.\n    Suggested fix: Please use spaces instead.\n  |\n3 |         1\n  | ^^^^^^^^\n\n",
+        "stock_diagnostics": "A.hs:3:1: warning: [GHC-94817] [-Wtabs]\n    Tab character found here.\n    Suggested fix: Please use spaces instead.\n  |\n3 |         1\n  | ^^^^^^^^\n\n"
+      },
+      "tab_error": {
+        "status": 1,
+        "diagnostics": "witness: Uncaught exception ghc-10.1-inplace:GHC.Types.SourceError.SourceError:\n\nA.hs:3:1: error: [GHC-94817] [-Wtabs (in -Wdefault), Werror=tabs]\n    Tab character found here.\n\nHasCallStack backtrace:\n  throwIO, called at compiler/GHC/Types/SourceError.hs:36:28 in ghc-10.1-inplace:GHC.Types.SourceError\n\n",
+        "stock_diagnostics": "A.hs:3:1: error: [GHC-94817] [-Wtabs, Werror=tabs]\n    Tab character found here.\n    Suggested fix: Please use spaces instead.\n  |\n3 |         1\n  | ^^^^^^^^\n\n"
+      }
+    }
+  },
+  "hadrian_linker": {
+    "rounds": [
+      {
+        "round": 1,
+        "order": [
+          "stock",
+          "candidate"
+        ],
+        "modes": {
+          "stock": {
+            "prime": {
+              "seconds": 20.15,
+              "actions": 8
+            },
+            "edit": {
+              "seconds": 11.12,
+              "actions": 8
+            },
+            "noop": {
+              "seconds": 4.62,
+              "actions": 0
+            }
+          },
+          "candidate": {
+            "prime": {
+              "seconds": 9.96,
+              "actions": 8
+            },
+            "edit": {
+              "seconds": 10.21,
+              "actions": 8
+            },
+            "settled": {
+              "seconds": 5.39,
+              "actions": 0
+            },
+            "noop": {
+              "seconds": 7.5,
+              "actions": 1
+            }
+          }
+        },
+        "stock_seconds_saved": {
+          "edit": 0.91,
+          "noop": -2.88,
+          "edit_plus_first_noop": -1.97
+        },
+        "artifact_hashes": {
+          "stock": {
+            "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+            "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+            "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343"
+          },
+          "candidate": {
+            "_build/stage1/bin/ghc": "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf",
+            "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+            "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+          }
+        },
+        "api_consumer_hashes": {
+          "stock": {
+            "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+            "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+          },
+          "candidate": {
+            "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+            "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+          }
+        },
+        "linked_outputs": {
+          "ghc": {
+            "export_counts": [
+              0,
+              0
+            ],
+            "exports_missing": [],
+            "exports_added": [],
+            "layout_hashes": [
+              "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+              "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf"
+            ]
+          },
+          "libHSghc-10.1-inplace-ghc10.1.20261115.1.so": {
+            "export_counts": [
+              87699,
+              87699
+            ],
+            "exports_missing": [],
+            "exports_added": [],
+            "layout_hashes": [
+              "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+              "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+            ]
+          }
+        },
+        "dynamic_metadata_matches": true,
+        "api_loader": {
+          "stock": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so => /tmp/hadrian-worker.PilPLQ/source/_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so (0x0000720b13200000)",
+          "candidate": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so => /tmp/hadrian-worker.PilPLQ/source/_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so (0x000071ec6d400000)"
+        }
+      },
+      {
+        "round": 2,
+        "order": [
+          "candidate",
+          "stock"
+        ],
+        "modes": {
+          "stock": {
+            "prime": {
+              "seconds": 11.33,
+              "actions": 8
+            },
+            "edit": {
+              "seconds": 10.91,
+              "actions": 8
+            },
+            "noop": {
+              "seconds": 4.89,
+              "actions": 0
+            }
+          },
+          "candidate": {
+            "prime": {
+              "seconds": 18.22,
+              "actions": 8
+            },
+            "edit": {
+              "seconds": 9.79,
+              "actions": 8
+            },
+            "settled": {
+              "seconds": 4.67,
+              "actions": 0
+            },
+            "noop": {
+              "seconds": 7.97,
+              "actions": 1
+            }
+          }
+        },
+        "stock_seconds_saved": {
+          "edit": 1.12,
+          "noop": -3.08,
+          "edit_plus_first_noop": -1.96
+        },
+        "artifact_hashes": {
+          "stock": {
+            "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+            "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+            "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343"
+          },
+          "candidate": {
+            "_build/stage1/bin/ghc": "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf",
+            "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+            "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+            "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+            "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+            "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+          }
+        },
+        "api_consumer_hashes": {
+          "stock": {
+            "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+            "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+          },
+          "candidate": {
+            "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+            "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+          }
+        },
+        "linked_outputs": {
+          "ghc": {
+            "export_counts": [
+              0,
+              0
+            ],
+            "exports_missing": [],
+            "exports_added": [],
+            "layout_hashes": [
+              "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+              "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf"
+            ]
+          },
+          "libHSghc-10.1-inplace-ghc10.1.20261115.1.so": {
+            "export_counts": [
+              87699,
+              87699
+            ],
+            "exports_missing": [],
+            "exports_added": [],
+            "layout_hashes": [
+              "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+              "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+            ]
+          }
+        },
+        "dynamic_metadata_matches": true,
+        "api_loader": {
+          "stock": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so => /tmp/hadrian-worker.PilPLQ/source/_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so (0x00007f9aa8600000)",
+          "candidate": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so => /tmp/hadrian-worker.PilPLQ/source/_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so (0x000073938c000000)"
+        }
+      }
+    ],
+    "median_wall_seconds": {
+      "stock": {
+        "prime": 15.739999999999998,
+        "edit": 11.015,
+        "noop": 4.755
+      },
+      "candidate": {
+        "prime": 14.09,
+        "edit": 10.0,
+        "settled": 5.029999999999999,
+        "noop": 7.734999999999999
+      }
+    },
+    "worker": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T025749Z.HjEVcx",
+    "flags": [
+      "-optl-B/tmp/fast-worker.Y5C1KH/linker/packages/mold/usr/bin/",
+      "-optl-fuse-ld=mold"
+    ]
+  },
+  "linker_replay": {
+    "order_and_seconds": [
+      {
+        "round": 0,
+        "mode": "bfd",
+        "shared_library": 2.2059153939480893,
+        "linked_executable": 0.9329177499748766
+      },
+      {
+        "round": 0,
+        "mode": "gold",
+        "shared_library": 1.1863747430033982,
+        "linked_executable": 0.4146577839856036
+      },
+      {
+        "round": 0,
+        "mode": "lld",
+        "shared_library": 0.739660224004183,
+        "linked_executable": 0.248818592983298
+      },
+      {
+        "round": 0,
+        "mode": "mold",
+        "shared_library": 0.5587120830314234,
+        "linked_executable": 0.29655840201303363
+      },
+      {
+        "round": 1,
+        "mode": "mold",
+        "shared_library": 0.5105868150130846,
+        "linked_executable": 0.21047964395256713
+      },
+      {
+        "round": 1,
+        "mode": "lld",
+        "shared_library": 0.7165308099938557,
+        "linked_executable": 0.2330166639876552
+      },
+      {
+        "round": 1,
+        "mode": "gold",
+        "shared_library": 1.3601784489583224,
+        "linked_executable": 0.4390177000313997
+      },
+      {
+        "round": 1,
+        "mode": "bfd",
+        "shared_library": 2.142636477947235,
+        "linked_executable": 1.074137174000498
+      },
+      {
+        "round": 2,
+        "mode": "lld",
+        "shared_library": 0.7528935779700987,
+        "linked_executable": 0.22227646800456569
+      },
+      {
+        "round": 2,
+        "mode": "mold",
+        "shared_library": 0.4975059049902484,
+        "linked_executable": 0.21353462804108858
+      },
+      {
+        "round": 2,
+        "mode": "bfd",
+        "shared_library": 2.2080664859968238,
+        "linked_executable": 0.9004379279795103
+      },
+      {
+        "round": 2,
+        "mode": "gold",
+        "shared_library": 1.3705595540232025,
+        "linked_executable": 0.3808498870348558
+      }
+    ],
+    "linker_process_samples": [
+      {
+        "label": "bfd",
+        "round": 0,
+        "elapsed": 2.272852393973153,
+        "max_threads": 1,
+        "max_rss_kib": 457736,
+        "samples": 251,
+        "sha256": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343"
+      },
+      {
+        "label": "auto",
+        "round": 0,
+        "elapsed": 0.5535426820279099,
+        "max_threads": 4,
+        "max_rss_kib": 443436,
+        "samples": 80,
+        "sha256": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+      },
+      {
+        "label": "four",
+        "round": 0,
+        "elapsed": 0.4892427650047466,
+        "max_threads": 4,
+        "max_rss_kib": 443348,
+        "samples": 73,
+        "sha256": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+      },
+      {
+        "label": "two",
+        "round": 0,
+        "elapsed": 0.5729620229685679,
+        "max_threads": 2,
+        "max_rss_kib": 442424,
+        "samples": 94,
+        "sha256": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+      },
+      {
+        "label": "one",
+        "round": 0,
+        "elapsed": 0.9205492329783738,
+        "max_threads": 1,
+        "max_rss_kib": 438380,
+        "samples": 178,
+        "sha256": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+      },
+      {
+        "label": "one",
+        "round": 1,
+        "elapsed": 0.8514633359736763,
+        "max_threads": 1,
+        "max_rss_kib": 437844,
+        "samples": 163,
+        "sha256": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+      },
+      {
+        "label": "two",
+        "round": 1,
+        "elapsed": 0.5466592099983245,
+        "max_threads": 2,
+        "max_rss_kib": 442172,
+        "samples": 92,
+        "sha256": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+      },
+      {
+        "label": "four",
+        "round": 1,
+        "elapsed": 0.4548558850074187,
+        "max_threads": 4,
+        "max_rss_kib": 443264,
+        "samples": 64,
+        "sha256": "38174368d773fbdef51eec4ca2f228c5895768efb3b5cf16934fc3a483067385"
+      },
+      {
+        "label": "auto",
+        "round": 1,
+        "elapsed": 0.4774135360494256,
+        "max_threads": 4,
+        "max_rss_kib": 443324,
+        "samples": 67,
+        "sha256": "38174368d773fbdef51eec4ca2f228c5895768efb3b5cf16934fc3a483067385"
+      },
+      {
+        "label": "bfd",
+        "round": 1,
+        "elapsed": 2.1029720309888944,
+        "max_threads": 1,
+        "max_rss_kib": 457720,
+        "samples": 233,
+        "sha256": "60979619ad16fdb6d17763673922ee9070b6fe8f84f65cab76a195215ba4efa8"
+      }
+    ],
+    "outputs": {
+      "bfd": {
+        "symbol_count": 90845,
+        "missing": [],
+        "added": [],
+        "different": [],
+        "loaded": "/tmp/fast-worker.Y5C1KH/linker/links/bfd/lib/x86_64-linux-ghc-10.1.20261115.1-inplace/libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "compiler_bytes": 1987128,
+        "library_bytes": 138932320,
+        "consumer": {
+          "Main.o": "69fca69861abfa1f76cc5bf2d541caf6e2cfce2adffc3256aeff9cef00b96b3f",
+          "Main.hi": "aa12c325cbeda0c1909f13b19b26d588b9200cabaff37b4333c1c1131b49d7ca",
+          "observe": "d39a8ef123641bbd8174ff19fd9cbe43a5db81a189d06e257c6e874d51e70e66"
+        },
+        "stdout": "156",
+        "grouped_dynamic_tags_match_bfd": true
+      },
+      "gold": {
+        "symbol_count": 90848,
+        "missing": [],
+        "added": [
+          "__bss_start",
+          "_edata",
+          "_end"
+        ],
+        "different": [],
+        "loaded": "/tmp/fast-worker.Y5C1KH/linker/links/gold/lib/x86_64-linux-ghc-10.1.20261115.1-inplace/libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "compiler_bytes": 1987072,
+        "library_bytes": 139141800,
+        "consumer": {
+          "Main.o": "69fca69861abfa1f76cc5bf2d541caf6e2cfce2adffc3256aeff9cef00b96b3f",
+          "Main.hi": "aa12c325cbeda0c1909f13b19b26d588b9200cabaff37b4333c1c1131b49d7ca",
+          "observe": "d39a8ef123641bbd8174ff19fd9cbe43a5db81a189d06e257c6e874d51e70e66"
+        },
+        "stdout": "156",
+        "grouped_dynamic_tags_match_bfd": true
+      },
+      "lld": {
+        "symbol_count": 90845,
+        "missing": [],
+        "added": [],
+        "different": [],
+        "loaded": "/tmp/fast-worker.Y5C1KH/linker/links/lld/lib/x86_64-linux-ghc-10.1.20261115.1-inplace/libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "compiler_bytes": 1986568,
+        "library_bytes": 139253664,
+        "consumer": {
+          "Main.o": "69fca69861abfa1f76cc5bf2d541caf6e2cfce2adffc3256aeff9cef00b96b3f",
+          "Main.hi": "aa12c325cbeda0c1909f13b19b26d588b9200cabaff37b4333c1c1131b49d7ca",
+          "observe": "d39a8ef123641bbd8174ff19fd9cbe43a5db81a189d06e257c6e874d51e70e66"
+        },
+        "stdout": "156",
+        "grouped_dynamic_tags_match_bfd": true
+      },
+      "mold": {
+        "symbol_count": 90845,
+        "missing": [],
+        "added": [],
+        "different": [],
+        "loaded": "/tmp/fast-worker.Y5C1KH/linker/links/mold/lib/x86_64-linux-ghc-10.1.20261115.1-inplace/libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "compiler_bytes": 2122576,
+        "library_bytes": 142627336,
+        "consumer": {
+          "Main.o": "69fca69861abfa1f76cc5bf2d541caf6e2cfce2adffc3256aeff9cef00b96b3f",
+          "Main.hi": "aa12c325cbeda0c1909f13b19b26d588b9200cabaff37b4333c1c1131b49d7ca",
+          "observe": "d39a8ef123641bbd8174ff19fd9cbe43a5db81a189d06e257c6e874d51e70e66"
+        },
+        "stdout": "156",
+        "grouped_dynamic_tags_match_bfd": true
+      }
+    },
+    "archive": {
+      "rows": [
+        {
+          "mode": "regular",
+          "seconds": 0.6470613720011897,
+          "bytes": 215915674,
+          "sha256": "2c2798de5c0523ea8b230398c6f05b7148fc9cc743ab20fa03aa866d8b579937"
+        },
+        {
+          "mode": "thin",
+          "seconds": 0.36642584198853,
+          "bytes": 6352466,
+          "sha256": "9d0d28b901c10d872b0a697fe903c4bfb12c62e72dc1838cc0899e0387c58acb"
+        },
+        {
+          "mode": "thin",
+          "seconds": 0.31922048196429387,
+          "bytes": 6352466,
+          "sha256": "9d0d28b901c10d872b0a697fe903c4bfb12c62e72dc1838cc0899e0387c58acb"
+        },
+        {
+          "mode": "regular",
+          "seconds": 0.6368916820501909,
+          "bytes": 215915674,
+          "sha256": "2c2798de5c0523ea8b230398c6f05b7148fc9cc743ab20fa03aa866d8b579937"
+        },
+        {
+          "mode": "regular",
+          "seconds": 0.5253516949596815,
+          "bytes": 215915674,
+          "sha256": "2c2798de5c0523ea8b230398c6f05b7148fc9cc743ab20fa03aa866d8b579937"
+        },
+        {
+          "mode": "thin",
+          "seconds": 0.3060330979642458,
+          "bytes": 6352466,
+          "sha256": "9d0d28b901c10d872b0a697fe903c4bfb12c62e72dc1838cc0899e0387c58acb"
+        },
+        {
+          "mode": "thin",
+          "seconds": 0.34442081302404404,
+          "bytes": 6352466,
+          "sha256": "9d0d28b901c10d872b0a697fe903c4bfb12c62e72dc1838cc0899e0387c58acb"
+        },
+        {
+          "mode": "regular",
+          "seconds": 0.5775143309729174,
+          "bytes": 215915674,
+          "sha256": "2c2798de5c0523ea8b230398c6f05b7148fc9cc743ab20fa03aa866d8b579937"
+        }
+      ],
+      "members": 890,
+      "whole_archive_relocatable_sha256": "13eff83333edccd00c98ce9a9b307d2a43e0da3ac2cc188035c689a54b78e892",
+      "regular_input_sha256": "2c2798de5c0523ea8b230398c6f05b7148fc9cc743ab20fa03aa866d8b579937"
+    }
+  },
+  "compile_routing": {
+    "timer": {
+      "stock": "wall=11.73 user=7.49 sys=4.57 rss=595280 exit=0",
+      "combined": "wall=12.71 user=7.98 sys=5.35 rss=615396 exit=0"
+    },
+    "object_differences": {
+      "hadrian/o": {
+        "objects_exact": false,
+        "different_sections": [
+          ".strtab"
+        ],
+        "local_names_changed": 19,
+        "local_names_examples": [
+          [
+            "c7ka_str",
+            "ccQx_str",
+            "0x0"
+          ],
+          [
+            "c7kb_str",
+            "ccQy_str",
+            "0x1d"
+          ],
+          [
+            "c7kc_str",
+            "ccQz_str",
+            "0x2e"
+          ],
+          [
+            "c7kd_str",
+            "ccQA_str",
+            "0x3f"
+          ]
+        ],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "hadrian/dyn_o": {
+        "objects_exact": false,
+        "different_sections": [
+          ".strtab"
+        ],
+        "local_names_changed": 19,
+        "local_names_examples": [
+          [
+            "c7R4_str",
+            "cdnr_str",
+            "0x0"
+          ],
+          [
+            "c7R5_str",
+            "cdns_str",
+            "0x1d"
+          ],
+          [
+            "c7R6_str",
+            "cdnt_str",
+            "0x2e"
+          ],
+          [
+            "c7R7_str",
+            "cdnu_str",
+            "0x3f"
+          ]
+        ],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      }
+    },
+    "minimal_fixture": "module Probe where\n\nprobe :: Bool -> String\nprobe False = \"reference\"\nprobe True = \"edited-A\"\n",
+    "minimal_objects": {
+      "default/cold/o": {
+        "objects_exact": true,
+        "different_sections": [],
+        "local_names_changed": 0,
+        "local_names_examples": [],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "default/warm/o": {
+        "objects_exact": false,
+        "different_sections": [
+          ".strtab"
+        ],
+        "local_names_changed": 2,
+        "local_names_examples": [
+          [
+            "cxE_str",
+            "cAe_str",
+            "0x0"
+          ],
+          [
+            "cxF_str",
+            "cAf_str",
+            "0xa"
+          ]
+        ],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "default/cold/dyn_o": {
+        "objects_exact": true,
+        "different_sections": [],
+        "local_names_changed": 0,
+        "local_names_examples": [],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "default/warm/dyn_o": {
+        "objects_exact": false,
+        "different_sections": [
+          ".strtab"
+        ],
+        "local_names_changed": 2,
+        "local_names_examples": [
+          [
+            "cy8_str",
+            "cAI_str",
+            "0x0"
+          ],
+          [
+            "cy9_str",
+            "cAJ_str",
+            "0xa"
+          ]
+        ],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "deterministic/cold/o": {
+        "objects_exact": true,
+        "different_sections": [],
+        "local_names_changed": 0,
+        "local_names_examples": [],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "deterministic/warm/o": {
+        "objects_exact": true,
+        "different_sections": [],
+        "local_names_changed": 0,
+        "local_names_examples": [],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "deterministic/cold/dyn_o": {
+        "objects_exact": true,
+        "different_sections": [],
+        "local_names_changed": 0,
+        "local_names_examples": [],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      },
+      "deterministic/warm/dyn_o": {
+        "objects_exact": true,
+        "different_sections": [],
+        "local_names_changed": 0,
+        "local_names_examples": [],
+        "symbol_tables_equal_ignoring_local_names": true,
+        "normalized_relocations_equal": true,
+        "changed_relocation_sections": []
+      }
+    }
+  },
+  "core_rule_fixtures": [
+    {
+      "kind": "attached",
+      "case": "initial-none",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 6,
+      "warm": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      },
+      "fresh": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      }
+    },
+    {
+      "kind": "attached",
+      "case": "add-active",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 46,
+      "warm": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "84a40e8720894c4edc49323bad01b047227956f3afe64a6df5b2094b1a064051"
+      },
+      "fresh": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "84a40e8720894c4edc49323bad01b047227956f3afe64a6df5b2094b1a064051"
+      }
+    },
+    {
+      "kind": "attached",
+      "case": "revise-rhs",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 56,
+      "warm": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "a3da906de69bdaceb861264c7395dd3a19e73839762853920ad86275de59acd4"
+      },
+      "fresh": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "a3da906de69bdaceb861264c7395dd3a19e73839762853920ad86275de59acd4"
+      }
+    },
+    {
+      "kind": "attached",
+      "case": "revise-phase",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 56,
+      "warm": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "b327fb345cfe4d9626d0d26e7a5b474793ff6631fde92cbb105cb7963ce1cd35"
+      },
+      "fresh": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "b327fb345cfe4d9626d0d26e7a5b474793ff6631fde92cbb105cb7963ce1cd35"
+      }
+    },
+    {
+      "kind": "attached",
+      "case": "disable",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 6,
+      "warm": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "835cce78db2d7d1ca7b366b7ad727a6b33e4058842b4b9204928386004017492"
+      },
+      "fresh": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "835cce78db2d7d1ca7b366b7ad727a6b33e4058842b4b9204928386004017492"
+      }
+    },
+    {
+      "kind": "attached",
+      "case": "remove",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 6,
+      "warm": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      },
+      "fresh": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      }
+    },
+    {
+      "kind": "attached",
+      "case": "restore",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 46,
+      "warm": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "84a40e8720894c4edc49323bad01b047227956f3afe64a6df5b2094b1a064051"
+      },
+      "fresh": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Lib)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "84a40e8720894c4edc49323bad01b047227956f3afe64a6df5b2094b1a064051"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "initial-none",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 6,
+      "warm": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      },
+      "fresh": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "add-active",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 46,
+      "warm": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "7c3f9ccb21efd2ea71bc0946682ab9850ba7e6189f8ec13ba5e16918d606cb21"
+      },
+      "fresh": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "7c3f9ccb21efd2ea71bc0946682ab9850ba7e6189f8ec13ba5e16918d606cb21"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "revise-rhs",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 56,
+      "warm": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "661577212d0f691e3b5ffbeda787e9cb0adbb21a2707a6142eb53b69cca2ab4b"
+      },
+      "fresh": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "661577212d0f691e3b5ffbeda787e9cb0adbb21a2707a6142eb53b69cca2ab4b"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "revise-phase",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 56,
+      "warm": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "8db1b8071a05542b3f26e3013836837415f0cb087c2af954c4648f01f896596a"
+      },
+      "fresh": {
+        "result": 56,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce",
+        "client_hi": "8db1b8071a05542b3f26e3013836837415f0cb087c2af954c4648f01f896596a"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "disable",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 6,
+      "warm": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "65d1e56596cc5a4d3d388c7a002976555b051c7390773e620f2a50b656581273"
+      },
+      "fresh": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "65d1e56596cc5a4d3d388c7a002976555b051c7390773e620f2a50b656581273"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "remove",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 6,
+      "warm": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      },
+      "fresh": {
+        "result": 6,
+        "use_compiled": true,
+        "rule_fires": [],
+        "client_o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28",
+        "client_hi": "410b842d2c762c0d4803b7765094f5d1ed94f500f6e85f5c0c54a7b7a8f583bc"
+      }
+    },
+    {
+      "kind": "orphan",
+      "case": "restore",
+      "source_sha256": "4245c129cb09272cc46ec26f942ac41e2e40947f41c17aec1b82fb5367b7808a",
+      "expected": 46,
+      "warm": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "7c3f9ccb21efd2ea71bc0946682ab9850ba7e6189f8ec13ba5e16918d606cb21"
+      },
+      "fresh": {
+        "result": 46,
+        "use_compiled": true,
+        "rule_fires": [
+          "Rule fired: experiment/target (Rules)"
+        ],
+        "client_o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d",
+        "client_hi": "7c3f9ccb21efd2ea71bc0946682ab9850ba7e6189f8ec13ba5e16918d606cb21"
+      }
+    }
+  ],
+  "core_direct": {
+    "records": {
+      "synthetic": [
+        {
+          "label": "stock-none",
+          "result": 6,
+          "artifacts": {
+            ".hi": "44ca192d2e41c5ab78b2a0218fd97efb6c1b5f7cd4df0a017077b95064e31f5c",
+            ".o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+          },
+          "binding": "ruleClient",
+          "verdict": "record",
+          "direct_heads": 4,
+          "certificate_bytes": 325,
+          "prepass_ns": 470254,
+          "prepass_alloc": 579288,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|280785b40846294e067076fba35a4c0e",
+            "Q|template|$main$Lib$target|3968525dc6c042650525039f4b19b5c2"
+          ]
+        },
+        {
+          "label": "unrelated-orphan-head",
+          "result": 6,
+          "artifacts": {
+            ".hi": "25f5bf9aa49d66383ebcbde52b11730be3307bc39ef80abe458ca39d3dc80a61",
+            ".o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+          },
+          "binding": "ruleClient",
+          "verdict": "eligible-slice",
+          "direct_heads": 4,
+          "certificate_bytes": 325,
+          "prepass_ns": 338989,
+          "prepass_alloc": 595120,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|0ffa068763a24fcac84f0b17b2c2ed88",
+            "Q|template|$main$Lib$target|00c1cb4130c43807038d589af6029d13"
+          ]
+        },
+        {
+          "label": "orphan-add",
+          "result": 46,
+          "artifacts": {
+            ".hi": "bfd648729244a0c11d6f200a1e7b56ab8c02986273cd918e46b4dfd5f5eb64f3",
+            ".o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d"
+          },
+          "binding": "ruleClient",
+          "verdict": "discard",
+          "direct_heads": 4,
+          "certificate_bytes": 386,
+          "prepass_ns": 487296,
+          "prepass_alloc": 749608,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|0ffa068763a24fcac84f0b17b2c2ed88"
+          ]
+        },
+        {
+          "label": "orphan-repeat",
+          "result": 46,
+          "artifacts": {
+            ".hi": "bfd648729244a0c11d6f200a1e7b56ab8c02986273cd918e46b4dfd5f5eb64f3",
+            ".o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d"
+          },
+          "binding": "ruleClient",
+          "verdict": "eligible-slice",
+          "direct_heads": 4,
+          "certificate_bytes": 386,
+          "prepass_ns": 467211,
+          "prepass_alloc": 753928,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|0ffa068763a24fcac84f0b17b2c2ed88"
+          ]
+        },
+        {
+          "label": "orphan-rhs",
+          "result": 56,
+          "artifacts": {
+            ".hi": "d9aed83f1e060bdad1b40a6d0c859545e7392a296b8c2b88253d8b9318d5bf8c",
+            ".o": "c2970097a4c4f0b5c2fa2312ed0274b3c85f4803b564cc5372f48edb7b1a10ce"
+          },
+          "binding": "ruleClient",
+          "verdict": "discard",
+          "direct_heads": 4,
+          "certificate_bytes": 386,
+          "prepass_ns": 456920,
+          "prepass_alloc": 752048,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|0ffa068763a24fcac84f0b17b2c2ed88"
+          ]
+        },
+        {
+          "label": "orphan-phase",
+          "result": 46,
+          "artifacts": {
+            ".hi": "8426cd805874800a6de9df243c668e92f75b53ac236073654967b38bd1e9fa96",
+            ".o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d"
+          },
+          "binding": "ruleClient",
+          "verdict": "discard",
+          "direct_heads": 4,
+          "certificate_bytes": 386,
+          "prepass_ns": 402777,
+          "prepass_alloc": 751184,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|0ffa068763a24fcac84f0b17b2c2ed88"
+          ]
+        },
+        {
+          "label": "orphan-remove",
+          "result": 6,
+          "artifacts": {
+            ".hi": "44ca192d2e41c5ab78b2a0218fd97efb6c1b5f7cd4df0a017077b95064e31f5c",
+            ".o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+          },
+          "binding": "ruleClient",
+          "verdict": "discard",
+          "direct_heads": 4,
+          "certificate_bytes": 325,
+          "prepass_ns": 369922,
+          "prepass_alloc": 595768,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|0ffa068763a24fcac84f0b17b2c2ed88",
+            "Q|template|$main$Lib$target|9f00b17a4da2347eda9d878369d255bf"
+          ]
+        },
+        {
+          "label": "transitive-base",
+          "result": 6,
+          "artifacts": {
+            ".hi": "7c12c576eb2594bf472631b78a186c75256d455d8f089c145d4dc90ecca981be",
+            ".o": "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+          },
+          "binding": "ruleClient",
+          "verdict": "record",
+          "direct_heads": 4,
+          "certificate_bytes": 324,
+          "prepass_ns": 203535,
+          "prepass_alloc": 379928,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|57b1448d8c18a4426c3bce5581e85118",
+            "Q|template|$main$Lib$outer|c987784c1c9e329615fc9cef9934afba",
+            "Q|template|$main$Lib$target|ec94986b954a373df73104d748ff0076"
+          ]
+        },
+        {
+          "label": "transitive-add",
+          "result": 46,
+          "artifacts": {
+            ".hi": "bf2f6be642d695572149cd561b5d6a6633d206cd1d989131d52ed10971679a6d",
+            ".o": "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d"
+          },
+          "binding": "ruleClient",
+          "verdict": "eligible-slice",
+          "direct_heads": 4,
+          "certificate_bytes": 324,
+          "prepass_ns": 199951,
+          "prepass_alloc": 393104,
+          "selected": [
+            "Q|template|$ghc-internal$GHC.Internal.Num$$fNumInt_$c+|57b1448d8c18a4426c3bce5581e85118",
+            "Q|template|$main$Lib$outer|c987784c1c9e329615fc9cef9934afba"
+          ]
+        }
+      ],
+      "real": [
+        {
+          "label": "real-original",
+          "artifacts": {
+            ".o": "6eb12e8f25d46339b702d074433c8ad387510795717a626cb45f0d622196b8cb",
+            ".hi": "81bffe175e2c268dc71863e67ea676e7c3371c0b50a230e7e3e2dec50386e230"
+          },
+          "expected": "record",
+          "binding": "doesDirNameExist",
+          "verdict": "record",
+          "direct_heads": 2,
+          "certificate_bytes": 261,
+          "prepass_ns": 1085385,
+          "prepass_alloc": 1170256,
+          "selected": [
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist|cf54325c9449bfa690127c4c877a0a08",
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1|6ff4bf1221e426c3d6a59279a1143b6e"
+          ]
+        },
+        {
+          "label": "real-repeat",
+          "artifacts": {
+            ".o": "6eb12e8f25d46339b702d074433c8ad387510795717a626cb45f0d622196b8cb",
+            ".hi": "81bffe175e2c268dc71863e67ea676e7c3371c0b50a230e7e3e2dec50386e230"
+          },
+          "expected": "eligible-slice",
+          "binding": "doesDirNameExist",
+          "verdict": "eligible-slice",
+          "direct_heads": 2,
+          "certificate_bytes": 261,
+          "prepass_ns": 2305376,
+          "prepass_alloc": 1183576,
+          "selected": [
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist|cf54325c9449bfa690127c4c877a0a08",
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1|6ff4bf1221e426c3d6a59279a1143b6e"
+          ]
+        },
+        {
+          "label": "real-unrelated",
+          "artifacts": {
+            ".o": "4cb6ecf60b71465728fa2f2cb0f9ae8dabf27af6312d87d93ba2cfc52379a6dc",
+            ".hi": "74a871c66594b0da9f96900b58c489677d5c36979ae4edb27dc77677efd8e009"
+          },
+          "expected": "eligible-slice",
+          "binding": "doesDirNameExist",
+          "verdict": "eligible-slice",
+          "direct_heads": 2,
+          "certificate_bytes": 261,
+          "prepass_ns": 1142192,
+          "prepass_alloc": 1183576,
+          "selected": [
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist|cf54325c9449bfa690127c4c877a0a08",
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1|6ff4bf1221e426c3d6a59279a1143b6e"
+          ]
+        },
+        {
+          "label": "real-inline-13",
+          "artifacts": {
+            ".o": "76864205eb2052cac70b1aac44472cae2b61062647fad2ef129cf8ca218100d5",
+            ".hi": "80e07537ae55a312b77d71e72b14031d85a5bd285362f27b218e71424aa45028"
+          },
+          "expected": "record",
+          "binding": "doesDirNameExist",
+          "verdict": "record",
+          "direct_heads": 2,
+          "certificate_bytes": 247,
+          "prepass_ns": 1380774,
+          "prepass_alloc": 769680,
+          "selected": [
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist|cf54325c9449bfa690127c4c877a0a08",
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1|2b029ba3d6c66c5155b5650d6702dc52",
+            "Q|template|$ghc-10.1-inplace$GHC.Utils.Misc$queryDirHelper|c56999e10ca6ecf0a3e68b30fe85ae34",
+            "Q|template|$ghc-internal$GHC.Internal.Base$build|651b5b760d8c9673b5ab00166902c35a",
+            "Q|template|$_sys$lvl|07fc473218db7c6c44dc799cb27ef6e0",
+            "Q|template|$ghc-internal$GHC.Internal.List$unsafeTake|cd7586a48a09a99c719694530f6fa1b3"
+          ]
+        },
+        {
+          "label": "real-inline-14",
+          "artifacts": {
+            ".o": "62a6af258641171afcc1bbcb0e05ca524095ae26d8b0bf56b4b44e1f57416785",
+            ".hi": "8aab5f808b76f3a9bae2781aaf55d85be858d0fa079fca36465571f120ff6ef3"
+          },
+          "expected": "discard",
+          "binding": "doesDirNameExist",
+          "verdict": "discard",
+          "direct_heads": 2,
+          "certificate_bytes": 247,
+          "prepass_ns": 1145074,
+          "prepass_alloc": 780568,
+          "selected": [
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist|cf54325c9449bfa690127c4c877a0a08",
+            "Q|template|$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1|2b029ba3d6c66c5155b5650d6702dc52",
+            "Q|template|$ghc-10.1-inplace$GHC.Utils.Misc$queryDirHelper|17e9839f133e9a14c6f40341ce323aa9",
+            "Q|template|$ghc-internal$GHC.Internal.Base$build|651b5b760d8c9673b5ab00166902c35a",
+            "Q|template|$_sys$lvl|07fc473218db7c6c44dc799cb27ef6e0",
+            "Q|template|$ghc-internal$GHC.Internal.List$unsafeTake|cd7586a48a09a99c719694530f6fa1b3"
+          ]
+        }
+      ]
+    },
+    "coverage": {
+      "real-original": {
+        "first_covered": 2,
+        "first_queries": 12,
+        "first_distinct": 12,
+        "whole_covered": 37,
+        "whole_queries": 397,
+        "whole_distinct": 13,
+        "direct_heads": 2
+      },
+      "real-inline-13": {
+        "first_covered": 2,
+        "first_queries": 24,
+        "first_distinct": 21,
+        "whole_covered": 2,
+        "whole_queries": 486,
+        "whole_distinct": 25,
+        "direct_heads": 2
+      },
+      "stock-none": {
+        "first_covered": 2,
+        "first_queries": 6,
+        "first_distinct": 5,
+        "whole_covered": 7,
+        "whole_queries": 105,
+        "whole_distinct": 9,
+        "direct_heads": 4
+      },
+      "transitive-add": {
+        "first_covered": 2,
+        "first_queries": 10,
+        "first_distinct": 7,
+        "whole_covered": 2,
+        "whole_queries": 85,
+        "whole_distinct": 9,
+        "direct_heads": 4
+      }
+    }
+  },
+  "core_transitive": {
+    "synthetic": [
+      {
+        "label": "synthetic-base",
+        "certificate_comparison": "record",
+        "external_observations": 5,
+        "unresolved_external": 0,
+        "unresolved_local": 2,
+        "reuse_eligible": false,
+        "prepass_ns": 583556,
+        "prepass_alloc": 1168632,
+        "artifacts": [
+          "7c12c576eb2594bf472631b78a186c75256d455d8f089c145d4dc90ecca981be",
+          "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+        ],
+        "actual_first_queries": [
+          "$ghc-internal$GHC.Internal.Num$+",
+          "$ghc-internal$GHC.Internal.Num$$fNumInt_$c+",
+          "$main$Lib$outer",
+          "$main$Lib$target",
+          "$_in$x",
+          "$ghc-internal$GHC.Internal.Prim$+#",
+          "$_in$x"
+        ],
+        "stock_runtime": 6
+      },
+      {
+        "label": "synthetic-unrelated",
+        "certificate_comparison": "eligible-slice",
+        "external_observations": 5,
+        "unresolved_external": 0,
+        "unresolved_local": 2,
+        "reuse_eligible": false,
+        "prepass_ns": 729364,
+        "prepass_alloc": 1193976,
+        "artifacts": [
+          "83b6451335773239545cde4a1ad8753ddcc39289e2e682b11083ff9a69c02c25",
+          "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+        ],
+        "actual_first_queries": [
+          "$ghc-internal$GHC.Internal.Num$+",
+          "$ghc-internal$GHC.Internal.Num$$fNumInt_$c+",
+          "$main$Lib$outer",
+          "$main$Lib$target",
+          "$_in$x",
+          "$ghc-internal$GHC.Internal.Prim$+#",
+          "$_in$x"
+        ],
+        "stock_runtime": 6
+      },
+      {
+        "label": "synthetic-transitive",
+        "certificate_comparison": "discard",
+        "external_observations": 5,
+        "unresolved_external": 0,
+        "unresolved_local": 2,
+        "reuse_eligible": false,
+        "prepass_ns": 654105,
+        "prepass_alloc": 1344832,
+        "artifacts": [
+          "bf2f6be642d695572149cd561b5d6a6633d206cd1d989131d52ed10971679a6d",
+          "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d"
+        ],
+        "actual_first_queries": [
+          "$ghc-internal$GHC.Internal.Num$+",
+          "$ghc-internal$GHC.Internal.Num$$fNumInt_$c+",
+          "$main$Lib$outer",
+          "$main$Lib$target",
+          "$_in$x",
+          "$ghc-internal$GHC.Internal.Prim$+#",
+          "$_in$x1",
+          "$ghc-internal$GHC.Internal.Prim$+#",
+          "$ghc-internal$GHC.Internal.Prim$+#",
+          "$_in$x1"
+        ],
+        "stock_runtime": 46
+      }
+    ],
+    "real": [
+      {
+        "label": "real-base",
+        "certificate_comparison": "record",
+        "external_observations": 8,
+        "unresolved_external": 0,
+        "unresolved_local": 4,
+        "reuse_eligible": false,
+        "prepass_ns": 20679407,
+        "prepass_alloc": 26219584,
+        "artifacts": [
+          "da74a2acc6c701c1be9fadb11270172b6cfac8a6473ace3bcc8192daefd0dde5",
+          "0601ac75251e33cb49fb2f9b6398f7be3d48fe8a4dbe0925d7b57ea8558bfc28"
+        ],
+        "actual_first_queries": [
+          "$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist",
+          "$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1",
+          "$os-string-2.0.8-inplace$System.OsString.Encoding.Internal$encodeWithBasePosix2",
+          "$filepath-1.5.4.0-inplace$System.FilePath.Posix$takeDirectory",
+          "$_in$fpath",
+          "$bytestring-0.12.2.0-inplace$Data.ByteString.Short.Internal$packCStringLen1",
+          "$_in$s",
+          "$ghc-internal$GHC.Internal.Prim$catch#",
+          "$directory-1.3.10.1-inplace$System.Directory.OsPath$doesDirectoryExist4",
+          "$_in$ipv1",
+          "$directory-1.3.10.1-inplace$System.Directory.OsPath$doesDirectoryExist2",
+          "$_in$ipv"
+        ]
+      },
+      {
+        "label": "real-unrelated",
+        "certificate_comparison": "eligible-slice",
+        "external_observations": 8,
+        "unresolved_external": 0,
+        "unresolved_local": 4,
+        "reuse_eligible": false,
+        "prepass_ns": 14528335,
+        "prepass_alloc": 26279208,
+        "artifacts": [
+          "eeae2322596fbf4b703c5057cb9b633d6727f8bb81b25008b6520a883bcc3536",
+          "784a214dffa7b0d4b18eb869ef0fd410622326feb7b4fa95fa4229b9eddee67c"
+        ],
+        "actual_first_queries": [
+          "$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist",
+          "$directory-1.3.10.1-inplace$System.Directory$doesDirectoryExist1",
+          "$os-string-2.0.8-inplace$System.OsString.Encoding.Internal$encodeWithBasePosix2",
+          "$filepath-1.5.4.0-inplace$System.FilePath.Posix$takeDirectory",
+          "$_in$fpath",
+          "$bytestring-0.12.2.0-inplace$Data.ByteString.Short.Internal$packCStringLen1",
+          "$_in$s",
+          "$ghc-internal$GHC.Internal.Prim$catch#",
+          "$directory-1.3.10.1-inplace$System.Directory.OsPath$doesDirectoryExist4",
+          "$_in$ipv1",
+          "$directory-1.3.10.1-inplace$System.Directory.OsPath$doesDirectoryExist2",
+          "$_in$ipv"
+        ]
+      }
+    ]
+  },
+  "portable_fixture": [
+    {
+      "case": "baseline",
+      "value": 6,
+      "artifact_sha256": [
+        "4b78f166309303bcbcbddc2a9a671524f6b535909eed6b95e4c57d2e5617e243",
+        "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+      ],
+      "comparison": "record",
+      "unresolved_external": 0,
+      "unresolved_local": 2,
+      "rule_queries": [
+        "$ghc-internal$GHC.Internal.Num$+",
+        "$ghc-internal$GHC.Internal.Num$$fNumInt_$c+",
+        "$main$Lib$outer",
+        "$main$Lib$target",
+        "$_in$x",
+        "$ghc-internal$GHC.Internal.Prim$+#",
+        "$_in$x"
+      ],
+      "prepass_ns": 997493,
+      "prepass_alloc_bytes": 1167152,
+      "reuse": false
+    },
+    {
+      "case": "unrelated",
+      "value": 6,
+      "artifact_sha256": [
+        "771da5244ecc2109c4d2e18a0105faa41491792918a9fd68f799c2a5ccc1268c",
+        "311256c55e2124b3ff42b1793081cfdaf95c9bb322952528b32a4ec081d04f28"
+      ],
+      "comparison": "eligible-slice",
+      "unresolved_external": 0,
+      "unresolved_local": 2,
+      "rule_queries": [
+        "$ghc-internal$GHC.Internal.Num$+",
+        "$ghc-internal$GHC.Internal.Num$$fNumInt_$c+",
+        "$main$Lib$outer",
+        "$main$Lib$target",
+        "$_in$x",
+        "$ghc-internal$GHC.Internal.Prim$+#",
+        "$_in$x"
+      ],
+      "prepass_ns": 684583,
+      "prepass_alloc_bytes": 1194672,
+      "reuse": false
+    },
+    {
+      "case": "target",
+      "value": 46,
+      "artifact_sha256": [
+        "896421a689de0213b003d32efee7f6f43c36f98a1d0f8964c97ca571f754f3f5",
+        "cd5847ff3b92bc3f59b15f0315938a895ef0ca53bf74e7e7627a61d6b4b9a55d"
+      ],
+      "comparison": "discard",
+      "unresolved_external": 0,
+      "unresolved_local": 2,
+      "rule_queries": [
+        "$ghc-internal$GHC.Internal.Num$+",
+        "$ghc-internal$GHC.Internal.Num$$fNumInt_$c+",
+        "$main$Lib$outer",
+        "$main$Lib$target",
+        "$_in$x",
+        "$ghc-internal$GHC.Internal.Prim$+#",
+        "$_in$x1",
+        "$ghc-internal$GHC.Internal.Prim$+#",
+        "$ghc-internal$GHC.Internal.Prim$+#",
+        "$_in$x1"
+      ],
+      "prepass_ns": 634920,
+      "prepass_alloc_bytes": 1345528,
+      "reuse": false
+    }
+  ],
+  "hadrian_stamp_fix": {
+    "ghc_branch_commit": "ba31db324e",
+    "diagnostic_build_pueue_id": 5732,
+    "end_to_end_pueue_id": 5735,
+    "rounds": [
+      {
+        "single_stamp_writer": false,
+        "order": [
+          "stock",
+          "candidate"
+        ],
+        "arms": {
+          "stock": {
+            "timings": {
+              "prime": {
+                "time": "wall=19.84 user=7.55 sys=4.47 rss=546220 exit=0",
+                "actions": 8
+              },
+              "edit": {
+                "time": "wall=10.87 user=7.21 sys=4.04 rss=529572 exit=0",
+                "actions": 8
+              },
+              "noop": {
+                "time": "wall=4.54 user=4.16 sys=0.45 rss=465896 exit=0",
+                "actions": 0
+              }
+            },
+            "built_and_loaded_elf_ids": [
+              "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6",
+              "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6"
+            ],
+            "consumers": {
+              "consumer.stdout": "156",
+              "api.stdout": "156"
+            },
+            "stamps": {
+              "edit": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:15:54.134842966 +0100 2026-11-27 03:15:54.134208176 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:15:55.324847748 +0100 2026-11-27 03:15:55.324582272 UTC"
+              ],
+              "noop": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:15:54.134842966 +0100 2026-11-27 03:15:54.134208176 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:15:55.324847748 +0100 2026-11-27 03:15:55.324582272 UTC"
+              ]
+            },
+            "api_hashes": {
+              "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+              "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+            },
+            "artifact_hashes": {
+              "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+              "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+              "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343"
+            }
+          },
+          "candidate": {
+            "timings": {
+              "prime": {
+                "time": "wall=10.37 user=6.18 sys=4.16 rss=610624 exit=0",
+                "actions": 8
+              },
+              "edit": {
+                "time": "wall=9.33 user=6.08 sys=3.44 rss=560332 exit=0",
+                "actions": 8
+              },
+              "settled": {
+                "time": "wall=5.39 user=4.87 sys=0.59 rss=478296 exit=0",
+                "actions": 0
+              },
+              "noop": {
+                "time": "wall=7.89 user=5.68 sys=2.29 rss=549536 exit=0",
+                "actions": 1
+              }
+            },
+            "built_and_loaded_elf_ids": [
+              "7b378f494b0c3d9685d5b70114227516eba57f5e",
+              "7b378f494b0c3d9685d5b70114227516eba57f5e"
+            ],
+            "consumers": {
+              "consumer.stdout": "156",
+              "api.stdout": "156"
+            },
+            "stamps": {
+              "edit": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:16:24.416978124 +0100 2026-11-27 03:16:24.41629791 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:16:24.417562137 +0100 2026-11-27 03:16:24.41629791 UTC"
+              ],
+              "noop": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:16:24.416978124 +0100 2026-11-27 03:16:24.41629791 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:16:35.269544017 +0100 2026-11-27 03:16:35.269264238 UTC"
+              ]
+            },
+            "api_hashes": {
+              "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+              "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+            },
+            "artifact_hashes": {
+              "_build/stage1/bin/ghc": "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf",
+              "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+              "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+            }
+          }
+        }
+      },
+      {
+        "single_stamp_writer": true,
+        "order": [
+          "candidate",
+          "stock"
+        ],
+        "arms": {
+          "stock": {
+            "timings": {
+              "prime": {
+                "time": "wall=10.81 user=7.49 sys=3.70 rss=461900 exit=0",
+                "actions": 8
+              },
+              "edit": {
+                "time": "wall=11.51 user=7.84 sys=4.12 rss=611988 exit=0",
+                "actions": 8
+              },
+              "noop": {
+                "time": "wall=4.75 user=4.19 sys=0.63 rss=568420 exit=0",
+                "actions": 0
+              }
+            },
+            "built_and_loaded_elf_ids": [
+              "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6",
+              "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6"
+            ],
+            "consumers": {
+              "consumer.stdout": "156",
+              "api.stdout": "156"
+            },
+            "stamps": {
+              "edit": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:17:39.337961942 +0100 2026-11-27 03:17:39.337011545 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:17:40.794287613 +0100 2026-11-27 03:17:40.793619859 UTC"
+              ],
+              "noop": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:17:39.337961942 +0100 2026-11-27 03:17:39.337011545 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:17:40.794287613 +0100 2026-11-27 03:17:40.793619859 UTC"
+              ]
+            },
+            "api_hashes": {
+              "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+              "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+            },
+            "artifact_hashes": {
+              "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+              "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+              "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343"
+            }
+          },
+          "candidate": {
+            "timings": {
+              "prime": {
+                "time": "wall=17.93 user=5.95 sys=3.81 rss=583676 exit=0",
+                "actions": 8
+              },
+              "edit": {
+                "time": "wall=9.53 user=6.14 sys=3.55 rss=548476 exit=0",
+                "actions": 8
+              },
+              "noop": {
+                "time": "wall=4.84 user=4.07 sys=0.84 rss=532044 exit=0",
+                "actions": 0
+              }
+            },
+            "built_and_loaded_elf_ids": [
+              "7b378f494b0c3d9685d5b70114227516eba57f5e",
+              "7b378f494b0c3d9685d5b70114227516eba57f5e"
+            ],
+            "consumers": {
+              "consumer.stdout": "156",
+              "api.stdout": "156"
+            },
+            "stamps": {
+              "edit": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:17:10.013159315 +0100 2026-11-27 03:17:10.012689526 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:17:09.775515305 +0100 2026-11-27 03:17:09.774804407 UTC"
+              ],
+              "noop": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:17:10.013159315 +0100 2026-11-27 03:17:10.012689526 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:17:09.775515305 +0100 2026-11-27 03:17:09.774804407 UTC"
+              ]
+            },
+            "api_hashes": {
+              "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+              "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+            },
+            "artifact_hashes": {
+              "_build/stage1/bin/ghc": "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf",
+              "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+              "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+            }
+          }
+        }
+      },
+      {
+        "single_stamp_writer": true,
+        "order": [
+          "stock",
+          "candidate"
+        ],
+        "arms": {
+          "stock": {
+            "timings": {
+              "prime": {
+                "time": "wall=20.96 user=8.23 sys=4.51 rss=543124 exit=0",
+                "actions": 8
+              },
+              "edit": {
+                "time": "wall=12.72 user=8.55 sys=4.83 rss=494800 exit=0",
+                "actions": 8
+              },
+              "noop": {
+                "time": "wall=4.99 user=4.44 sys=0.63 rss=590748 exit=0",
+                "actions": 0
+              }
+            },
+            "built_and_loaded_elf_ids": [
+              "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6",
+              "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6"
+            ],
+            "consumers": {
+              "consumer.stdout": "156",
+              "api.stdout": "156"
+            },
+            "stamps": {
+              "edit": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:18:21.644099731 +0100 2026-11-27 03:18:21.643398504 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:18:23.082459551 +0100 2026-11-27 03:18:23.081001209 UTC"
+              ],
+              "noop": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:18:21.644099731 +0100 2026-11-27 03:18:21.643398504 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:18:23.082459551 +0100 2026-11-27 03:18:23.081001209 UTC"
+              ]
+            },
+            "api_hashes": {
+              "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+              "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+            },
+            "artifact_hashes": {
+              "_build/stage1/bin/ghc": "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a",
+              "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+              "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343"
+            }
+          },
+          "candidate": {
+            "timings": {
+              "prime": {
+                "time": "wall=9.33 user=5.99 sys=3.57 rss=545920 exit=0",
+                "actions": 8
+              },
+              "edit": {
+                "time": "wall=9.13 user=5.99 sys=3.44 rss=531244 exit=0",
+                "actions": 8
+              },
+              "noop": {
+                "time": "wall=4.68 user=4.18 sys=0.57 rss=462208 exit=0",
+                "actions": 0
+              }
+            },
+            "built_and_loaded_elf_ids": [
+              "7b378f494b0c3d9685d5b70114227516eba57f5e",
+              "7b378f494b0c3d9685d5b70114227516eba57f5e"
+            ],
+            "consumers": {
+              "consumer.stdout": "156",
+              "api.stdout": "156"
+            },
+            "stamps": {
+              "edit": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:18:52.542206311 +0100 2026-11-27 03:18:52.541363057 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:18:52.322551862 +0100 2026-11-27 03:18:52.322294429 UTC"
+              ],
+              "noop": [
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace 2026-11-27 04:18:52.542206311 +0100 2026-11-27 03:18:52.541363057 UTC",
+                "_build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn 2026-11-27 04:18:52.322551862 +0100 2026-11-27 03:18:52.322294429 UTC"
+              ]
+            },
+            "api_hashes": {
+              "Main.o": "e37be0d755b317b5f1fdae6f72c6382a1f4c56aca1259c650a3232a22d430d3a",
+              "Main.hi": "6b187c48596c6ce09ba22c7a2bf76b910b9b7d5a7cc2e3ebfda94ca8d67fba1e"
+            },
+            "artifact_hashes": {
+              "_build/stage1/bin/ghc": "56119947948aabace50b794ea7c81723126b2b0db24ac2ad7075d4118f1e07bf",
+              "_build/stage1/compiler/.dependencies.mk": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi": "6cfba24e458ef50ca1e5b5f572a3630efab489b1f600b06214b671d8c0519193",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o": "c6593ec31fba20308c4414440f4bb1dc6c040efc2673743cced2d5861aad987c",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi": "f5f5bf75b564ede0c9bfa8b1500bbc4641061d922ef6d37ab56eb8fd146dea0e",
+              "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o": "a8587998db0324357027ee344e7446f3fe22f12377a7f1d269ccfbf4164fa29d",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.hi": "688c6c72b35e2ccf4c36e0a2315c05ec98bc119c99684a6027590f4ab98246fc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.o": "1903009b0c0706827f2521dfa1ce870316abbde5e0f063f7f64e5a5a032bf8bf",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_hi": "39efe607161066a0ec883f295faafd5ff49bfbd93db85b71bb5aabbb68ea2abc",
+              "_build/stage1/compiler/build/GHC/Driver/Main/Compile.dyn_o": "810d6167ee3fe24abf64dcf4150cebab2878083a0ff56081732e63046a85181c",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.hi": "0b1f788553c5dd3a63dda4fb7d689b99f09599ac2a4e2482b272ba4a1819b8c1",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.o": "861e7e645d156e1b70ef15745afc155d0f5c9c60fc4f9841ed7e27fff98536c8",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_hi": "4db639b6518a695dc63b94d8cbc584f91d5fa2953bb51a0f745bef3e1e181386",
+              "_build/stage1/compiler/build/GHC/Driver/GenerateCgIPEStub.dyn_o": "0a91bd8d82ed5b8a5d4baf78a790910285548ecd16e1db19aec4d49d1ce1a2a4",
+              "_build/stage1/compiler/.dependencies": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace.a": "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+              "_build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so": "bcd1bab37bf624e11d0b1bed9098c5a7abf6f24f1fce714ddac11017b4c94845"
+            }
+          }
+        }
+      }
+    ],
+    "exact_branch_direct_regression": {
+      "baseline": [
+        "Flavour: quick",
+        "# _build/stage1/compiler/build/stamp-ghc-10.1-inplace",
+        "Build completed in 4.59s",
+        "",
+        "Dynamic stamp changed",
+        "before 2026-11-27 04:18:52.322551862 +0100 33",
+        "f3935f83ebe25adb605247fa84baeb92ccfaa87d55d1c3a392276f4016aca5b4  _build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn",
+        "after 2026-11-27 04:19:36.445140840 +0100 32",
+        "a8d66d99ccb4973e51a8ff3a0527bd53aef27c34fd6a98391d9c5a71fbe92eae  _build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn"
+      ],
+      "fixed": [
+        "Flavour: quick",
+        "# _build/stage1/compiler/build/stamp-ghc-10.1-inplace",
+        "Build completed in 4.24s",
+        "",
+        "Dynamic stamp unchanged",
+        "before 2026-11-27 04:19:36.445140840 +0100 32",
+        "a8d66d99ccb4973e51a8ff3a0527bd53aef27c34fd6a98391d9c5a71fbe92eae  _build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn",
+        "after 2026-11-27 04:19:36.445140840 +0100 32",
+        "a8d66d99ccb4973e51a8ff3a0527bd53aef27c34fd6a98391d9c5a71fbe92eae  _build/stage1/compiler/build/stamp-ghc-10.1-inplace_dyn"
+      ]
+    }
+  }
+}

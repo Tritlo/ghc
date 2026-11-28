@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TypeFamilies #-}
 module Oracles.Setting (
-    configFile,
+    configFile, topDirectoryOracle,
     -- * Settings
     ProjectSetting (..), setting, getSetting,
     BuildSetting(..), buildSetting,
@@ -25,6 +27,7 @@ import Control.Monad.Trans.Maybe (runMaybeT)
 
 import Base
 
+import GHC.Generics (Generic)
 import GHC.Toolchain
 import GHC.Platform.ArchOS
 
@@ -199,15 +202,26 @@ ghcCanonVersion = do
     let leadingZero = [ '0' | length ghcMinorVersion == 1 ]
     return $ ghcMajorVersion ++ leadingZero ++ ghcMinorVersion
 
+-- | The Shake key for the configured GHC source directory.
+data TopDirectory = TopDirectory
+    deriving (Binary, Eq, Generic, Hashable, NFData, Show)
+
+type instance RuleResult TopDirectory = FilePath
+
+-- | Resolve the source directory once per build. Use an ordinary oracle so
+-- that a symlink can resolve differently in the next build.
+topDirectoryOracle :: Rules ()
+topDirectoryOracle = void $ addOracle $ \TopDirectory -> do
+    ghcSourcePath <- setting GhcSourcePath
+    if isWindows
+      -- On Windows: enforce the path convention of Note [MSYS paths].
+      then return $ unifyPath ghcSourcePath
+      -- Otherwise: canonicalise to handle symlinks; see #22451.
+      else liftIO $ canonicalizePath ghcSourcePath
+
 -- | Absolute path to the GHC source tree.
 topDirectory :: Action FilePath
-topDirectory = do
-  ghcSourcePath <- setting GhcSourcePath
-  if isWindows
-  -- On Windows: enforce the path convention of Note [MSYS paths].
-  then return $ unifyPath ghcSourcePath
-  -- Otherwise: canonicalise to handle symlinks; see #22451.
-  else liftIO $ canonicalizePath ghcSourcePath
+topDirectory = askOracle TopDirectory
 
 ghcVersionStage :: Stage -> Action String
 ghcVersionStage (Stage0 {}) = setting GhcVersion

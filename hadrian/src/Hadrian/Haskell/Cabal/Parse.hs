@@ -254,7 +254,7 @@ resolveContextData context@Context {..} = do
 
     -- Note: the @cPath@ is ignored. The path that's used is the 'buildDir' path
     -- from the local build info @lbi@.
-    pdi <- liftIO $ getHookedBuildInfo [pkgPath package, cPath -/- "build"]
+    pdi <- getHookedBuildInfo [pkgPath package, cPath -/- "build"]
 
     pkgDbPath <- packageDbPath (PackageDbLoc stage iplace)
     let pd'  = C.updatePackageDescription pdi (C.localPkgDescr lbi)
@@ -385,21 +385,35 @@ write_inplace_conf pkg_path res_path pd lbi = do
               C.writeFileAtomic res_path
                               (C.toUTF8LBS content)
 
+{- Note [Overlapping compiler package copy and ABI calculation]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The final package rule waits for the library stamps and dependency package
+configurations before it calls registerPackage. Cabal's ABI calculation
+reads the interfaces in the build directory. Copying the package reads
+from that directory and writes to the install directory. For the Stage1
+compiler library, the development option can run these actions in
+parallel. Write the package configuration and recache the database only
+after both actions finish.
+-}
+
 -- This uses the API directly because no way to register into a different package db which is
 -- configured. See the use of C.SpecificPackageDB
-registerPackage :: [(Resource, Int)] -> Context -> Action ()
-registerPackage rs context = do
-    cPath <- Context.contextPath context
-    setupConfig <- pkgSetupConfigFile context
-    need [setupConfig] -- This triggers 'configurePackage'
-    pd <- packageDescription <$> readContextData context
-    db_path <- packageDbPath (PackageDbLoc (stage context) (iplace context))
-    pid <- pkgUnitId (stage context) (package context)
-    -- Note: the @cPath@ is ignored. The path that's used is the 'buildDir' path
-    -- from the local build info @lbi@.
-    lbi <- liftIO $ C.getPersistBuildConfig Nothing (C.makeSymbolicPath cPath)
-    -- This runs `ghc --abi-hash`, so do it outside the critical section below.
-    installedPkgInfo <- liftIO $ generateRegistrationInfo pd lbi
+registerPackage :: Bool -> [(Resource, Int)] -> Context -> Action ()
+registerPackage overlap rs context = do
+    let prepare = do
+            cPath <- Context.contextPath context
+            setupConfig <- pkgSetupConfigFile context
+            need [setupConfig] -- This triggers 'configurePackage'
+            pd <- packageDescription <$> readContextData context
+            db_path <- packageDbPath (PackageDbLoc (stage context) (iplace context))
+            pid <- pkgUnitId (stage context) (package context)
+            lbi <- liftIO $ C.getPersistBuildConfig Nothing (C.makeSymbolicPath cPath)
+            info <- traced "cabal-abi-hash" $ generateRegistrationInfo pd lbi
+            pure (db_path, pid, info)
+    (db_path, pid, installedPkgInfo) <-
+        if overlap
+            then snd <$> par (copyPackage context) prepare
+            else copyPackage context >> prepare
 
     let pkg_name = pkgName (package context)
         -- Is this a pkg.conf for a previous build?
@@ -475,13 +489,17 @@ writeInplacePkgConf context = do
 
 -- | Look for a @.buildinfo@ in all of the specified directories, stopping on
 -- the first one we find.
-getHookedBuildInfo :: [FilePath] -> IO C.HookedBuildInfo
+getHookedBuildInfo :: [FilePath] -> Action C.HookedBuildInfo
 getHookedBuildInfo [] = return C.emptyHookedBuildInfo
 getHookedBuildInfo (baseDir:baseDirs) = do
-    maybeInfoFile <- C.findHookedPackageDesc C.normal Nothing (C.makeSymbolicPath baseDir)
+    -- Track additions and removals in every directory Cabal searches.
+    _ <- getDirectoryFiles baseDir ["*.buildinfo"]
+    maybeInfoFile <- liftIO $ C.findHookedPackageDesc C.normal Nothing (C.makeSymbolicPath baseDir)
     case maybeInfoFile of
         Nothing       -> getHookedBuildInfo baseDirs
-        Just infoFile -> C.readHookedBuildInfo C.silent Nothing infoFile
+        Just infoFile -> do
+            need [C.getSymbolicPath infoFile]
+            liftIO $ C.readHookedBuildInfo C.silent Nothing infoFile
 
 externalPackageDeps :: C.LocalBuildInfo -> [(C.UnitId, C.MungedPackageId)]
 externalPackageDeps lbi =

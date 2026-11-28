@@ -14,6 +14,7 @@ module GHC.Driver.MakeFile
    ( doMkDepend
    , doMkDependHS
    , doMkDependModuleGraph
+   , doMkDependModuleGraphWithCppDeps
    )
 where
 
@@ -134,7 +135,18 @@ doMkDepend = do
     doMkDependModuleGraph dflags module_graph
 
 doMkDependModuleGraph :: GhcMonad m => DynFlags -> ModuleGraph -> m ()
-doMkDependModuleGraph dflags module_graph = do
+doMkDependModuleGraph = doMkDependModuleGraphWithCppDeps (\_ parse -> parse)
+
+-- | Generate dependencies with a request-scoped action that supplies CPP
+-- file dependencies. The action receives the default parser for this
+-- module. Import lookup and output formatting still use the stock path.
+doMkDependModuleGraphWithCppDeps
+  :: GhcMonad m
+  => (ModSummary -> IO [FilePath] -> IO [FilePath])
+  -> DynFlags
+  -> ModuleGraph
+  -> m ()
+doMkDependModuleGraphWithCppDeps cppDeps dflags module_graph = do
     hsc_env <- getSession
     logger <- getLogger
     let
@@ -169,7 +181,7 @@ doMkDependModuleGraph dflags module_graph = do
         forM_
           sorted
           (\ mod_graph_node ->
-            processDeps hsc_env (UniqSet.mkUniqSet excl_mods) mod_graph_node >>= \ case
+            processDeps cppDeps hsc_env (UniqSet.mkUniqSet excl_mods) mod_graph_node >>= \ case
               Nothing -> pure ()
               Just dep_node -> write_dep dep_node
           )
@@ -388,7 +400,8 @@ depStreamHandle h =
 --
 -----------------------------------------------------------------
 
-processDeps :: HscEnv
+processDeps :: (ModSummary -> IO [FilePath] -> IO [FilePath])
+            -> HscEnv
             -> UniqSet ModuleName -- ^ Excludes
             -> SCC ModuleGraphNode
             -> IO (Maybe DepNode)
@@ -407,17 +420,17 @@ processDeps :: HscEnv
 --
 -- For {-# SOURCE #-} imports the "hi" will be "hi-boot".
 
-processDeps hsc_env _ (CyclicSCC nodes)
+processDeps _ hsc_env _ (CyclicSCC nodes)
   =     -- There shouldn't be any cycles; report them
     throwOneError (initSourceErrorContext (hsc_dflags hsc_env)) $ cyclicModuleErr nodes
 
-processDeps hsc_env _ (AcyclicSCC (InstantiationNode _uid node))
+processDeps _ hsc_env _ (AcyclicSCC (InstantiationNode _uid node))
   =     -- There shouldn't be any backpack instantiations; report them as well
     throwOneError (initSourceErrorContext (hsc_dflags hsc_env)) $
       mkPlainErrorMsgEnvelope noSrcSpan $
       GhcDriverMessage $ DriverInstantiationNodeInDependencyGeneration node
 
-processDeps hsc_env _ (AcyclicSCC (LinkNode keys unitId)) = do
+processDeps _ hsc_env _ (AcyclicSCC (LinkNode keys unitId)) = do
   let
     toLinkNodeDep = \ case
       NodeKey_Unit iu -> DepLink_Unit $ virtualUnitId iu
@@ -432,12 +445,12 @@ processDeps hsc_env _ (AcyclicSCC (LinkNode keys unitId)) = do
 
   pure $ Just $ LinkDepNode linkNode (map toLinkNodeDep keys)
 
-processDeps _ _ (AcyclicSCC (UnitNode {})) = return Nothing
-processDeps _ _ (AcyclicSCC (ModuleNode _ (ModuleNodeFixed {})))
+processDeps _ _ _ (AcyclicSCC (UnitNode {})) = return Nothing
+processDeps _ _ _ (AcyclicSCC (ModuleNode _ (ModuleNodeFixed {})))
   -- No dependencies needed for fixed modules (already compiled)
   = return Nothing
 
-processDeps hsc_env0 excl_mods (AcyclicSCC (ModuleNode _ (ModuleNodeCompile node))) = do
+processDeps cppDeps hsc_env0 excl_mods (AcyclicSCC (ModuleNode _ (ModuleNodeCompile node))) = do
   let
     find_deps imps = do
       cpp_deps <- find_cpp_deps
@@ -491,12 +504,12 @@ processDeps hsc_env0 excl_mods (AcyclicSCC (ModuleNode _ (ModuleNodeCompile node
     find_cpp_deps :: IO [Dep]
     find_cpp_deps =
       if depIncludeCppDeps dflags
-        then do
-          session <- Session <$> newIORef hsc_env
-          parsedMod <- reflectGhc (GHC.parseModule node) session
-          pure (DepCpp . unsafeEncodeUtf <$> GHC.pm_extra_src_files parsedMod)
-        else
-          pure []
+        then map (DepCpp . unsafeEncodeUtf) <$> cppDeps node parseCppDeps
+        else pure []
+
+    parseCppDeps = do
+      session <- Session <$> newIORef hsc_env
+      GHC.pm_extra_src_files <$> reflectGhc (GHC.parseModule node) session
 
     -- Emit a dependency for each import
     find_import_deps :: [Located (UnresolvedImport PkgQual)] -> IO [Either (MsgEnvelope GhcMessage) Dep]

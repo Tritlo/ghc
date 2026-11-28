@@ -11,6 +11,7 @@ module GHC.Iface.Binary (
         -- * Public API for interface file serialisation
         writeBinIface,
         readBinIface,
+        readBinIfaceWith,
         readBinIfaceHeader,
         CompressionIFace(..),
         getSymtabName,
@@ -18,6 +19,7 @@ module GHC.Iface.Binary (
         TraceBinIFace(..),
         getIfaceWithExtFields,
         putIfaceWithExtFields,
+        fingerprintNormalizedIface,
         getWithUserData,
         putWithUserData,
 
@@ -32,10 +34,13 @@ module GHC.Iface.Binary (
 
 import GHC.Prelude
 
+import Data.ByteString (ByteString)
+
 import GHC.Builtin   ( knownKeyOccMap, wiredInNamesMap )
 import GHC.Builtin.Uniques( knownUniqueTupleName )
 
 import GHC.Utils.Panic
+import GHC.Utils.Fingerprint (Fingerprint)
 import GHC.Utils.Binary as Binary
 import GHC.Utils.Outputable
 
@@ -51,6 +56,7 @@ import GHC.Unit.Module.ModIface
 import GHC.Platform.Profile
 import GHC.Platform
 import GHC.Settings.Constants
+import GHC.Iface.Recomp.Binary (fingerprintBinMem)
 import GHC.Iface.Type (IfaceType(..), getIfaceType, putIfaceType, ifaceTypeSharedByte)
 
 import GHC.Data.FastMutInt
@@ -110,9 +116,7 @@ data CompressionIFace
 instance Outputable CompressionIFace where
   ppr = text . show
 
--- | Read an interface file header, checking the magic number, version, and
--- way. Returns the hash of the source file and a BinHandle which points at the
--- start of the rest of the interface file data.
+-- | Read and check the header. Leave the cursor at the interface body.
 readBinIfaceHeader
   :: Profile
   -> NameCache
@@ -121,6 +125,13 @@ readBinIfaceHeader
   -> FilePath
   -> IO ReadBinHandle
 readBinIfaceHeader profile _name_cache checkHiWay traceBinIFace hi_path = do
+    bh <- Binary.readBinMem hi_path
+    checkBinIfaceHeader profile checkHiWay traceBinIFace bh
+    pure bh
+
+-- | Check the file format and requested way. Advance the cursor past the header.
+checkBinIfaceHeader :: Profile -> CheckHiWay -> TraceBinIFace -> ReadBinHandle -> IO ()
+checkBinIfaceHeader profile checkHiWay traceBinIFace bh = do
     let platform = profilePlatform profile
 
         wantedGot :: String -> a -> a -> (a -> SDoc) -> IO ()
@@ -139,7 +150,6 @@ readBinIfaceHeader profile _name_cache checkHiWay traceBinIFace hi_path = do
             when (wanted /= got) $ throwGhcExceptionIO $ ProgramError
                          (what ++ " (wanted " ++ show wanted
                                ++ ", got "    ++ show got ++ ")")
-    bh <- Binary.readBinMem hi_path
 
     -- Read the magic number to check that this really is a GHC .hi file
     -- (This magic number does not change when we change
@@ -161,8 +171,6 @@ readBinIfaceHeader profile _name_cache checkHiWay traceBinIFace hi_path = do
     when (checkHiWay == CheckHiWay) $
         errorOnMismatch "mismatched interface file profile tag" tag check_tag
 
-    pure bh
-
 -- | Read an interface file.
 --
 -- See Note [Deduplication during iface binary serialisation] for details.
@@ -179,6 +187,22 @@ readBinIface profile name_cache checkHiWay traceBinIface hi_path = do
     mod_iface <- getIfaceWithExtFields name_cache bh
 
     return $ mod_iface
+
+
+-- | Run a caller-supplied reader after the stock header checks. The byte
+-- string and the stock decoder use the same input buffer.
+readBinIfaceWith
+  :: Profile
+  -> NameCache
+  -> CheckHiWay
+  -> TraceBinIFace
+  -> FilePath
+  -> (ByteString -> IO ModIface -> IO ModIface)
+  -> IO ModIface
+readBinIfaceWith profile name_cache checkHiWay traceBinIface hi_path reader = do
+    (bh, bytes) <- Binary.readBinMemWithBuffer hi_path
+    checkBinIfaceHeader profile checkHiWay traceBinIface bh
+    reader bytes (getIfaceWithExtFields name_cache bh)
 
 
 getIfaceWithExtFields :: NameCache -> ReadBinHandle -> IO ModIface
@@ -267,6 +291,22 @@ writeBinIface profile traceBinIface compressionLevel hi_path mod_iface = do
 
     -- And send the result to the file
     writeBinMem bh hi_path
+
+-- | Fingerprint the complete interface with its own source hash omitted.
+-- Return 'Nothing' if self-recompilation metadata is absent or the stored
+-- interface hash differs from the hash derived by the standard writer.
+-- Compare fingerprints only from the same compiler and interface way.
+-- See Note [Comparing interfaces without the source hash] in
+-- "GHC.Unit.Module.ModIface".
+fingerprintNormalizedIface :: ModIface -> IO (Maybe Fingerprint)
+fingerprintNormalizedIface iface
+  | Just normalized <- normalizeIfaceSourceHash iface
+  , computeIfaceHash (mi_mod_hash iface) iface == mi_iface_hash iface
+  = do
+      bh <- openBinMem initBinMemSize
+      putIfaceWithExtFields QuietBinIFace NormalCompression bh normalized
+      Just <$> fingerprintBinMem bh
+  | otherwise = pure Nothing
 
 -- | Puts the 'ModIface' to the 'WriteBinHandle'.
 --

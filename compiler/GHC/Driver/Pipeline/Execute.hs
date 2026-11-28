@@ -632,8 +632,15 @@ getFileArgs hsc_env input_fn = do
   return (dflags1, warns0, warns)
 
 runCppPhase :: HscEnv -> FilePath -> FilePath -> IO FilePath
-runCppPhase hsc_env input_fn output_fn = do
-  doCpp (hsc_logger hsc_env)
+runCppPhase hsc_env input_fn output_fn =
+  fst <$> runCppPhaseWithMacroHeader hsc_env input_fn output_fn
+
+-- | Run the Haskell CPP phase with a preallocated output path. Also return
+-- the package version macro header created for this invocation, if any.
+runCppPhaseWithMacroHeader :: HscEnv -> FilePath -> FilePath
+                           -> IO (FilePath, Maybe FilePath)
+runCppPhaseWithMacroHeader hsc_env input_fn output_fn = do
+  macro_header <- doCppWithMacroHeader (hsc_logger hsc_env)
            (hsc_tmpfs hsc_env)
            (hsc_dflags hsc_env)
            (hsc_unit_env hsc_env)
@@ -642,7 +649,7 @@ runCppPhase hsc_env input_fn output_fn = do
               , cppLinePragmas          = True
               })
            input_fn output_fn
-  return output_fn
+  return (output_fn, macro_header)
 
 
 runHscPhase :: PipeEnv

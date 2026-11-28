@@ -1,0 +1,20 @@
+{
+  "compiler": "10.1.20261115.1",
+  "source_revision": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+  "command": "Stage0 ghc -M -include-cpp-deps for the Stage1 ghc package",
+  "parser": {
+    "calls": 956,
+    "allocated_bytes": 15239516360,
+    "cpu_seconds": 9.1768
+  },
+  "chasing_dependencies": {
+    "allocated_bytes": 2638870792,
+    "cpu_seconds": 1.403574
+  },
+  "stock_control": {
+    "allocated_bytes": 24064715352,
+    "cpu_seconds": 15.946327,
+    "wall_seconds": 17.07665
+  },
+  "same_makefile": true
+}

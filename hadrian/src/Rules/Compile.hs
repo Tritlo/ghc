@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs, TypeFamilies #-}
 
 module Rules.Compile (compilePackage) where
 
@@ -6,6 +6,7 @@ import Hadrian.BuildPath
 import Hadrian.Oracles.TextFile
 
 import Base
+import qualified Builder
 import Context as C
 import Expression
 import Oracles.Flag (targetSupportsSharedLibs)
@@ -15,12 +16,22 @@ import Target
 import Utilities
 
 import qualified Text.Parsec as Parsec
+import Control.Exception (evaluate)
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Char (isHexDigit)
+import GHC.Generics (Generic)
+import Packages (compiler)
+import System.IO (IOMode(ReadMode), withBinaryFile)
+import System.IO.Error (tryIOError)
 
 -- * Rules for building objects and Haskell interface files
 
 compilePackage :: [(Resource, Int)] -> Rules ()
 compilePackage rs = do
     root <- buildRootRules
+    readReceipt <- normalizedImportRules root
     -- We match all file paths that look like:
     --   <root>/...stuffs.../build/...stuffs.../<something>.<suffix>
     --
@@ -81,22 +92,144 @@ compilePackage rs = do
                -- Shake won't execute the associated action. Hence we detect
                -- this case and we explicitly build the dynamic artifacts here:
                case changed of
-                  [] -> compileHsObjectAndHi rs dyn_o
+                  [] -> compileHsObjectAndHi readReceipt rs dyn_o
                   _  -> pure ()
 
-            else compileHsObjectAndHi rs dyn_o
+            else compileHsObjectAndHi readReceipt rs dyn_o
 
       forM_ ((,) <$> hsExts <*> wayPats) $ \ ((oExt, hiExt), wayPat) ->
         (  (root -/- "**/build/**/*." ++ wayPat ++ oExt)
         :& (root -/- "**/build/**/*." ++ wayPat ++ hiExt)
         :& Nil ) &%>
           \ ( o :& _hi :& _ ) ->
-            compileHsObjectAndHi rs o
+            compileHsObjectAndHi readReceipt rs o
   where
     hsExts = [ ("o", "hi")
              , ("o-boot", "hi-boot")
              ]
     wayPats = [ "", "*_" ]
+
+-- | Cache the candidate list for a package dependency graph.
+newtype HighFanout = HighFanout (FilePath, FilePath) deriving (Eq, Generic, Show)
+instance Binary HighFanout
+instance Hashable HighFanout
+instance NFData HighFanout
+type instance RuleResult HighFanout = Set.Set FilePath
+
+-- | Only this stage and package are qualified for the first experiment.
+normalizedImportRules :: FilePath -> Rules (FilePath -> Action (Maybe (String, [String])))
+normalizedImportRules root = do
+    void $ addOracleCache $ \(HighFanout (depFile, directory)) -> do
+      need [depFile]
+      contents <- liftIO $ BSC.readFile depFile
+      let rows = map (words . BSC.unpack) (BSC.lines contents)
+      pure . Map.keysSet . Map.filter ((>= 64) . Set.size) . Map.fromListWith Set.union $
+        [ (iface, Set.singleton obj)
+        | obj : src : deps <- rows
+        , takeExtension obj == ".o", takeExtension src == ".hs"
+        , directory `isPathPrefix` obj
+        , iface <- deps
+        , takeExtension iface == ".hi", directory `isPathPrefix` iface
+        ]
+    let directory = root -/- "stage1/compiler/build"
+        depFile = root -/- "stage1/compiler/.dependencies"
+    (root -/- "stage1/compiler/build//*.normalized-import") %> \stamp -> do
+      let static = stamp -<.> "hi"
+          dynamic = stamp -<.> "dyn_hi"
+      need [static]
+      selected <- Builder.builderPath (Ghc CompileHs Stage1) >>= Builder.normalizedIfaceWorker
+      hasDynamic <- doesFileExist dynamic
+      when hasDynamic $ need [dynamic]
+      evidence <- case selected of
+        Just (daemon, libdir, _) | hasDynamic -> do
+          providers <- askOracle (HighFanout (depFile, directory))
+          if static `Set.member` providers
+            then do
+              need [daemon]
+              Builder.ifaceWorkerQuery daemon ["fingerprint", "--evidence", libdir, static, dynamic]
+            else pure []
+        _ -> pure []
+      receipt <- case (selected, parseProvider evidence) of
+        (Just (_, _, digest), Just _) -> pure (("helper-v1 " ++ digest) : evidence)
+        _ -> do
+          staticHash <- rawHash static
+          dynamicHash <- if hasDynamic then rawHash dynamic else pure "missing"
+          pure ["raw-iface-v1 " ++ staticHash ++ " " ++ dynamicHash]
+      writeFileChanged stamp (unlines receipt)
+    -- Share the read and parse among all consumers of this provider.
+    -- A strict read closes the descriptor before the consumer can suspend.
+    newCache $ \stamp -> do
+      need [stamp]
+      liftIO $ do
+        contents <- BSC.readFile stamp
+        let receipt = case map BSC.unpack (BSC.lines contents) of
+              tag : evidence -> (,) tag <$> parseProvider evidence
+              _ -> Nothing
+        evaluate (rnf receipt `seq` receipt)
+  where
+    rawHash path = liftIO (Builder.fileSHA256 path) >>= maybe
+      (fail ("cannot read raw interface " ++ path)) pure
+
+isPathPrefix :: FilePath -> FilePath -> Bool
+isPathPrefix dir path = addTrailingPathSeparator dir `isPrefixOf` path
+
+parseProvider :: [String] -> Maybe [String]
+parseProvider [digest, provider]
+  | ["normalized-iface-v1", static, dynamic] <- words digest
+  , all isFingerprint [static, dynamic]
+  , ["provider", home, unit, name, staticAbi, dynamicAbi] <- splitOn "\t" provider
+  , all (not . null) [home, unit, name]
+  , all isFingerprint [staticAbi, dynamicAbi] = Just [home, unit, name, staticAbi, dynamicAbi]
+parseProvider _ = Nothing
+
+isFingerprint :: String -> Bool
+isFingerprint hash = length hash == 32 && all isHexDigit hash
+
+-- | Convert the daemon rows into a set to check multiple potential providers.
+parseConsumer :: [String] -> Maybe (Set.Set [String])
+parseConsumer ("iface-evidence-v2" : rows) = Set.fromList <$> traverse parse rows
+  where
+    parse row
+      | fields@[way, kind, unit, name, abi] <- splitOn "\t" row
+      , way `elem` ["static", "dynamic"], kind `elem` ["home", "package"]
+      , all (not . null) [unit, name], isFingerprint abi = Just fields
+      | otherwise = Nothing
+parseConsumer _ = Nothing
+
+-- | Require the current provider's recorded ABI in both consumer ways.
+matchesProvider :: Set.Set [String] -> [String] -> Bool
+matchesProvider uses [home, unit, name, sAbi, dAbi] =
+    matches "static" sAbi && matches "dynamic" dAbi
+  where
+    matches way abi = [way, "home", home, name, abi] `Set.member` uses
+                   || [way, "package", unit, name, abi] `Set.member` uses
+matchesProvider _ _ = False
+
+{- Note [Normalized importer dependencies]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Only opt-in Stage1 compiler vanilla object rules can substitute an input
+receipt for a raw interface. The normal dependency list still names the
+provider. The order-only receipt makes both provider ways available before
+the compiler runs. If the pair cannot be verified, the original raw
+dependency is used before compilation.
+The consumer's own interfaces are outputs of this action. Read them only
+after normal compilation, and never need them from this rule. A certificate
+must match a current provider in both ways. Keep the ordinary raw dependency
+if any evidence is missing or invalid. A receipt has a normal dependency on
+the worker selection and records the helper digest in its content. If the mode is disabled or the release moves, it can
+revert to raw bytes before Shake decides whether a stored consumer is clean.
+-}
+
+-- | Recognize common CPP pragmas before starting the interface helper.
+-- A match keeps the raw dependencies. The helper checks all other sources.
+hasCppPragmaPrefix :: FilePath -> IO Bool
+hasCppPragmaPrefix path = do
+    contents <- tryIOError (withBinaryFile path ReadMode (\h -> BSC.hGet h 4096))
+    pure (either (const False) (any cppLine . BSC.lines) contents)
+  where
+    cppLine line =
+        let trimmed = BSC.dropWhile (\c -> c == ' ' || c == '\t') line
+        in any (\prefix -> BSC.isPrefixOf prefix trimmed) (map BSC.pack ["{-# LANGUAGE CPP ", "{-# OPTIONS_GHC -cpp "])
 
 -- * Object file paths types and parsers
 
@@ -213,16 +346,42 @@ objectContext (BuildPath _ stage pkgPath obj) =
 -- * Building an object
 
 compileHsObjectAndHi
-    :: [(Resource, Int)] -> FilePath -> Action ()
-compileHsObjectAndHi rs objpath = do
+    :: (FilePath -> Action (Maybe (String, [String])))
+    -> [(Resource, Int)] -> FilePath -> Action ()
+compileHsObjectAndHi readReceipt rs objpath = do
   root <- buildRoot
   b@(BuildPath _root stage _path _o)
     <- parsePath (parseBuildObject root) "<object file path parser>" objpath
   let ctx = objectContext b
       way = C.way ctx
   ctxPath <- contextPath ctx
-  (src, deps) <- lookupDependencies (ctxPath -/- ".dependencies") objpath
-  need (src:deps)
+  let depFile = ctxPath -/- ".dependencies"
+      directory = root -/- "stage1/compiler/build"
+  (src, deps) <- lookupDependencies depFile objpath
+  let compileTarget = target ctx (Ghc CompileHs stage) [src] [objpath]
+  selected <- if stage == Stage1 && C.package ctx == compiler && way == vanilla
+                     && takeExtension objpath == ".o" && takeExtension src == ".hs"
+              then orderOnlyAction $ do
+                mode <- getEnv "HADRIAN_NORMALIZED_IFACE_WORKER"
+                case mode of
+                  Just _ -> Builder.builderPath (Ghc CompileHs stage) >>= Builder.normalizedIfaceWorker
+                  Nothing -> pure Nothing
+              else pure Nothing
+  setup <- forM selected $ \helper@(_, _, digest) -> do
+      providers <- orderOnlyAction (askOracle (HighFanout (depFile, directory)))
+      let candidates = filter (`Set.member` providers) deps
+      args <- if null candidates then pure [] else interpret compileTarget getArgs
+      ready <- if "-dynamic-too" `notElem` args then pure [] else fmap catMaybes $
+        forM candidates $ \provider -> do
+          let stamp = provider -<.> "normalized-import"
+          receipt <- orderOnlyAction (readReceipt stamp)
+          pure $ case receipt of
+            Just (tag, record) | tag == "helper-v1 " ++ digest -> Just (provider, stamp, record)
+            _ -> Nothing
+      pure (helper, args, ready)
+  let potential = maybe [] (\(_, _, ready) -> [p | (p, _, _) <- ready]) setup
+  need (src : filter (`notElem` potential) deps)
+  orderOnly potential
   -- The .conf file is needed when template-haskell is implicitly added as a dependency
   -- when a module in the template-haskell package is compiled. (See #24737)
   when  (isLibrary (C.package ctx)) (need . (:[]) =<< pkgConfFile ctx)
@@ -236,7 +395,24 @@ compileHsObjectAndHi rs objpath = do
              , "**/*." ++ hibootsuf way
              ]
 
-  buildWithResources rs $ target ctx (Ghc CompileHs stage) [src] [objpath]
+  buildWithResources rs compileTarget
+  forM_ setup $ \((daemon, libdir, _), args, ready) -> unless (null ready) $ do
+    let ownHi = objpath -<.> "hi"
+        ownDyn = objpath -<.> "dyn_hi"
+    trackAllow [ownHi, ownDyn]
+    cpp <- liftIO (hasCppPragmaPrefix src)
+    certificate <- if cpp
+      then pure Nothing
+      else parseConsumer <$> Builder.ifaceWorkerQuery daemon
+        (["certify", "--evidence", libdir, src, ownHi, ownDyn, "--"] ++ args ++ [src])
+    case certificate of
+      Nothing -> need potential
+      Just uses -> forM_ ready $ \(provider, stamp, record) -> do
+        if matchesProvider uses record
+          then do
+            need [stamp]
+            putVerbose $ "normalized import " ++ objpath ++ " <- " ++ provider
+          else need [provider]
 
 compileNonHsObject :: [(Resource, Int)] -> SourceLang -> FilePath -> Action ()
 compileNonHsObject rs lang path = do

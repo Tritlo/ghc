@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-x-data-list-nonempty-unzip #-}
-
 module Rules.Dependencies (buildPackageDependencies) where
 
-import Data.Bifunctor
-import qualified Data.List.NonEmpty as NE
+import qualified Data.HashMap.Lazy as HashMap
 
 import Base
 import Context
@@ -20,6 +16,7 @@ import qualified Text.Parsec as Parsec
 
 buildPackageDependencies :: [(Resource, Int)] -> Rules ()
 buildPackageDependencies rs = do
+    dependencyWorkerRules
     root <- buildRootRules
     root -/- "**/.dependencies.mk" %> \mk -> do
         DepMkFile stage pkgpath <- getDepMkFile root mk
@@ -36,12 +33,14 @@ buildPackageDependencies rs = do
 
     root -/- "**/.dependencies" %> \deps -> do
         mkDeps <- readFile' (deps <.> "mk")
-        writeFileChanged deps . unlines
-                              . map (\(src, deps) -> unwords $ src : deps)
-                              . map (bimap unifyPath (map unifyPath))
-                              . map (bimap NE.head concat . NE.unzip)
-                              . NE.groupAllWith fst
-                              $ parseMakefile mkDeps
+        -- fromListWith (++) prepends each new row to the previous rows for
+        -- its target. Reverse the input to preserve the prerequisite order.
+        let byTarget = HashMap.fromListWith (++) (reverse (parseMakefile mkDeps))
+        writeFileChanged deps $
+            unlines
+                [ unwords (map unifyPath (targetPath : prerequisites))
+                | (targetPath, prerequisites) <- sortOn fst (HashMap.toList byTarget)
+                ]
 
 
 data DepMkFile = DepMkFile Stage FilePath deriving (Eq, Show)

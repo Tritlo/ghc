@@ -43,7 +43,12 @@ cabalOracle = do
         putVerbose $ "| PackageData oracle: parsing " ++ quote file ++ "..."
         parsePackageData package
 
-    void $ addOracleCache $ \(ContextDataKey context@Context {..}) -> do
+    -- Keep the existing key so rules saved with an older database still
+    -- check this result. The ordinary oracle refreshes those dependencies.
+    void $ addOracle $ \(ContextDataKey context) ->
+        askOracle (ContextDataWithBuildInfoKey context)
+
+    void $ addOracleCache $ \(ContextDataWithBuildInfoKey context@Context {..}) -> do
         putVerbose $ "| ContextData oracle: resolving data for "
                ++ quote (pkgName package) ++ " (" ++ show stage
                ++ ", " ++ show way ++ ")..."

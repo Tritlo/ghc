@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "stage": "stage1",
+  "ghc_source_revision": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+  "release_metadata": {
+    "compiler_sha256": "5611e965dc74a909eb5968b9f2be4d320904db6e0bd68e5e89ed5b01864ddd1b",
+    "compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+    "version": "10.1.20261115.1",
+    "libdir": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/lib/.",
+    "worker_revision": "55f502b328e7348b544a446cf92a6a26dd1bc17f",
+    "worker_source_modified": "no"
+  },
+  "release_path": "/home/tritlo/Code/ghc-persistent-worker/_build/stage0-bin/releases/ghc-10.1.20261115.1-20261127T014454Z.J6d25r",
+  "worker_shim_sha256": "a52701d56c47b4f506d2142abfcae6f714d47eb5d100f6ed0068ebdcde17b7eb",
+  "worker_daemon_sha256": "37b548335fc077ae1ebb38690ba7eaadfcd619e041690147c6f4f2746a5ea707",
+  "workload": {
+    "target": "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o",
+    "flavour": "quick",
+    "jobs": 3,
+    "setting": "stage1.ghc.ghc.hs.opts+=-O2",
+    "worker_deps_only": true,
+    "frozen_prerequisites": true,
+    "source_targets": 887,
+    "module_summaries": 956,
+    "rhs_before": "\"Post CPS Cmm\"",
+    "rhs_after": "\"Post CPS Cmm pass\"",
+    "baseline_source_sha256": "e28ae69ab5413e3ff4c6f4d0cd56d623413d9755f15ddab203ab2e42e0d70928",
+    "baseline_shake_sha256": "b366c16ead57604d9a7418d6524e2a88fd388de192af11c2c89367ff7b97e88c"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "order": [
+        "worker",
+        "stock"
+      ],
+      "edit": {
+        "stock": {
+          "wall_seconds": 12.12,
+          "launcher_user_seconds": 11.07,
+          "launcher_system_seconds": 1.13,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 2.42,
+          "launcher_user_seconds": 1.53,
+          "launcher_system_seconds": 0.47,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": [
+            "partial 1/956"
+          ]
+        }
+      },
+      "noop": {
+        "stock": {
+          "wall_seconds": 1.52,
+          "launcher_user_seconds": 1.34,
+          "launcher_system_seconds": 0.4,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 1.39,
+          "launcher_user_seconds": 1.2,
+          "launcher_system_seconds": 0.38,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        }
+      },
+      "artifacts": {
+        "mk": {
+          "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+          "bytes": 5244968
+        },
+        "o": {
+          "sha256": "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+          "bytes": 45040
+        },
+        "hi": {
+          "sha256": "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+          "bytes": 12303
+        },
+        "dyn_o": {
+          "sha256": "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+          "bytes": 45416
+        },
+        "dyn_hi": {
+          "sha256": "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+          "bytes": 12306
+        }
+      }
+    },
+    {
+      "round": 2,
+      "order": [
+        "stock",
+        "worker"
+      ],
+      "edit": {
+        "stock": {
+          "wall_seconds": 11.31,
+          "launcher_user_seconds": 10.3,
+          "launcher_system_seconds": 1.09,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 2.59,
+          "launcher_user_seconds": 1.64,
+          "launcher_system_seconds": 0.44,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": [
+            "partial 1/956"
+          ]
+        }
+      },
+      "noop": {
+        "stock": {
+          "wall_seconds": 1.42,
+          "launcher_user_seconds": 1.25,
+          "launcher_system_seconds": 0.37,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 1.34,
+          "launcher_user_seconds": 1.22,
+          "launcher_system_seconds": 0.3,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        }
+      },
+      "artifacts": {
+        "mk": {
+          "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+          "bytes": 5244968
+        },
+        "o": {
+          "sha256": "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+          "bytes": 45040
+        },
+        "hi": {
+          "sha256": "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+          "bytes": 12303
+        },
+        "dyn_o": {
+          "sha256": "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+          "bytes": 45416
+        },
+        "dyn_hi": {
+          "sha256": "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+          "bytes": 12306
+        }
+      }
+    },
+    {
+      "round": 3,
+      "order": [
+        "worker",
+        "stock"
+      ],
+      "edit": {
+        "stock": {
+          "wall_seconds": 11.86,
+          "launcher_user_seconds": 10.89,
+          "launcher_system_seconds": 1.02,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 2.52,
+          "launcher_user_seconds": 1.54,
+          "launcher_system_seconds": 0.53,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": [
+            "partial 1/956"
+          ]
+        }
+      },
+      "noop": {
+        "stock": {
+          "wall_seconds": 1.46,
+          "launcher_user_seconds": 1.26,
+          "launcher_system_seconds": 0.4,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 1.42,
+          "launcher_user_seconds": 1.29,
+          "launcher_system_seconds": 0.34,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        }
+      },
+      "artifacts": {
+        "mk": {
+          "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+          "bytes": 5244968
+        },
+        "o": {
+          "sha256": "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+          "bytes": 45040
+        },
+        "hi": {
+          "sha256": "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+          "bytes": 12303
+        },
+        "dyn_o": {
+          "sha256": "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+          "bytes": 45416
+        },
+        "dyn_hi": {
+          "sha256": "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+          "bytes": 12306
+        }
+      }
+    },
+    {
+      "round": 4,
+      "order": [
+        "stock",
+        "worker"
+      ],
+      "edit": {
+        "stock": {
+          "wall_seconds": 12.09,
+          "launcher_user_seconds": 10.99,
+          "launcher_system_seconds": 1.18,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 2.49,
+          "launcher_user_seconds": 1.58,
+          "launcher_system_seconds": 0.45,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": [
+            "partial 1/956"
+          ]
+        }
+      },
+      "noop": {
+        "stock": {
+          "wall_seconds": 1.61,
+          "launcher_user_seconds": 1.37,
+          "launcher_system_seconds": 0.46,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 1.3,
+          "launcher_user_seconds": 1.12,
+          "launcher_system_seconds": 0.36,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        }
+      },
+      "artifacts": {
+        "mk": {
+          "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+          "bytes": 5244968
+        },
+        "o": {
+          "sha256": "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+          "bytes": 45040
+        },
+        "hi": {
+          "sha256": "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+          "bytes": 12303
+        },
+        "dyn_o": {
+          "sha256": "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+          "bytes": 45416
+        },
+        "dyn_hi": {
+          "sha256": "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+          "bytes": 12306
+        }
+      }
+    },
+    {
+      "round": 5,
+      "order": [
+        "worker",
+        "stock"
+      ],
+      "edit": {
+        "stock": {
+          "wall_seconds": 11.8,
+          "launcher_user_seconds": 10.87,
+          "launcher_system_seconds": 1.02,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 2.4,
+          "launcher_user_seconds": 1.47,
+          "launcher_system_seconds": 0.5,
+          "ghc_calls": {
+            "-M": 1,
+            "-c": 1
+          },
+          "worker_trace": [
+            "partial 1/956"
+          ]
+        }
+      },
+      "noop": {
+        "stock": {
+          "wall_seconds": 1.28,
+          "launcher_user_seconds": 1.12,
+          "launcher_system_seconds": 0.33,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        },
+        "worker": {
+          "wall_seconds": 1.46,
+          "launcher_user_seconds": 1.27,
+          "launcher_system_seconds": 0.39,
+          "ghc_calls": {
+            "-M": 0,
+            "-c": 0
+          },
+          "worker_trace": []
+        }
+      },
+      "artifacts": {
+        "mk": {
+          "sha256": "c283391fc11707d5a3f7a50174a821ce0d4b4b743de2c41a4b665fc4ae1c9de7",
+          "bytes": 5244968
+        },
+        "o": {
+          "sha256": "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+          "bytes": 45040
+        },
+        "hi": {
+          "sha256": "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+          "bytes": 12303
+        },
+        "dyn_o": {
+          "sha256": "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+          "bytes": 45416
+        },
+        "dyn_hi": {
+          "sha256": "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+          "bytes": 12306
+        }
+      }
+    }
+  ],
+  "summary": {
+    "all": {
+      "sample_size": 5,
+      "edit_median_seconds": {
+        "stock": 11.86,
+        "worker": 2.49
+      },
+      "noop_median_seconds": {
+        "stock": 1.46,
+        "worker": 1.39
+      },
+      "edit_stock_over_worker_medians": 4.763052208835341,
+      "edit_median_paired_stock_over_worker": 4.855421686746987
+    },
+    "stock_first": {
+      "sample_size": 2,
+      "edit_median_seconds": {
+        "stock": 11.7,
+        "worker": 2.54
+      },
+      "noop_median_seconds": {
+        "stock": 1.5150000000000001,
+        "worker": 1.32
+      },
+      "edit_stock_over_worker_medians": 4.606299212598425,
+      "edit_median_paired_stock_over_worker": 4.6111085267711776
+    },
+    "worker_first": {
+      "sample_size": 3,
+      "edit_median_seconds": {
+        "stock": 11.86,
+        "worker": 2.42
+      },
+      "noop_median_seconds": {
+        "stock": 1.46,
+        "worker": 1.42
+      },
+      "edit_stock_over_worker_medians": 4.900826446280992,
+      "edit_median_paired_stock_over_worker": 4.916666666666667
+    }
+  }
+}

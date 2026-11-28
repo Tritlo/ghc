@@ -3,16 +3,26 @@ module Main (main) where
 
 import Development.Shake
 import Hadrian.Utilities
+import Settings (newFlavourCache)
 import Settings.Parser
 import System.Directory (getCurrentDirectory)
 import System.IO
 import System.Exit
 import System.Environment
+import Control.Concurrent (getNumCapabilities, rtsSupportsBoundThreads, setNumCapabilities)
 import Control.Exception
 import Data.IORef
+import qualified Crypto.Hash.SHA256 as SHA256
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Builder as Bytes
+import qualified Data.ByteString.Char8 as Char8
+import Data.List (isPrefixOf, sortOn)
 
 import qualified Base
+import qualified Builder
 import qualified CommandLine
+import qualified Flavour.Type as Flavour
+import qualified Hadrian.Oracles.ArgsHash as ArgsHash
 import qualified Environment
 import qualified Rules
 import qualified Rules.Codes
@@ -35,6 +45,7 @@ main = do
     -- Provide access to command line arguments and some user settings through
     -- Shake's type-indexed map 'shakeExtra'.
     argsMap <- CommandLine.cmdLineArgsMap
+    flavourCache <- newFlavourCache
     case CommandLine.lookupBignum argsMap of
       Just _ -> hPutStrLn stderr $ unlines
         [ "Warning: --bignum is deprecated."
@@ -44,6 +55,7 @@ main = do
       Nothing -> return ()
     let extra = insertExtra UserSettings.buildProgressColour
               $ insertExtra UserSettings.successColour
+              $ insertExtra flavourCache
               $ argsMap
 
         BuildRoot buildRoot = CommandLine.lookupBuildRoot argsMap
@@ -59,7 +71,23 @@ main = do
                    then [(RebuildLater, buildRoot -/- "**/.dependencies.mk"), (RebuildLater, buildRoot -/- "**/.dependencies")]
                    else [])
 
+    singleCapability <- (== Just "1") <$> lookupEnv "HADRIAN_SINGLE_CAPABILITY"
+    let buildAction build
+          -- See Note [Hadrian RTS capabilities].
+          | singleCapability && rtsSupportsBoundThreads =
+              action $ actionBracket enter setNumCapabilities (const build)
+          | otherwise = action build
+
+        enter = do
+          previous <- getNumCapabilities
+          setNumCapabilities 1
+          pure previous
+
     cwd <- getCurrentDirectory
+    rawArguments <- getArgs
+    persistent <- (== Just "1") <$> lookupEnv "HADRIAN_PERSISTENT_ARGS"
+    let invocation = ArgsHash.ArgsInvocation persistent
+            (invocationWitness cwd rawArguments (CommandLine.argumentSettingsSnapshot argsMap))
     shakeColor <- shouldUseColor
     let options :: ShakeOptions
         options = shakeOptions
@@ -75,7 +103,7 @@ main = do
             , shakeRebuild  = rebuild
             , shakeTimings  = False
             , shakeColor    = shakeColor
-            , shakeExtra    = extra
+            , shakeExtra    = insertExtra invocation extra
 
             -- Setting shakeSymlink to False ensures files are copied out of
             -- shake's cloud cache instead of hard linked. This is important as
@@ -125,7 +153,6 @@ main = do
             Rules.Changelog.changelogRules
             Rules.SourceDist.sourceDistRules
             Rules.Test.testRules
-            Rules.topLevelTargets
             Rules.toolArgsTarget
 
     -- This IORef is used to communicate the result of shake parsing
@@ -137,10 +164,42 @@ main = do
         writeIORef  shake_opts_var shake_opts
         let targets' = filter (not . null) $ removeKVs targets
         Environment.setupEnvironment
-        return . Just $ (shake_opts, if null targets'
-                                      then rules
-                                      else want targets' >> withoutActions rules)
+        return . Just $ (shake_opts, case targets' of
+            [] -> rules >> buildAction Rules.topLevelTargets
+            _ | singleCapability -> buildAction (need targets') >> withoutActions rules
+              | otherwise -> want targets' >> withoutActions rules)
 
+-- | Identify the inputs which argument expressions read outside Shake.
+-- Read the effective directory after Shake applies --directory.
+invocationWitness :: FilePath -> [String] -> String -> Action (Maybe String)
+invocationWitness initialDirectory argv settings = do
+    flavour <- CommandLine.cmdFlavour
+    unitHash <- CommandLine.cmdUnitIdHash
+    bignum <- CommandLine.cmdBignum
+    options <- getShakeOptions
+    let supported = "perf+no_profiled_libs"
+        customBase = any ((`isPrefixOf` supported) . Flavour.name) UserSettings.userFlavours
+    if flavour /= Just supported || customBase || not (null UserSettings.userPackages)
+        || unitHash || bignum /= Nothing
+        || shakeShare options /= Nothing || not (null (shakeCloud options))
+        then pure Nothing
+        else liftIO $ do
+            executable <- Builder.fileSHA256 "/proc/self/exe"
+            effectiveDirectory <- getCurrentDirectory
+            -- Preserve the first and last values of repeated names.
+            environment <- sortOn fst <$> getEnvironment
+            let digest identity = Char8.unpack . Base16.encode . SHA256.hashlazy . Bytes.toLazyByteString
+                    . Bytes.stringUtf8 $ show (identity, initialDirectory, effectiveDirectory, argv, settings, environment)
+            pure (digest <$> executable)
+
+{- Note [Hadrian RTS capabilities]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Shake sets the number of RTS capabilities to the job count before it runs the
+target actions. For incremental builds, a single capability can reduce the
+time Hadrian spends checking dependencies. Set the capability count inside
+the action so that Shake keeps its job pool. Restore the count when the
+action finishes or throws an exception.
+-}
 handleShakeException :: IORef ShakeOptions -> IO a -> IO a
 handleShakeException shake_opts_var shake_run = do
   args <- getArgs

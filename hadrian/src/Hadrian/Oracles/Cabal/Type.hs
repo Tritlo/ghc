@@ -35,6 +35,11 @@ newtype ContextDataKey = ContextDataKey Context
     deriving (Binary, Eq, Hashable, NFData, Show)
 type instance RuleResult ContextDataKey = ContextData
 
+-- | Cache resolved context data with dependencies on Cabal build information.
+newtype ContextDataWithBuildInfoKey = ContextDataWithBuildInfoKey Context
+    deriving (Binary, Eq, Hashable, NFData, Show)
+type instance RuleResult ContextDataWithBuildInfoKey = ContextData
+
 -- TODO: Should @PackageConfiguration@ be simply @()@? Presumably the pair
 -- @(Compiler, Maybe Platform)@ is fully determined by the current build Stage.
 -- | The result of Cabal package configuration produced by the oracle

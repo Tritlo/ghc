@@ -8,7 +8,7 @@ module Settings (
     queryBuildTarget, queryHostTarget,
     queryBuild, queryHost,
     queryArch, queryOS, queryVendor,
-    flavourFileRules
+    flavourFileRules, newFlavourCache
     ) where
 
 import CommandLine
@@ -120,6 +120,30 @@ getFlavourName = askOracle (FlavourName ())
 --   syntax. See Note [Hadrian settings] at the bottom of this file.
 flavour :: Action Flavour
 flavour = do
+    FlavourCache lookupFlavour <- userSetting (FlavourCache resolveFlavour)
+    lookupFlavour
+
+-- | A resolved flavour lookup for one Hadrian invocation.
+newtype FlavourCache = FlavourCache (Action Flavour)
+
+{- Note [Share resolved flavour]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Many argument expressions ask for the flavour. Resolving it applies the same
+command-line overrides, settings file, and target defaults each time. Share
+the resolved flavour within one invocation. Shake's cache propagates the
+resolution dependencies to each caller. Argument expressions still evaluate
+in their own target contexts.
+-}
+
+-- | Allocate a cache for the current invocation's flavour.
+newFlavourCache :: IO FlavourCache
+newFlavourCache = do
+    cached <- newCacheIO $ \() -> resolveFlavour
+    pure (FlavourCache (cached ()))
+
+-- | Apply the invocation's settings and target defaults.
+resolveFlavour :: Action Flavour
+resolveFlavour = do
     flavourName <- getFlavourName
     when ("quickest" `isPrefixOf` flavourName) $
       fail $ "The `quickest` flavour has been deprecated. Use `quick` instead.\n"

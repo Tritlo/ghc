@@ -1,0 +1,660 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "order": [
+        "stock",
+        "cap",
+        "combined"
+      ],
+      "measurements": {
+        "stock": {
+          "prime": {
+            "wall": 41.1,
+            "user": 27.6,
+            "sys": 17.8,
+            "rss_kib": 543832,
+            "actions": 8,
+            "allocation_bytes": 12617472712
+          },
+          "edit": {
+            "wall": 41.26,
+            "user": 28.12,
+            "sys": 17.68,
+            "rss_kib": 495960,
+            "actions": 8,
+            "allocation_bytes": 13103298384
+          },
+          "noop": {
+            "wall": 25.05,
+            "user": 14.67,
+            "sys": 13.28,
+            "rss_kib": 598300,
+            "actions": 0,
+            "allocation_bytes": 10958468464
+          }
+        },
+        "cap": {
+          "prime": {
+            "wall": 19.73,
+            "user": 15.95,
+            "sys": 5.06,
+            "rss_kib": 547712,
+            "actions": 8,
+            "allocation_bytes": 11747389760
+          },
+          "edit": {
+            "wall": 19.64,
+            "user": 15.9,
+            "sys": 4.72,
+            "rss_kib": 528680,
+            "actions": 8,
+            "allocation_bytes": 11906005632
+          },
+          "noop": {
+            "wall": 4.78,
+            "user": 4.31,
+            "sys": 0.54,
+            "rss_kib": 467308,
+            "actions": 0,
+            "allocation_bytes": 11411880776
+          }
+        },
+        "combined": {
+          "prime": {
+            "wall": 51.16,
+            "user": 8.64,
+            "sys": 5.57,
+            "rss_kib": 590608,
+            "actions": 43,
+            "allocation_bytes": 12427759560
+          },
+          "edit": {
+            "wall": 12.39,
+            "user": 8.28,
+            "sys": 4.28,
+            "rss_kib": 564648,
+            "actions": 8,
+            "allocation_bytes": 12400242024
+          },
+          "noop": {
+            "wall": 5.02,
+            "user": 4.47,
+            "sys": 0.62,
+            "rss_kib": 545372,
+            "actions": 0,
+            "allocation_bytes": 11898496912
+          }
+        }
+      },
+      "checks": {
+        "stock": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        },
+        "cap": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        },
+        "combined": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        }
+      }
+    },
+    {
+      "round": 2,
+      "order": [
+        "combined",
+        "stock",
+        "cap"
+      ],
+      "measurements": {
+        "stock": {
+          "prime": {
+            "wall": 38.71,
+            "user": 32.88,
+            "sys": 19.02,
+            "rss_kib": 536780,
+            "actions": 43,
+            "allocation_bytes": 12079383032
+          },
+          "edit": {
+            "wall": 39.1,
+            "user": 27.42,
+            "sys": 16.91,
+            "rss_kib": 477564,
+            "actions": 8,
+            "allocation_bytes": 12125009992
+          },
+          "noop": {
+            "wall": 25.2,
+            "user": 15.25,
+            "sys": 12.9,
+            "rss_kib": 436676,
+            "actions": 0,
+            "allocation_bytes": 11621104816
+          }
+        },
+        "cap": {
+          "prime": {
+            "wall": 19.79,
+            "user": 15.85,
+            "sys": 4.62,
+            "rss_kib": 557644,
+            "actions": 8,
+            "allocation_bytes": 12400791712
+          },
+          "edit": {
+            "wall": 19.64,
+            "user": 16.14,
+            "sys": 4.67,
+            "rss_kib": 544364,
+            "actions": 8,
+            "allocation_bytes": 12563458672
+          },
+          "noop": {
+            "wall": 5.14,
+            "user": 4.64,
+            "sys": 0.57,
+            "rss_kib": 486656,
+            "actions": 0,
+            "allocation_bytes": 12382302856
+          }
+        },
+        "combined": {
+          "prime": {
+            "wall": 35.64,
+            "user": 7.89,
+            "sys": 4.73,
+            "rss_kib": 482892,
+            "actions": 8,
+            "allocation_bytes": 13079313640
+          },
+          "edit": {
+            "wall": 11.08,
+            "user": 7.38,
+            "sys": 4.14,
+            "rss_kib": 598780,
+            "actions": 8,
+            "allocation_bytes": 11571777488
+          },
+          "noop": {
+            "wall": 4.51,
+            "user": 3.98,
+            "sys": 0.6,
+            "rss_kib": 561424,
+            "actions": 0,
+            "allocation_bytes": 11082128720
+          }
+        }
+      },
+      "checks": {
+        "stock": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        },
+        "cap": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        },
+        "combined": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        }
+      }
+    },
+    {
+      "round": 3,
+      "order": [
+        "cap",
+        "combined",
+        "stock"
+      ],
+      "measurements": {
+        "stock": {
+          "prime": {
+            "wall": 40.33,
+            "user": 35.77,
+            "sys": 20.61,
+            "rss_kib": 544356,
+            "actions": 43,
+            "allocation_bytes": 12734773944
+          },
+          "edit": {
+            "wall": 42.22,
+            "user": 29.32,
+            "sys": 17.74,
+            "rss_kib": 501216,
+            "actions": 8,
+            "allocation_bytes": 13108742936
+          },
+          "noop": {
+            "wall": 26.01,
+            "user": 15.8,
+            "sys": 13.27,
+            "rss_kib": 596584,
+            "actions": 0,
+            "allocation_bytes": 10968053304
+          }
+        },
+        "cap": {
+          "prime": {
+            "wall": 19.8,
+            "user": 15.7,
+            "sys": 4.86,
+            "rss_kib": 589516,
+            "actions": 8,
+            "allocation_bytes": 11577659696
+          },
+          "edit": {
+            "wall": 19.31,
+            "user": 15.82,
+            "sys": 4.55,
+            "rss_kib": 548436,
+            "actions": 8,
+            "allocation_bytes": 11745939784
+          },
+          "noop": {
+            "wall": 4.61,
+            "user": 4.11,
+            "sys": 0.58,
+            "rss_kib": 520028,
+            "actions": 0,
+            "allocation_bytes": 11248438072
+          }
+        },
+        "combined": {
+          "prime": {
+            "wall": 50.38,
+            "user": 8.44,
+            "sys": 5.3,
+            "rss_kib": 602868,
+            "actions": 43,
+            "allocation_bytes": 12255166968
+          },
+          "edit": {
+            "wall": 11.67,
+            "user": 7.99,
+            "sys": 3.83,
+            "rss_kib": 610584,
+            "actions": 8,
+            "allocation_bytes": 12229578136
+          },
+          "noop": {
+            "wall": 4.84,
+            "user": 4.35,
+            "sys": 0.56,
+            "rss_kib": 566648,
+            "actions": 0,
+            "allocation_bytes": 11739218888
+          }
+        }
+      },
+      "checks": {
+        "stock": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        },
+        "cap": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        },
+        "combined": {
+          "artifact_count": 17,
+          "artifacts_differ": {},
+          "noop_exact": true,
+          "dependencies_sha256": "26724e223fdc78cf386bb0a5bb5bd3af9f082b77802a1c15f802712e34058ac7",
+          "consumer": "156\n",
+          "consumer_hashes_exact": true
+        }
+      }
+    }
+  ],
+  "medians": {
+    "stock": {
+      "prime": {
+        "wall": 40.33,
+        "user": 32.88,
+        "sys": 19.02,
+        "rss_kib": 543832,
+        "actions": 43,
+        "allocation_bytes": 12617472712
+      },
+      "edit": {
+        "wall": 41.26,
+        "user": 28.12,
+        "sys": 17.68,
+        "rss_kib": 495960,
+        "actions": 8,
+        "allocation_bytes": 13103298384
+      },
+      "noop": {
+        "wall": 25.2,
+        "user": 15.25,
+        "sys": 13.27,
+        "rss_kib": 596584,
+        "actions": 0,
+        "allocation_bytes": 10968053304
+      }
+    },
+    "cap": {
+      "prime": {
+        "wall": 19.79,
+        "user": 15.85,
+        "sys": 4.86,
+        "rss_kib": 557644,
+        "actions": 8,
+        "allocation_bytes": 11747389760
+      },
+      "edit": {
+        "wall": 19.64,
+        "user": 15.9,
+        "sys": 4.67,
+        "rss_kib": 544364,
+        "actions": 8,
+        "allocation_bytes": 11906005632
+      },
+      "noop": {
+        "wall": 4.78,
+        "user": 4.31,
+        "sys": 0.57,
+        "rss_kib": 486656,
+        "actions": 0,
+        "allocation_bytes": 11411880776
+      }
+    },
+    "combined": {
+      "prime": {
+        "wall": 50.38,
+        "user": 8.44,
+        "sys": 5.3,
+        "rss_kib": 590608,
+        "actions": 43,
+        "allocation_bytes": 12427759560
+      },
+      "edit": {
+        "wall": 11.67,
+        "user": 7.99,
+        "sys": 4.14,
+        "rss_kib": 598780,
+        "actions": 8,
+        "allocation_bytes": 12229578136
+      },
+      "noop": {
+        "wall": 4.84,
+        "user": 4.35,
+        "sys": 0.6,
+        "rss_kib": 561424,
+        "actions": 0,
+        "allocation_bytes": 11739218888
+      }
+    }
+  },
+  "paired_wall_seconds_saved": {
+    "stock->cap": {
+      "prime": [
+        21.37,
+        18.92,
+        20.53
+      ],
+      "edit": [
+        21.62,
+        19.46,
+        22.91
+      ],
+      "noop": [
+        20.27,
+        20.06,
+        21.4
+      ]
+    },
+    "stock->combined": {
+      "prime": [
+        -10.06,
+        3.07,
+        -10.05
+      ],
+      "edit": [
+        28.87,
+        28.02,
+        30.55
+      ],
+      "noop": [
+        20.03,
+        20.69,
+        21.17
+      ]
+    },
+    "cap->combined": {
+      "prime": [
+        -31.43,
+        -15.85,
+        -30.58
+      ],
+      "edit": [
+        7.25,
+        8.56,
+        7.64
+      ],
+      "noop": [
+        -0.24,
+        0.63,
+        -0.23
+      ]
+    }
+  },
+  "hadrian_commit": "b45aa1c372",
+  "shake": "0.19.9",
+  "ghc_source_revision": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+  "worker": "55f502b",
+  "args": [
+    "-j3",
+    "--flavour=quick",
+    "--docs=none",
+    "--freeze1",
+    "stage2:exe:ghc-bin"
+  ],
+  "edit": "GHC.Cmm.Pipeline, require splitting_proc_points in the common-block elimination guard",
+  "host": "gondolin x86_64 WSL2",
+  "cpus": [
+    20,
+    21,
+    22,
+    23
+  ],
+  "physical_core_ids": [
+    10,
+    10,
+    11,
+    11
+  ],
+  "sampled_simultaneous_children": {
+    "combined-prime": [
+      [
+        "ghc",
+        "compiler/GHC.hs"
+      ],
+      [
+        "ghc",
+        "libraries/containers/containers/src/Data/Containers/ListUtils.hs"
+      ],
+      [
+        "ghc",
+        "libraries/unix/System/Posix.hs"
+      ]
+    ],
+    "combined-edit": [
+      [
+        "ghc",
+        ""
+      ],
+      [
+        "ar",
+        ""
+      ]
+    ]
+  },
+  "stock_hashes": "whole-55f502b.json",
+  "diagnostic_shake_noop": [
+    {
+      "label": "0-0",
+      "elapsed": 25.7083,
+      "actions": 0,
+      "cpu": "28.422638",
+      "gc": "0.739871",
+      "bytes": "10963398520",
+      "mem": "580911104"
+    },
+    {
+      "label": "1-1",
+      "elapsed": 4.7303,
+      "actions": 0,
+      "cpu": "4.773097",
+      "gc": "1.209038",
+      "bytes": "11076029600",
+      "mem": "543162368"
+    },
+    {
+      "label": "1-2",
+      "elapsed": 5.001,
+      "actions": 0,
+      "cpu": "5.039266",
+      "gc": "1.330183",
+      "bytes": "11244443040",
+      "mem": "509607936"
+    },
+    {
+      "label": "0-3",
+      "elapsed": 26.4709,
+      "actions": 0,
+      "cpu": "29.513268",
+      "gc": "0.720022",
+      "bytes": "11467397336",
+      "mem": "466616320"
+    },
+    {
+      "label": "0-4",
+      "elapsed": 26.3421,
+      "actions": 0,
+      "cpu": "29.357246",
+      "gc": "0.809765",
+      "bytes": "11629987808",
+      "mem": "419430400"
+    },
+    {
+      "label": "1-5",
+      "elapsed": 5.5204,
+      "actions": 0,
+      "cpu": "5.564338",
+      "gc": "1.618544",
+      "bytes": "11732853672",
+      "mem": "557842432"
+    }
+  ],
+  "distinct_physical_cores_noop": {
+    "cpus": [
+      12,
+      14,
+      16,
+      18
+    ],
+    "core_ids": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "jobs": 3,
+    "samples": [
+      {
+        "mode": "prime",
+        "elapsed": 27.15,
+        "actions": 0,
+        "cpu": 30.271444,
+        "gc": 0.985774,
+        "allocated_bytes": 11134212640
+      },
+      {
+        "mode": "stock",
+        "elapsed": 25.213,
+        "actions": 0,
+        "cpu": 28.065866,
+        "gc": 0.672989,
+        "allocated_bytes": 11291210552
+      },
+      {
+        "mode": "cap",
+        "elapsed": 4.6472,
+        "actions": 0,
+        "cpu": 4.697292,
+        "gc": 1.09387,
+        "allocated_bytes": 11403185768
+      },
+      {
+        "mode": "cap",
+        "elapsed": 4.8953,
+        "actions": 0,
+        "cpu": 4.941075,
+        "gc": 1.314005,
+        "allocated_bytes": 11560327608
+      },
+      {
+        "mode": "stock",
+        "elapsed": 24.971,
+        "actions": 0,
+        "cpu": 27.801998,
+        "gc": 0.788403,
+        "allocated_bytes": 11784287320
+      },
+      {
+        "mode": "stock",
+        "elapsed": 25.2082,
+        "actions": 0,
+        "cpu": 28.048094,
+        "gc": 1.066898,
+        "allocated_bytes": 11948331976
+      },
+      {
+        "mode": "cap",
+        "elapsed": 5.2652,
+        "actions": 0,
+        "cpu": 5.269372,
+        "gc": 1.308748,
+        "allocated_bytes": 12389249576
+      }
+    ]
+  }
+}

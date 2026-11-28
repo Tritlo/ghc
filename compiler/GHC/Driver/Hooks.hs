@@ -17,6 +17,7 @@ module GHC.Driver.Hooks
    , tcForeignExportsHook
    , hscFrontendHook
    , hscCompileCoreExprHook
+   , readIfaceHook
    , ghcPrimIfaceHook
    , runPhaseHook
    , runMetaHook
@@ -34,6 +35,7 @@ import GHC.Prelude
 import GHC.Driver.Env
 import GHC.Driver.DynFlags
 import GHC.Driver.Pipeline.Phases
+import GHC.Platform.Profile (Profile)
 
 import GHC.Hs.Decls
 import GHC.Hs.Binds
@@ -42,6 +44,7 @@ import GHC.Hs.Extension
 
 import GHC.Types.Name.Reader
 import GHC.Types.Name
+import GHC.Types.Name.Cache (NameCache)
 import GHC.Types.Id
 import GHC.Types.SrcLoc
 import GHC.Types.Basic
@@ -69,6 +72,7 @@ import GHCi.RemoteTypes
 
 import GHC.Data.Bag
 
+import Data.ByteString (ByteString)
 import qualified Data.Kind
 import System.Process
 import GHC.Linker.Types
@@ -101,6 +105,7 @@ emptyHooks = Hooks
   , createIservProcessHook = Nothing
   , stgToCmmHook           = Nothing
   , cmmToRawCmmHook        = Nothing
+  , readIfaceHook          = Nothing
   }
 
 {- Note [The Decoupling Abstract Data Hack]
@@ -151,6 +156,13 @@ data Hooks = Hooks
                                  -> [CgStgTopBinding] -> CgStream CmmGroup ModuleLFInfos))
   , cmmToRawCmmHook        :: !(forall a . Maybe (DynFlags -> Maybe Module -> CgStream CmmGroupSRTs a
                                  -> IO (CgStream RawCmmGroup a)))
+  -- | Reuse a stock interface decode under the same name cache and profile.
+  -- GHC checks the header before calling the hook and checks module identity
+  -- on return. Call the decoder at most once. It reads the supplied bytes
+  -- from the cursor left by the header check. Reuse a result only for
+  -- identical bytes under the same name cache and profile.
+  , readIfaceHook          :: !(Maybe
+      (Profile -> NameCache -> Module -> FilePath -> ByteString -> IO ModIface -> IO ModIface))
   }
 
 class HasHooks m where

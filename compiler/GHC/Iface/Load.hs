@@ -1354,7 +1354,10 @@ readIface
 readIface hooks logger dflags name_cache wanted_mod file_path = do
   trace_if logger (text "readIFace" <+> text file_path)
   let profile = targetProfile dflags
-  res <- tryMost $ readBinIface profile name_cache CheckHiWay QuietBinIFace file_path
+  res <- tryMost $ case readIfaceHook hooks of
+    Nothing -> readBinIface profile name_cache CheckHiWay QuietBinIFace file_path
+    Just reader -> readBinIfaceWith profile name_cache CheckHiWay QuietBinIFace file_path
+                                     (reader profile name_cache wanted_mod file_path)
   case res of
     Right iface
         -- NB: This check is NOT just a sanity check, it is

@@ -1,0 +1,143 @@
+{
+  "compiler": "GHC 10.1.20261115.1 retained Stage0",
+  "source_revision": "945ea7a737",
+  "target": "GHC.Utils.Misc.doesDirNameExist",
+  "flags": [
+    "-O2",
+    "-fforce-recomp",
+    "-fobject-determinism",
+    "-split-sections"
+  ],
+  "baseline_repeated_exact": true,
+  "unrelated_edit_exact": true,
+  "helper_rhs_edit_exact": false,
+  "summaries": {
+    "A-1": {
+      "groups": 71,
+      "events": 794,
+      "outcomes": {
+        "rules|empty": 397,
+        "inline|yes": 2,
+        "inline|no": 395
+      },
+      "ordered_sha256": "a3ea2fb624ce48b8062d12311bbe96ae071fe315ed5d0eb37a6c5cf5c8450dc2",
+      "external_name_count": 8
+    },
+    "B-1": {
+      "groups": 71,
+      "events": 794,
+      "outcomes": {
+        "rules|empty": 397,
+        "inline|yes": 2,
+        "inline|no": 395
+      },
+      "ordered_sha256": "a3ea2fb624ce48b8062d12311bbe96ae071fe315ed5d0eb37a6c5cf5c8450dc2",
+      "external_name_count": 8
+    },
+    "A-2": {
+      "groups": 71,
+      "events": 794,
+      "outcomes": {
+        "rules|empty": 397,
+        "inline|yes": 2,
+        "inline|no": 395
+      },
+      "ordered_sha256": "a3ea2fb624ce48b8062d12311bbe96ae071fe315ed5d0eb37a6c5cf5c8450dc2",
+      "external_name_count": 8
+    },
+    "C-1": {
+      "groups": 71,
+      "events": 796,
+      "outcomes": {
+        "rules|empty": 398,
+        "inline|yes": 3,
+        "inline|no": 395
+      },
+      "ordered_sha256": "3540a08b89f27db8f379752c162af206a7999527095472e19ad5900d5a3f3985",
+      "external_name_count": 9
+    },
+    "D-1": {
+      "groups": 71,
+      "events": 726,
+      "outcomes": {
+        "rules|empty": 363,
+        "inline|yes": 4,
+        "inline|no": 359
+      },
+      "ordered_sha256": "783da702e0f8351ed48d6f83536d8e0a289897917d51fe371dad2228a023314b",
+      "external_name_count": 9
+    }
+  },
+  "stock_object_and_iface_sha256": {
+    "A": [
+      "af17d853f6ce33008146f78f52bdee1fa5f90f7e2891484bb1bb10444d1c7650",
+      "3c154d6ac354c33d2d8ebda6a9db3bce82160d817514c7275babdb550f8cc767"
+    ],
+    "B": [
+      "e7b11e8a0067e476fb1b699a68678d67d974381ae4881678b367ee67c06e6044",
+      "e62de51b8de7b50aa2b14f8e675fe20e64ce604e1ee2ed9c28df1e1eab8d53ec"
+    ],
+    "C": [
+      "4439b05c314da108ed81db73b2c246cc071426db31c9c3aefb2a59d45fe32749",
+      "fff20d4f5ddfd785f01ec56f48d908678f950e9120ab9c4c66cf7ee03c9fd478"
+    ],
+    "D": [
+      "80eede7c769b4c7e08775d90685cb3823cc1c08702cc4112375fcf25438f8fa8",
+      "714f3add7bcd79986a5bcb9c9ea8fa5b2128beb483b98654a6bbdea523b3582f"
+    ]
+  },
+  "unrelated_edit": "Change Word32 cutoff from 32 to 31 in edit-distance helper.",
+  "helper_change": "INLINE queryDirHelper = takeDirectory versus id at the same call site.",
+  "literal_change": {
+    "edit": "INLINE queryDirHelper = take 13 versus take 14; unchanged caller body.",
+    "decisions": {
+      "ordered_trace_exact": true,
+      "repeat_exact": true,
+      "sha256": {
+        "E": [
+          "7eb6593685d093e3cc8fb8a3d656a7025890583c801f357a40b3b0c21cb89a07",
+          "5c32c9f6c27f98e64ec8ec536ff4c423ac174b6a072bb557296d9dd54a76ae65"
+        ],
+        "F": [
+          "83c29fc088ae682ef6e0178a1588f6eb9559bef96b6bd142502cac69918d871a",
+          "ffdf50d7b28f2f1fdad7b7dfbab69d886af2b2d12538b7f67ca9ce934adfaa24"
+        ]
+      },
+      "sizes": {
+        "E-1": 982,
+        "E-2": 982,
+        "F-1": 982
+      }
+    },
+    "with_unfolding_fingerprints": {
+      "ordered_trace_exact": false,
+      "repeat_exact": true,
+      "sha256": {
+        "E": [
+          "7eb6593685d093e3cc8fb8a3d656a7025890583c801f357a40b3b0c21cb89a07",
+          "5c32c9f6c27f98e64ec8ec536ff4c423ac174b6a072bb557296d9dd54a76ae65"
+        ],
+        "F": [
+          "83c29fc088ae682ef6e0178a1588f6eb9559bef96b6bd142502cac69918d871a",
+          "ffdf50d7b28f2f1fdad7b7dfbab69d886af2b2d12538b7f67ca9ce934adfaa24"
+        ]
+      },
+      "sizes": {
+        "E-1": 988,
+        "E-2": 988,
+        "F-1": 988
+      }
+    },
+    "changed_fingerprints": [
+      {
+        "original": "template|$ghc-10.1-inplace$GHC.Utils.Misc$queryDirHelper|c56999e10ca6ecf0a3e68b30fe85ae34",
+        "edited": "template|$ghc-10.1-inplace$GHC.Utils.Misc$queryDirHelper|17e9839f133e9a14c6f40341ce323aa9"
+      }
+    ],
+    "only_final_core_difference": [
+      "-             (GHC.Internal.List.$wunsafeTake @Char 13# fpath_a5AO)",
+      "+             (GHC.Internal.List.$wunsafeTake @Char 14# fpath_a5AO)"
+    ],
+    "payload_hash_method": "GHC fingerprintString over showSDocUnsafe (pprCoreExpr selected) when tryInlining succeeded."
+  }
+}

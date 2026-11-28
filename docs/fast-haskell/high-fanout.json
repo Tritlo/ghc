@@ -1,0 +1,1762 @@
+{
+  "benchmarked_ghc": "945ea7a737dca39c2d01c7fa9a444a7dc2c890a0",
+  "branch_with_build_system_fixes": "incremental-builds",
+  "worker_for_hadrian_experiment": "c33551f1d3201580fe04bae0325987f932ae1723",
+  "source_edit": {
+    "module": "GHC.Utils.Misc",
+    "before": "if n <= 32 -- n must be larger",
+    "after": "if n <= 31 -- n must be larger",
+    "original_file_sha256": "5d74a0630f0a299e07b59ad79660c3e6859d2450b5aaaf62437aca151c3745c4"
+  },
+  "first_linked_target": {
+    "samples": {
+      "warm-prime": {
+        "timing": {
+          "wall": 6.35,
+          "user": 5.7,
+          "sys": 0.74,
+          "rss": 566672.0,
+          "exit": 0.0
+        },
+        "builders": {},
+        "compiler_skips": 0,
+        "worker_reports": []
+      },
+      "warm-noop": {
+        "timing": {
+          "wall": 6.42,
+          "user": 5.8,
+          "sys": 0.71,
+          "rss": 545816.0,
+          "exit": 0.0
+        },
+        "builders": {},
+        "compiler_skips": 0,
+        "worker_reports": []
+      },
+      "warm-edit": {
+        "timing": {
+          "wall": 48.35,
+          "user": 38.85,
+          "sys": 31.8,
+          "rss": 634940.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ghc LinkHs Stage1": 2,
+          "Ar Pack Stage1": 1,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: full 956"
+        ]
+      },
+      "warm-edited-noop": {
+        "timing": {
+          "wall": 5.95,
+          "user": 5.35,
+          "sys": 0.69,
+          "rss": 590352.0,
+          "exit": 0.0
+        },
+        "builders": {},
+        "compiler_skips": 0,
+        "worker_reports": []
+      }
+    },
+    "scope": {
+      "modules": 299,
+      "artifacts": 1196,
+      "changed": {
+        "_build/stage1/compiler/build/GHC/Utils/Misc": {
+          ".o": [
+            "619aade02c7053e1add0f1dd3e0c56ddc658923427f09d98a8119e8b22cb23ca",
+            "105c8e02bf09c0a99a2ab0d63824ab8e34e25234e090773c0686727e4d2436ce"
+          ],
+          ".dyn_o": [
+            "ac3c0e2fa0a2284dfb0ba4d37ee00542aa82ce4c2f09b479cbd17090b1a648a9",
+            "08543104d49a54742af8b1cb6f23e92c74bb07cd923aba0d10e74a054dbbede0"
+          ],
+          ".hi": [
+            "b9952a1548e1caf891b676ae0352c14bd2f2f5a083ce8065e76edebd1d3202ce",
+            "187f15c811d3001159137ec1eacfaef55303035a23391d5fde7da9eda7bcea5b"
+          ],
+          ".dyn_hi": [
+            "95463cea9f1ac1d8d05651c47614af07cd79e8d098ab919eb389422b2b17d05a",
+            "7fae129bae65f6626529753c9917a62cae9c1e102324e267c92a10328672a0e1"
+          ]
+        }
+      }
+    },
+    "built_loaded_ids": [
+      "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9",
+      "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9"
+    ]
+  },
+  "compile_routing": {
+    "samples": {
+      "prime-stock-A": {
+        "timing": {
+          "wall": 43.96,
+          "user": 36.18,
+          "sys": 29.82,
+          "rss": 546820.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ghc LinkHs Stage1": 2,
+          "Ar Pack Stage1": 1,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: full 956"
+        ],
+        "build_products": [
+          "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a  _build/stage1/bin/ghc",
+          "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff  _build/stage1/compiler/build/libHSghc-10.1-inplace.a",
+          "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343  _build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so"
+        ]
+      },
+      "prime-worker-B": {
+        "timing": {
+          "wall": 39.38,
+          "user": 9.69,
+          "sys": 15.76,
+          "rss": 584076.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ar Pack Stage1": 1,
+          "Ghc LinkHs Stage1": 2,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: full 956"
+        ],
+        "build_products": [
+          "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a  _build/stage1/bin/ghc",
+          "779898adba858079d7c68acbf09ed1ff781b0b783678948fbad09541f99e45bc  _build/stage1/compiler/build/libHSghc-10.1-inplace.a",
+          "0a842dc2c5804dea0cff27a6a16ed3ae6a595e282e88c6baf71da0d7fba40620  _build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so"
+        ]
+      },
+      "first-stock-A": {
+        "timing": {
+          "wall": 35.16,
+          "user": 36.0,
+          "sys": 28.75,
+          "rss": 545296.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ghc LinkHs Stage1": 2,
+          "Ar Pack Stage1": 1,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: hit 956"
+        ],
+        "build_products": [
+          "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a  _build/stage1/bin/ghc",
+          "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff  _build/stage1/compiler/build/libHSghc-10.1-inplace.a",
+          "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343  _build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so"
+        ],
+        "noop": {
+          "timing": {
+            "wall": 5.0,
+            "user": 4.49,
+            "sys": 0.59,
+            "rss": 512956.0,
+            "exit": 0.0
+          },
+          "builders": {},
+          "compiler_skips": 0,
+          "worker_reports": []
+        },
+        "built_and_loaded_ids": [
+          "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6",
+          "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6"
+        ],
+        "api_consumer": 156
+      },
+      "first-worker-B": {
+        "timing": {
+          "wall": 25.5,
+          "user": 9.06,
+          "sys": 11.93,
+          "rss": 622548.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ghc LinkHs Stage1": 2,
+          "Ar Pack Stage1": 1,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: hit 956"
+        ],
+        "build_products": [
+          "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a  _build/stage1/bin/ghc",
+          "f6ab4584ea6c0da130c0dfeb3b9d5fbf711f846f4396d46baa38604fcdfd5293  _build/stage1/compiler/build/libHSghc-10.1-inplace.a",
+          "c7d5dac1cde4e8627adf294a4ee6ff4e6b8afe9b954f5571da6c8a0a1693ae0f  _build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so"
+        ],
+        "noop": {
+          "timing": {
+            "wall": 4.97,
+            "user": 4.43,
+            "sys": 0.61,
+            "rss": 600848.0,
+            "exit": 0.0
+          },
+          "builders": {},
+          "compiler_skips": 0,
+          "worker_reports": []
+        },
+        "built_and_loaded_ids": [
+          "d005f091c093db06bfd6b8b7eeef0db541bfeb3a",
+          "d005f091c093db06bfd6b8b7eeef0db541bfeb3a"
+        ],
+        "api_consumer": 156
+      },
+      "second-worker-A": {
+        "timing": {
+          "wall": 26.51,
+          "user": 9.32,
+          "sys": 13.12,
+          "rss": 559540.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ghc LinkHs Stage1": 2,
+          "Ar Pack Stage1": 1,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: partial 1/956"
+        ],
+        "build_products": [
+          "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a  _build/stage1/bin/ghc",
+          "a8708a11aac7aec72aa5d1c69f8471242d4e1eb952c1ed7e0ad59ef003948964  _build/stage1/compiler/build/libHSghc-10.1-inplace.a",
+          "2d929f664ea762fa8326da646aca946c6bc2e9041c20d91c56e57b122b45ea53  _build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so"
+        ],
+        "noop": {
+          "timing": {
+            "wall": 5.46,
+            "user": 4.89,
+            "sys": 0.65,
+            "rss": 530428.0,
+            "exit": 0.0
+          },
+          "builders": {},
+          "compiler_skips": 0,
+          "worker_reports": []
+        },
+        "built_and_loaded_ids": [
+          "7fead8ed8bd9d917c15f587ef2a251069410eafa",
+          "7fead8ed8bd9d917c15f587ef2a251069410eafa"
+        ],
+        "api_consumer": 156
+      },
+      "second-stock-B": {
+        "timing": {
+          "wall": 31.72,
+          "user": 31.68,
+          "sys": 27.08,
+          "rss": 597392.0,
+          "exit": 0.0
+        },
+        "builders": {
+          "Ghc FindHsDependencies Stage1": 1,
+          "Ghc CompileHs Stage1": 305,
+          "Ghc LinkHs Stage1": 2,
+          "Ar Pack Stage1": 1,
+          "GhcPkg Recache Stage1": 1
+        },
+        "compiler_skips": 304,
+        "worker_reports": [
+          "ghc-worker-deps: partial 1/956"
+        ],
+        "build_products": [
+          "bdf0d98abf63e08748323d22e3bd534d10d4c59971c6f5636cb6cace2c38827a  _build/stage1/bin/ghc",
+          "779898adba858079d7c68acbf09ed1ff781b0b783678948fbad09541f99e45bc  _build/stage1/compiler/build/libHSghc-10.1-inplace.a",
+          "0a842dc2c5804dea0cff27a6a16ed3ae6a595e282e88c6baf71da0d7fba40620  _build/stage1/compiler/build/libHSghc-10.1-inplace-ghc10.1.20261115.1.so"
+        ],
+        "noop": {
+          "timing": {
+            "wall": 4.66,
+            "user": 4.17,
+            "sys": 0.56,
+            "rss": 558412.0,
+            "exit": 0.0
+          },
+          "builders": {},
+          "compiler_skips": 0,
+          "worker_reports": []
+        },
+        "built_and_loaded_ids": [
+          "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9",
+          "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9"
+        ],
+        "api_consumer": 156
+      }
+    },
+    "same_source_artifacts": {
+      "A": {
+        "modules": 299,
+        "artifacts": 1196,
+        "changed": {
+          "_build/stage1/compiler/build/GHC/Utils/Misc": {
+            ".o": [
+              "619aade02c7053e1add0f1dd3e0c56ddc658923427f09d98a8119e8b22cb23ca",
+              "ab1887a6291200a61bf8e1f4f963d3d8961db106d37b318fb3b1189fcd5d458c"
+            ],
+            ".dyn_o": [
+              "ac3c0e2fa0a2284dfb0ba4d37ee00542aa82ce4c2f09b479cbd17090b1a648a9",
+              "265ad1dc5842237c088beaa65b2879311c83eef46672b50136df32e99872bc52"
+            ]
+          }
+        }
+      },
+      "B": {
+        "modules": 299,
+        "artifacts": 1196,
+        "changed": {
+          "_build/stage1/compiler/build/GHC/Utils/Misc": {
+            ".o": [
+              "105c8e02bf09c0a99a2ab0d63824ab8e34e25234e090773c0686727e4d2436ce",
+              "a2e7b791d30be9c1a3eda565790faddeeaf67755d78a184e7cd5b0dc156f38df"
+            ],
+            ".dyn_o": [
+              "08543104d49a54742af8b1cb6f23e92c74bb07cd923aba0d10e74a054dbbede0",
+              "c7c753a8bad24ea216a6cd9ffd8228c06e7f18bdd81709e85602f79e4376af48"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "interface_and_splice": {
+    "fixture_compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage1/bin/ghc",
+    "pipeline_compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+    "pipeline": {
+      "stock-1-A.hi": {
+        "ABI hash": "99005425a1a1c0eb1a29510c45f6424e",
+        "interface hash": "71c899e788bb4a1c11e54fe9d126727a",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+        "sha256": "c5ade31ebac6412be9ed60e350c4d0cfebebe535fa930b5c408e47018929b704"
+      },
+      "stock-0-B.hi": {
+        "ABI hash": "99005425a1a1c0eb1a29510c45f6424e",
+        "interface hash": "1ef93eae3c5fc281d33a5b5640504329",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+        "sha256": "55bece6a7886f9c0cd35963aad4252014d897918bdafd6b773cdfa7308908c16"
+      },
+      "stock-1-A.dyn_hi": {
+        "ABI hash": "99005425a1a1c0eb1a29510c45f6424e",
+        "interface hash": "71c899e788bb4a1c11e54fe9d126727a",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+        "sha256": "803464de8ef3e0e640c10a7bca5cd7990b7d14558e38cfb684edf9dd0926bd81"
+      },
+      "stock-0-B.dyn_hi": {
+        "ABI hash": "99005425a1a1c0eb1a29510c45f6424e",
+        "interface hash": "1ef93eae3c5fc281d33a5b5640504329",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+        "sha256": "dddf6b1aa80b23d092aa8e32756503d5489531fe9ea5be439565aa0e3d850f9e"
+      }
+    },
+    "cases": [
+      {
+        "level": "-O0",
+        "shape": "ordinary",
+        "source": "base",
+        "result": 7,
+        "seconds": 0.5320485770353116,
+        "log": [
+          "[1 of 4] Compiling Provider",
+          "[2 of 4] Compiling Client",
+          "[3 of 4] Compiling Main",
+          "[4 of 4] Linking observe"
+        ],
+        "provider": {
+          "ABI hash": "b7eb0728594fed8e2e409ebcb6cf86d6",
+          "interface hash": "dc774efdd587c0aa3bcd54120c917be4",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "831f07a5a33b75323d6d4490bfaaaf0c0c60c3bf47135101434cce844cca4042"
+        },
+        "client": {
+          "ABI hash": "f3723da3bafd570fea651b527bc98a23",
+          "interface hash": "c7adadd6dc7739e755de77ee4584b774",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "da64b59187cc7c7508c60f702d09b1226205b4b59d17f5ae83155d507e1e6228"
+        },
+        "objects": {
+          "Provider": "1a876d177f3fe68455d3e40502b786c611ea8e9fee6393bd61ac79112359943f",
+          "Client": "2e55a2db2ace42bdb561313b458b9ce47585e00c2d4cb5b5e04b4037724d08d4",
+          "Main": "4bc9e1ff3ea5555090543d239a2f9ff6d786fe597809ec389f47c5d82fb0ccc9"
+        }
+      },
+      {
+        "level": "-O0",
+        "shape": "ordinary",
+        "source": "edit",
+        "result": 9,
+        "seconds": 0.5091413600021042,
+        "log": [
+          "[1 of 4] Compiling Provider [Source file changed]",
+          "[4 of 4] Linking observe [Objects changed]"
+        ],
+        "provider": {
+          "ABI hash": "b7eb0728594fed8e2e409ebcb6cf86d6",
+          "interface hash": "0d38823024747d6c79867170fa38681e",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "998059c1887c6081b1bb2bf060a335ef5faddb02d9d50ab387f6b7d119e4a375"
+        },
+        "client": {
+          "ABI hash": "f3723da3bafd570fea651b527bc98a23",
+          "interface hash": "c7adadd6dc7739e755de77ee4584b774",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "da64b59187cc7c7508c60f702d09b1226205b4b59d17f5ae83155d507e1e6228"
+        },
+        "objects": {
+          "Provider": "86a90212822bfcfa4788372d6c3c4dc53e53d573d0e64e45127845973f72e9ee",
+          "Client": "2e55a2db2ace42bdb561313b458b9ce47585e00c2d4cb5b5e04b4037724d08d4",
+          "Main": "4bc9e1ff3ea5555090543d239a2f9ff6d786fe597809ec389f47c5d82fb0ccc9"
+        }
+      },
+      {
+        "level": "-O0",
+        "shape": "splice",
+        "source": "base",
+        "result": 7,
+        "seconds": 0.7529995329678059,
+        "log": [
+          "[1 of 4] Compiling Provider",
+          "[2 of 4] Compiling Client",
+          "[3 of 4] Compiling Main",
+          "[4 of 4] Linking observe"
+        ],
+        "provider": {
+          "ABI hash": "b7eb0728594fed8e2e409ebcb6cf86d6",
+          "interface hash": "dc774efdd587c0aa3bcd54120c917be4",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "831f07a5a33b75323d6d4490bfaaaf0c0c60c3bf47135101434cce844cca4042"
+        },
+        "client": {
+          "ABI hash": "0e502c53e9ac7b1d9386ad103025e0b9",
+          "interface hash": "799c5152831b800c60c97d303ce7b378",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "b602963e3df7516d50f3a921f2486cf37d6dd14dd1112ea068c0f34d30609b83"
+        },
+        "objects": {
+          "Provider": "1a876d177f3fe68455d3e40502b786c611ea8e9fee6393bd61ac79112359943f",
+          "Client": "29658a47ec502653d8060989fe68f2119343d7d198f6eeb905760e861f119d4a",
+          "Main": "4bc9e1ff3ea5555090543d239a2f9ff6d786fe597809ec389f47c5d82fb0ccc9"
+        }
+      },
+      {
+        "level": "-O0",
+        "shape": "splice",
+        "source": "edit",
+        "result": 9,
+        "seconds": 0.7071417570114136,
+        "log": [
+          "[1 of 4] Compiling Provider [Source file changed]",
+          "[2 of 4] Compiling Client [Provider[TH] changed]",
+          "[4 of 4] Linking observe [Objects changed]"
+        ],
+        "provider": {
+          "ABI hash": "b7eb0728594fed8e2e409ebcb6cf86d6",
+          "interface hash": "0d38823024747d6c79867170fa38681e",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "998059c1887c6081b1bb2bf060a335ef5faddb02d9d50ab387f6b7d119e4a375"
+        },
+        "client": {
+          "ABI hash": "0e502c53e9ac7b1d9386ad103025e0b9",
+          "interface hash": "5f956d4b99df9438c6837f5e65c0e753",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "f67396d2c5589d9954f3da0aa6334fae787363c332e356ad121e69ceca6070fe"
+        },
+        "objects": {
+          "Provider": "86a90212822bfcfa4788372d6c3c4dc53e53d573d0e64e45127845973f72e9ee",
+          "Client": "139a17f9dffca32351cfa10d9df76abfa0941da4259f12add6ed42063e02a808",
+          "Main": "4bc9e1ff3ea5555090543d239a2f9ff6d786fe597809ec389f47c5d82fb0ccc9"
+        }
+      },
+      {
+        "level": "-O2",
+        "shape": "ordinary",
+        "source": "base",
+        "result": 7,
+        "seconds": 0.5250765680102631,
+        "log": [
+          "[1 of 4] Compiling Provider",
+          "[2 of 4] Compiling Client",
+          "[3 of 4] Compiling Main",
+          "[4 of 4] Linking observe"
+        ],
+        "provider": {
+          "ABI hash": "6b4b414ba3df13b5728a4360c7d30206",
+          "interface hash": "a72d663b49b976d1d0782cc590ec6e95",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "f8f4994e8e61e5cda9887467dae5a6b113ca7b4e6b9a52790a175b974c9bbcee"
+        },
+        "client": {
+          "ABI hash": "937b48ebff3e02fdf27222e9aed90cc9",
+          "interface hash": "ca4330e91835afaace6b5edc37b71884",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "771e230bf0e0099ed180e3f572bbb7d8daef3a2d88add3b1d7da5e8e614f331c"
+        },
+        "objects": {
+          "Provider": "1a876d177f3fe68455d3e40502b786c611ea8e9fee6393bd61ac79112359943f",
+          "Client": "a91bd8b2ce4d437229640ad5190927efcbcb6402f1f0f71d027d5ac3df9ed8f8",
+          "Main": "83dd56a0afb149d9fe5d00b7917dd735940ceee379c81c70d2974b65432172d5"
+        }
+      },
+      {
+        "level": "-O2",
+        "shape": "ordinary",
+        "source": "edit",
+        "result": 9,
+        "seconds": 0.43744959303876385,
+        "log": [
+          "[1 of 4] Compiling Provider [Source file changed]",
+          "[4 of 4] Linking observe [Objects changed]"
+        ],
+        "provider": {
+          "ABI hash": "6b4b414ba3df13b5728a4360c7d30206",
+          "interface hash": "2fe9fcdef09db20cedd4a6dc37934686",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "b58c1014d255841ab98b12ad3de6b611c672f85f7ef62dd4c5952b8d28383d4b"
+        },
+        "client": {
+          "ABI hash": "937b48ebff3e02fdf27222e9aed90cc9",
+          "interface hash": "ca4330e91835afaace6b5edc37b71884",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "771e230bf0e0099ed180e3f572bbb7d8daef3a2d88add3b1d7da5e8e614f331c"
+        },
+        "objects": {
+          "Provider": "86a90212822bfcfa4788372d6c3c4dc53e53d573d0e64e45127845973f72e9ee",
+          "Client": "a91bd8b2ce4d437229640ad5190927efcbcb6402f1f0f71d027d5ac3df9ed8f8",
+          "Main": "83dd56a0afb149d9fe5d00b7917dd735940ceee379c81c70d2974b65432172d5"
+        }
+      },
+      {
+        "level": "-O2",
+        "shape": "splice",
+        "source": "base",
+        "result": 7,
+        "seconds": 0.8886168680037372,
+        "log": [
+          "[1 of 4] Compiling Provider",
+          "[2 of 4] Compiling Client",
+          "[3 of 4] Compiling Main",
+          "[4 of 4] Linking observe"
+        ],
+        "provider": {
+          "ABI hash": "6b4b414ba3df13b5728a4360c7d30206",
+          "interface hash": "a72d663b49b976d1d0782cc590ec6e95",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "f8f4994e8e61e5cda9887467dae5a6b113ca7b4e6b9a52790a175b974c9bbcee"
+        },
+        "client": {
+          "ABI hash": "c5f21703ad1c077ed7633e7c897ea250",
+          "interface hash": "f9ef7fdcfa6e10f9aaebfb72e3af4e2f",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "6289d99f89932eff237e862151f8fdfbcd293885c4154004f4ff104896978557"
+        },
+        "objects": {
+          "Provider": "1a876d177f3fe68455d3e40502b786c611ea8e9fee6393bd61ac79112359943f",
+          "Client": "29658a47ec502653d8060989fe68f2119343d7d198f6eeb905760e861f119d4a",
+          "Main": "e8d15b136e6ee2df660922bf9f0d536477d0a2caac6c55783fd8f08e7f9bcee6"
+        }
+      },
+      {
+        "level": "-O2",
+        "shape": "splice",
+        "source": "edit",
+        "result": 9,
+        "seconds": 0.828971360984724,
+        "log": [
+          "[1 of 4] Compiling Provider [Source file changed]",
+          "[2 of 4] Compiling Client [Provider[TH] changed]",
+          "[3 of 4] Compiling Main [Client changed]",
+          "[4 of 4] Linking observe [Objects changed]"
+        ],
+        "provider": {
+          "ABI hash": "6b4b414ba3df13b5728a4360c7d30206",
+          "interface hash": "2fe9fcdef09db20cedd4a6dc37934686",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "b58c1014d255841ab98b12ad3de6b611c672f85f7ef62dd4c5952b8d28383d4b"
+        },
+        "client": {
+          "ABI hash": "76a8149b63e2fb7f24f1289b1d57a49d",
+          "interface hash": "8a493e1010936d350acb10cfb3e73451",
+          "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e",
+          "sha256": "66f5ec289f8fa8adcf446e9d228f124f7675853a6c5914d9bc9035ed85105d02"
+        },
+        "objects": {
+          "Provider": "86a90212822bfcfa4788372d6c3c4dc53e53d573d0e64e45127845973f72e9ee",
+          "Client": "139a17f9dffca32351cfa10d9df76abfa0941da4259f12add6ed42063e02a808",
+          "Main": "fc9a974b56c66ef081c27d7a25c0b4abff49701eee2aad6a56d670334b4a8b76"
+        }
+      }
+    ]
+  },
+  "core_whitespace": [
+    {
+      "config": "default",
+      "edit": "base",
+      "wall_s": 2.1700421350542456,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "b2c93a596020fafcbbefc656276c37b981186b750ae716ce5bfc6b12bdae6655"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "10f8685281b5e2d17c147fcb8d705e8a",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "e2981cef041a74744cf432a502224995",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 59613,
+      "artifact_sha256": {
+        ".hi": "000a28bbf18e11b3fa4f34537631ecaa79bdb9714281a7341a1f23d48769837c",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "default",
+      "edit": "noop",
+      "wall_s": 0.1988239850034006,
+      "ran_desugar": false,
+      "dumps": {
+        "dump.dump-timings": "f488c96f5b1ca7344bde81300a591b521d48986de03f15fd676881e623d55f4a"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "10f8685281b5e2d17c147fcb8d705e8a",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "e2981cef041a74744cf432a502224995",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 59613,
+      "artifact_sha256": {
+        ".hi": "000a28bbf18e11b3fa4f34537631ecaa79bdb9714281a7341a1f23d48769837c",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "default",
+      "edit": "trailing-comment",
+      "wall_s": 2.1408177569974214,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "b6776d9b6c9646d63dd644e42d15de3baf650a79a96cecc0e48d9f5db3b51793"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "02b2ff205b67a244fcfd3aa3931fcca0",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "6985e520affee9799a88fb4f6c787c1d",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 59614,
+      "artifact_sha256": {
+        ".hi": "4ecb6119fc2a3e75440f1a5da1746ee111a282f75fd82a919ec84f7e73f12b42",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "default",
+      "edit": "whitespace",
+      "wall_s": 2.1931997730280273,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "5faf0c597a1e01ecb7198c4e541ab56774ae1a12d6dfc485c5a50e072cb3c020"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "1467d5375c22e1827ddd305d0d9ff24a",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "80e43393e4a1dc05e03956b041025559",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 59614,
+      "artifact_sha256": {
+        ".hi": "6b5e796c44169aa3260256e2e7903c5bb3f47053133cd7bd9e2c910a318617a6",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "default",
+      "edit": "comment-line",
+      "wall_s": 2.1375124340411276,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "515ec592106957ebbefde3e61a9fb421afa46b3a27607d72a4a041d930bfc0e9",
+        "dump.dump-simpl": "66ec173ced21336fbb310271c25b51ce0b819fd8e39a28e5fe2720cf1061ea46",
+        "dump.dump-ds": "d2fc7993799e9eb61a805773d8289a8df24cae6f7e62ea194cc81ea492c959bd",
+        "dump.dump-timings": "6f6a0afbd20561a48adce5d07e0e58cffd0c8c1468427cf6be1457a47010e707"
+      },
+      "hashes": {
+        "ABI hash": "a192e9be4cdea4f5592e6715bb9b3e2c",
+        "interface hash": "bcd2c81d0958ff8a5b11fe8a43911a88",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "a7e904649760d5a5d901e3d38a487b85",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 59620,
+      "artifact_sha256": {
+        ".hi": "208cbf34920b315f9034f4e0fe287780972744804c42525ce176e45f7929888d",
+        ".o": "0f4ef3bbef92458c46e98649f22a07740ba4ac8a976e5ccd9b1de70d0c387d59"
+      }
+    },
+    {
+      "config": "default",
+      "edit": "body",
+      "wall_s": 2.1871010640170425,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "c1c776065db11f6fbb3ba92447c62fb6f7a94d9130adcdd734c26e43f3171138",
+        "dump.dump-simpl": "9b278e26b01b403b858997b5776ec55e7200e01dfbc56fdc6cfc5089a6064b9f",
+        "dump.dump-ds": "5adc55bc65aa818034c2d4734faf74c36cc1fbf6ca63c864bcd7123d30c9b862",
+        "dump.dump-timings": "6df8ae0ec57e1bb7c11a93d1a6169669743d2d8a78ed51905036a2391d68b955"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "ae3bebc007bf9d5e31f7f6c65298faa5",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "645ce40fb85fbf8a61fde88855ce7d1f",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 59613,
+      "artifact_sha256": {
+        ".hi": "6ab4e2a7cce273b804644de452c60cf24a7c4aac14e6a320976efc4e98fffa6c",
+        ".o": "b2c5eec5708687eb86472d4c12e9be433e589570937b6fecfedc5bee52d72e59"
+      }
+    },
+    {
+      "config": "fat",
+      "edit": "base",
+      "wall_s": 2.1497176390257664,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "dd766cdc502edf5e795f62d5cded65d2602a32a50d778092d4b586c393cd9605"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "d0af944b02b165841f09c0c0b98c2be5",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "e2981cef041a74744cf432a502224995",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 118710,
+      "artifact_sha256": {
+        ".hi": "9e2bf255a0355f8879269d8ac478838cbe83ff7f72016a401625c6c977565055",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "fat",
+      "edit": "noop",
+      "wall_s": 0.24369066598592326,
+      "ran_desugar": false,
+      "dumps": {
+        "dump.dump-timings": "e8f1ef47accd3b5c95c09ac376b389730591975e05c62bced26c138fc773982e"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "d0af944b02b165841f09c0c0b98c2be5",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "e2981cef041a74744cf432a502224995",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 118710,
+      "artifact_sha256": {
+        ".hi": "9e2bf255a0355f8879269d8ac478838cbe83ff7f72016a401625c6c977565055",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "fat",
+      "edit": "trailing-comment",
+      "wall_s": 1.914375600987114,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "87c8525940205ef1ee7f50473ded2a18d9b53c2d3592eac7948deb9a3a90ac76"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "8761666e81859988e097e6aa4447f236",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "6985e520affee9799a88fb4f6c787c1d",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 118711,
+      "artifact_sha256": {
+        ".hi": "6707bc1cba48ee54d0df1805df88b862a4401de5b2f0e36881cee1eb5500d7f3",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "fat",
+      "edit": "whitespace",
+      "wall_s": 1.873476474022027,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "8c980f1e59d25a704efb3d655931bc8f87e0bd00c97d167bccbaa3510080e0e7"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "db3558fd64cb8a8ca600407cdc860c56",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "80e43393e4a1dc05e03956b041025559",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 118712,
+      "artifact_sha256": {
+        ".hi": "bf44af68130f3b1d6f32281a54cca193ad838b690ba24b07f059a4649ab8328e",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "fat",
+      "edit": "comment-line",
+      "wall_s": 2.044004856958054,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "515ec592106957ebbefde3e61a9fb421afa46b3a27607d72a4a041d930bfc0e9",
+        "dump.dump-simpl": "66ec173ced21336fbb310271c25b51ce0b819fd8e39a28e5fe2720cf1061ea46",
+        "dump.dump-ds": "d2fc7993799e9eb61a805773d8289a8df24cae6f7e62ea194cc81ea492c959bd",
+        "dump.dump-timings": "b93a00e00887d84fa04585882e471a9dc2a57c7c48eddf6d288bf347ebe51802"
+      },
+      "hashes": {
+        "ABI hash": "a192e9be4cdea4f5592e6715bb9b3e2c",
+        "interface hash": "5bc8ee3eb679bb7c0aceb412bdd8f58c",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "a7e904649760d5a5d901e3d38a487b85",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 118715,
+      "artifact_sha256": {
+        ".hi": "44821cf94b902e1c85fadf206af282a32d2b847eb728348ff63d6137c6a8eee9",
+        ".o": "0f4ef3bbef92458c46e98649f22a07740ba4ac8a976e5ccd9b1de70d0c387d59"
+      }
+    },
+    {
+      "config": "fat",
+      "edit": "body",
+      "wall_s": 2.0610214170301333,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "c1c776065db11f6fbb3ba92447c62fb6f7a94d9130adcdd734c26e43f3171138",
+        "dump.dump-simpl": "9b278e26b01b403b858997b5776ec55e7200e01dfbc56fdc6cfc5089a6064b9f",
+        "dump.dump-ds": "5adc55bc65aa818034c2d4734faf74c36cc1fbf6ca63c864bcd7123d30c9b862",
+        "dump.dump-timings": "795c8d7a81bc4114fd4657b931ebc1d9cbdd4b3d117ceb135bfe42dfb3e171a7"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "7109a6779b67502a8a80fedb69d0cdcf",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "645ce40fb85fbf8a61fde88855ce7d1f",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 118709,
+      "artifact_sha256": {
+        ".hi": "41e647348bcfe41e17a5a74a12a78b5d81cb917f7b4a7a5852776c89f62876ab",
+        ".o": "b2c5eec5708687eb86472d4c12e9be433e589570937b6fecfedc5bee52d72e59"
+      }
+    },
+    {
+      "config": "no-self",
+      "edit": "base",
+      "wall_s": 2.048929247946944,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "951d360090001a9d63d747b975c7c200f1842f35159bf904dfdd806ec8a708bf"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "b1b08a1c90cdfccc66b3f261a84211f9",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 57028,
+      "artifact_sha256": {
+        ".hi": "ad1ea40f085866f6a186be3aa6f5c88ff1f7d9d934d37625cb1a54119b11fb3c",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "no-self",
+      "edit": "noop",
+      "wall_s": 2.047409794991836,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "2bfb2af65bd2dac2f729e1cfd3391d35199a724a301195296369e0572dd00b59"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "b1b08a1c90cdfccc66b3f261a84211f9",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 57028,
+      "artifact_sha256": {
+        ".hi": "ad1ea40f085866f6a186be3aa6f5c88ff1f7d9d934d37625cb1a54119b11fb3c",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "no-self",
+      "edit": "trailing-comment",
+      "wall_s": 1.9927330989739858,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "0324486280f53daf85f9850b6730dfe83110ae8b3c25116ab20e9f3fb9a19dd1"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "b1b08a1c90cdfccc66b3f261a84211f9",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 57028,
+      "artifact_sha256": {
+        ".hi": "ad1ea40f085866f6a186be3aa6f5c88ff1f7d9d934d37625cb1a54119b11fb3c",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "no-self",
+      "edit": "whitespace",
+      "wall_s": 2.010267184989061,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "b0d019779cacbab9678c28b892f69876fb4be14a675b1bf70146c4b271c09c2d",
+        "dump.dump-simpl": "32ad5ec9e4f012705143531075c782e9d55e729dba008906ef4710572ef795f1",
+        "dump.dump-ds": "1ca29ebd11e4c40bf932a686389b6b94919b1937faf772e619d9aba8ccdebe0f",
+        "dump.dump-timings": "b7309ddde1f4344f31d18914b37499c50b32a05dd55ef46fe04e7c134bef8949"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "b1b08a1c90cdfccc66b3f261a84211f9",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 57028,
+      "artifact_sha256": {
+        ".hi": "ad1ea40f085866f6a186be3aa6f5c88ff1f7d9d934d37625cb1a54119b11fb3c",
+        ".o": "3227cc5db7dc43d23484484c1ecfb7a475f747e9a43dd4d4a01af132095308a8"
+      }
+    },
+    {
+      "config": "no-self",
+      "edit": "comment-line",
+      "wall_s": 2.1156109219882637,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "515ec592106957ebbefde3e61a9fb421afa46b3a27607d72a4a041d930bfc0e9",
+        "dump.dump-simpl": "66ec173ced21336fbb310271c25b51ce0b819fd8e39a28e5fe2720cf1061ea46",
+        "dump.dump-ds": "d2fc7993799e9eb61a805773d8289a8df24cae6f7e62ea194cc81ea492c959bd",
+        "dump.dump-timings": "081502550ba6a5a144c698ba808c4bf3559e667dd4767ac3b0e71d6f10fa57fd"
+      },
+      "hashes": {
+        "ABI hash": "a192e9be4cdea4f5592e6715bb9b3e2c",
+        "interface hash": "ef5ca8b18990d69f238a7069b6e68a72",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 57033,
+      "artifact_sha256": {
+        ".hi": "c64cf384b5c5fe23410a1a13fc316dc007cc0ebccf460da0530abd1af7e8a0df",
+        ".o": "0f4ef3bbef92458c46e98649f22a07740ba4ac8a976e5ccd9b1de70d0c387d59"
+      }
+    },
+    {
+      "config": "no-self",
+      "edit": "body",
+      "wall_s": 2.10778612899594,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "c1c776065db11f6fbb3ba92447c62fb6f7a94d9130adcdd734c26e43f3171138",
+        "dump.dump-simpl": "9b278e26b01b403b858997b5776ec55e7200e01dfbc56fdc6cfc5089a6064b9f",
+        "dump.dump-ds": "5adc55bc65aa818034c2d4734faf74c36cc1fbf6ca63c864bcd7123d30c9b862",
+        "dump.dump-timings": "3ab668c235421f0877880938d6b2ebf3899e27c57b15084dcb50e9491e4de558"
+      },
+      "hashes": {
+        "ABI hash": "9f62c5e2ac8f55f220ec3be817e14ef2",
+        "interface hash": "b1b08a1c90cdfccc66b3f261a84211f9",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 57028,
+      "artifact_sha256": {
+        ".hi": "ad1ea40f085866f6a186be3aa6f5c88ff1f7d9d934d37625cb1a54119b11fb3c",
+        ".o": "b2c5eec5708687eb86472d4c12e9be433e589570937b6fecfedc5bee52d72e59"
+      }
+    },
+    {
+      "config": "debug",
+      "edit": "base",
+      "wall_s": 2.6957835350185633,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "44053406b86fc96f939767503c914bc188fdadfb5aea38b8e49194ea9c907554",
+        "dump.dump-simpl": "1703593728e332ed5da52962ca1107ba1bfe476e8afaa8ada12885f6ab914709",
+        "dump.dump-ds": "7fbaa7c64e7bd196c96526def6539a0ad6b4a5a81f8a0e40861d9a45fd37f37e",
+        "dump.dump-timings": "a6e9054d24f327c536a17006ed7a75e792245116f7e2d3605aaa50ee9ad57ca5"
+      },
+      "hashes": {
+        "ABI hash": "56d441bc0865f000cb5f24b704b79870",
+        "interface hash": "0bac125261c493f7feee2dea3ad067c1",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "e2981cef041a74744cf432a502224995",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 66798,
+      "artifact_sha256": {
+        ".hi": "b929c9cc8241b6890d369c7155bf879deaf99db7353aaab536a05da4d579f7ac",
+        ".o": "ddfbb1975d349ec3217c2ca3b1f94b8a1cfb2e53486b0a98065c634258f57b0b"
+      }
+    },
+    {
+      "config": "debug",
+      "edit": "noop",
+      "wall_s": 0.18325654399814084,
+      "ran_desugar": false,
+      "dumps": {
+        "dump.dump-timings": "8672db44a840571313f8154aa6bdfb70b78da666c4dcee2f4b0bffe9d91c7ca6"
+      },
+      "hashes": {
+        "ABI hash": "56d441bc0865f000cb5f24b704b79870",
+        "interface hash": "0bac125261c493f7feee2dea3ad067c1",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "e2981cef041a74744cf432a502224995",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 66798,
+      "artifact_sha256": {
+        ".hi": "b929c9cc8241b6890d369c7155bf879deaf99db7353aaab536a05da4d579f7ac",
+        ".o": "ddfbb1975d349ec3217c2ca3b1f94b8a1cfb2e53486b0a98065c634258f57b0b"
+      }
+    },
+    {
+      "config": "debug",
+      "edit": "trailing-comment",
+      "wall_s": 2.77711594698485,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "44053406b86fc96f939767503c914bc188fdadfb5aea38b8e49194ea9c907554",
+        "dump.dump-simpl": "1703593728e332ed5da52962ca1107ba1bfe476e8afaa8ada12885f6ab914709",
+        "dump.dump-ds": "7fbaa7c64e7bd196c96526def6539a0ad6b4a5a81f8a0e40861d9a45fd37f37e",
+        "dump.dump-timings": "7ffee016e3c7383e0c39d6163a1c4d83a26cf372d611b1c27d237ecd124e40bf"
+      },
+      "hashes": {
+        "ABI hash": "56d441bc0865f000cb5f24b704b79870",
+        "interface hash": "d74f87f34d1bd4c21ea53bb37e7c4e97",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "6985e520affee9799a88fb4f6c787c1d",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 66798,
+      "artifact_sha256": {
+        ".hi": "6ccb10fb155d08f6eacbec0a54a5a6ecc2d0b6ad103f4af912fa798e855ccb19",
+        ".o": "ddfbb1975d349ec3217c2ca3b1f94b8a1cfb2e53486b0a98065c634258f57b0b"
+      }
+    },
+    {
+      "config": "debug",
+      "edit": "whitespace",
+      "wall_s": 2.620118729013484,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "ac34bf3818b707f1eef2b60dad0364942505d60d5f4497fd8e44302ca8c60bf4",
+        "dump.dump-simpl": "06140806652164c519fea4e27dd6efde4c5e5f00928cf403bda9bab93e0a038f",
+        "dump.dump-ds": "6d7bdf08e7db8a86166109451ccb2bde7c7a98d20b03cd08d8feb0c3e4399d61",
+        "dump.dump-timings": "d0514651b3c2a09f65a998569f0d507fae241f30af780d5cb06e033b0bd14fd6"
+      },
+      "hashes": {
+        "ABI hash": "6477a721c43388699d6016acb9b7146d",
+        "interface hash": "d58c345c12111124d39fe6e57c80ce4f",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "80e43393e4a1dc05e03956b041025559",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 66800,
+      "artifact_sha256": {
+        ".hi": "02923543ccf34ec10345fe7ec53923082d0bf0c468639a0ee5d52bf5595c9e1e",
+        ".o": "984fdb94de11ceb71e750cd368a57d37eb52e5595af18fc139899b360d01d1f5"
+      }
+    },
+    {
+      "config": "debug",
+      "edit": "comment-line",
+      "wall_s": 2.6804676520405337,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "79a857ba970b77381f009c2557d023e51ea8484655c4d24b0ceed4b46f8ae65e",
+        "dump.dump-simpl": "459a01ab6482acd300f1be8f3fc89b3ac5f9058be526588eef09de8280f67538",
+        "dump.dump-ds": "0dbf1b95b88051cca1464da9bea7dc4f9da75cb373bfc28ac1e2736d7f3fa465",
+        "dump.dump-timings": "ca3e95aafac38c7c269aaddaf826ac5d589e03fb47fd148e0aa09e6d865c1188"
+      },
+      "hashes": {
+        "ABI hash": "78bb5bd5ea74dc7394294bcbbfe8e52f",
+        "interface hash": "3626a114c2562f37e9feca53b56d7461",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "a7e904649760d5a5d901e3d38a487b85",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 66804,
+      "artifact_sha256": {
+        ".hi": "ecfc0ad70573ec7203e61d8f4bc75c2a831d408ecba35e1b3249f66f5c0ae77f",
+        ".o": "136b51aa2df8eb1f968df328f93c848203f0fd30732eb2875f2c6c1586f5be88"
+      }
+    },
+    {
+      "config": "debug",
+      "edit": "body",
+      "wall_s": 2.429989880998619,
+      "ran_desugar": true,
+      "dumps": {
+        "dump.dump-ds-preopt": "dda05c8a16dbe1129f5f7944a835c8da4e0d36437590191405fb2edb687f6b75",
+        "dump.dump-simpl": "93a9156c2ca222ce01e91ae5cf3d66da9732a756573d4cf6ec9311367f9e6425",
+        "dump.dump-ds": "ec005f4b8cc076ca2cf56347666a04106e3416210631cfacdc1717513e9f81eb",
+        "dump.dump-timings": "e0c79073dbd704100287c30348cf9a301ea4d47f2586cd4aeb5608d0bc146972"
+      },
+      "hashes": {
+        "ABI hash": "56d441bc0865f000cb5f24b704b79870",
+        "interface hash": "28dd0b323c22b3010951509475628738",
+        "export avails hash": "e1d1b3602102e096cd242b5af6216b65",
+        "orphan-like hash": "35d75b9ffef984306919002d6d47977b",
+        "src hash": "645ce40fb85fbf8a61fde88855ce7d1f",
+        "opt hash": "eb021798c4b13256f63eb0aa4aadfc6e",
+        "hpc hash": "93b885adfe0da089cdf634904fd59f71",
+        "plugin hash": "ad164012d6b1e14942349d58b1132007",
+        "orphan hash": "693e9af84d3dfcc71e640e005bdc5e2e"
+      },
+      "interface_bytes": 66796,
+      "artifact_sha256": {
+        ".hi": "ee4225d86cce458c92193b7d37e3d8da9bea69f3e57c24cfa437f127db0fbb43",
+        ".o": "43052155de0ce533ec6dba24f3cc861b35d5cccab46cecee2b7923e85cf7442d"
+      }
+    }
+  ],
+  "stack_trace": {
+    "base": "CallStack (from HasCallStack):\n  observe, called at ./Exhibit.hs:6:11 in main:Exhibit",
+    "shifted": "CallStack (from HasCallStack):\n  observe, called at ./Exhibit.hs:7:11 in main:Exhibit"
+  },
+  "cabal_copy": {
+    "samples": [
+      "run1: edited build wall=12.18s, copy 1.867s, I/O {'rchar': 1366561457, 'wchar': 1288492097, 'syscr': 120855, 'syscw': 109032, 'read_bytes': 4096, 'write_bytes': 1294073856, 'cancelled_write_bytes': 554283008}",
+      "skip-base1: edited build wall=12.10s, copy 2.126s, I/O {'rchar': 1366561609, 'wchar': 1288492097, 'syscr': 120874, 'syscw': 109032, 'read_bytes': 0, 'write_bytes': 1294077952, 'cancelled_write_bytes': 472498176}",
+      "skip-fast1: edited build wall=17.95s, copy 3.669s, I/O {'rchar': 1403857457, 'wchar': 1251249886, 'syscr': 119041, 'syscw': 103643, 'read_bytes': 77824, 'write_bytes': 1253163008, 'cancelled_write_bytes': 554283008}",
+      "skip-fast2: edited build wall=12.40s, copy 1.867s, I/O {'rchar': 1403857169, 'wchar': 1251245293, 'syscr': 119005, 'syscw': 103642, 'read_bytes': 0, 'write_bytes': 1253158912, 'cancelled_write_bytes': 554283008}",
+      "skip-base2: edited build wall=13.82s, copy 2.294s, I/O {'rchar': 1366561743, 'wchar': 1288495922, 'syscr': 120890, 'syscw': 109034, 'read_bytes': 0, 'write_bytes': 1294086144, 'cancelled_write_bytes': 495566848}",
+      "strip ordinary: [1.28, 1.149]s, median 1.215s",
+      "strip direct: [0.84, 0.842]s, median 0.841s"
+    ],
+    "direct_strip": [
+      {
+        "index": 0,
+        "mode": "ordinary",
+        "lib": "ghc-10.1-inplace/libHSghc-10.1-inplace.a",
+        "elapsed": 1.0081260779988952,
+        "source": [
+          "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+          436
+        ],
+        "output": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "installed": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 921692490,
+          "wchar": 855103187,
+          "syscr": 52646,
+          "syscw": 44565,
+          "read_bytes": 0,
+          "write_bytes": 856997888,
+          "cancelled_write_bytes": 426680320
+        }
+      },
+      {
+        "index": 0,
+        "mode": "ordinary",
+        "lib": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "elapsed": 0.2723690109560266,
+        "source": [
+          "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+          509
+        ],
+        "output": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "installed": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 406274391,
+          "wchar": 395643513,
+          "syscr": 15762,
+          "syscw": 15699,
+          "read_bytes": 0,
+          "write_bytes": 395657216,
+          "cancelled_write_bytes": 267296768
+        }
+      },
+      {
+        "index": 1,
+        "mode": "direct",
+        "lib": "ghc-10.1-inplace/libHSghc-10.1-inplace.a",
+        "elapsed": 0.6678353549796157,
+        "source": [
+          "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+          436
+        ],
+        "output": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "installed": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 490621103,
+          "wchar": 424031759,
+          "syscr": 26379,
+          "syscw": 18299,
+          "read_bytes": 0,
+          "write_bytes": 425922560,
+          "cancelled_write_bytes": 210763776
+        }
+      },
+      {
+        "index": 1,
+        "mode": "direct",
+        "lib": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "elapsed": 0.17223457898944616,
+        "source": [
+          "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+          509
+        ],
+        "output": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "installed": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 138983299,
+          "wchar": 128352417,
+          "syscr": 90,
+          "syscw": 28,
+          "read_bytes": 0,
+          "write_bytes": 128364544,
+          "cancelled_write_bytes": 0
+        }
+      },
+      {
+        "index": 2,
+        "mode": "direct",
+        "lib": "ghc-10.1-inplace/libHSghc-10.1-inplace.a",
+        "elapsed": 0.6958202010137029,
+        "source": [
+          "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+          436
+        ],
+        "output": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "installed": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 490621105,
+          "wchar": 424031759,
+          "syscr": 26379,
+          "syscw": 18299,
+          "read_bytes": 0,
+          "write_bytes": 425922560,
+          "cancelled_write_bytes": 210763776
+        }
+      },
+      {
+        "index": 2,
+        "mode": "direct",
+        "lib": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "elapsed": 0.14639995899051428,
+        "source": [
+          "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+          509
+        ],
+        "output": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "installed": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 138983299,
+          "wchar": 128352417,
+          "syscr": 90,
+          "syscw": 28,
+          "read_bytes": 0,
+          "write_bytes": 128360448,
+          "cancelled_write_bytes": 0
+        }
+      },
+      {
+        "index": 3,
+        "mode": "ordinary",
+        "lib": "ghc-10.1-inplace/libHSghc-10.1-inplace.a",
+        "elapsed": 0.8143375089857727,
+        "source": [
+          "2a54bdbf584af2ae92afbbcd4cc3f16b0889b43aeb62d7df5814ddc03bf3c5ff",
+          436
+        ],
+        "output": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "installed": [
+          "35a388c9236c6e678985a3312bbb3fe1902b7843f72bca593d3d5ed73a02550d",
+          420
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 921692525,
+          "wchar": 855103187,
+          "syscr": 52646,
+          "syscw": 44565,
+          "read_bytes": 0,
+          "write_bytes": 856997888,
+          "cancelled_write_bytes": 641839104
+        }
+      },
+      {
+        "index": 3,
+        "mode": "ordinary",
+        "lib": "libHSghc-10.1-inplace-ghc10.1.20261115.1.so",
+        "elapsed": 0.33439603698207065,
+        "source": [
+          "7b0d740f11f62babb451ab453d478b0538a0db427a59a06d30a2955e12aa1343",
+          509
+        ],
+        "output": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "installed": [
+          "6fe5cd4c0a3ea710be3a41ab0841fff09effd8fd057f1a23c1aad48a0ecaaaeb",
+          493
+        ],
+        "byte_mode_match": true,
+        "delta_io": {
+          "rchar": 406274396,
+          "wchar": 395643513,
+          "syscr": 15762,
+          "syscw": 15699,
+          "read_bytes": 0,
+          "write_bytes": 395657216,
+          "cancelled_write_bytes": 267296768
+        }
+      }
+    ]
+  },
+  "stock_codegen_worker_check": {
+    "runs": {
+      "first-check-B": {
+        "wall_s": 29.9,
+        "compile_routes": {
+          "delegate:source-flags": 46,
+          "shim:stock": 52,
+          "T_HscRecomp:up-to-date": 253,
+          "delegate:cli-flags": 6
+        },
+        "compile_actions": 305,
+        "compile_boot_actions": 6,
+        "links": 2,
+        "archives": 1,
+        "dependency_worker": [
+          "partial 1/956"
+        ],
+        "noop_counts": [
+          "compile=0 dep=0 link=0"
+        ],
+        "build-ids": [
+          "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9",
+          "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9"
+        ],
+        "value": [
+          "156"
+        ]
+      },
+      "first-stock-A": {
+        "wall_s": 34.24,
+        "compile_routes": {},
+        "compile_actions": 305,
+        "compile_boot_actions": 6,
+        "links": 2,
+        "archives": 1,
+        "dependency_worker": [
+          "partial 1/956"
+        ],
+        "noop_counts": [
+          "compile=0 dep=0 link=0"
+        ],
+        "build-ids": [
+          "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6",
+          "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6"
+        ],
+        "value": [
+          "156"
+        ]
+      },
+      "second-stock-B": {
+        "wall_s": 35.55,
+        "compile_routes": {},
+        "compile_actions": 305,
+        "compile_boot_actions": 6,
+        "links": 2,
+        "archives": 1,
+        "dependency_worker": [
+          "partial 1/956"
+        ],
+        "noop_counts": [
+          "compile=0 dep=0 link=0"
+        ],
+        "build-ids": [
+          "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9",
+          "971f10b2fc928af6827a4f7c9d6b7a5cd80126c9"
+        ],
+        "value": [
+          "156"
+        ]
+      },
+      "second-check-A": {
+        "wall_s": 33.49,
+        "compile_routes": {
+          "delegate:source-flags": 46,
+          "shim:stock": 52,
+          "T_HscRecomp:up-to-date": 253,
+          "delegate:cli-flags": 6
+        },
+        "compile_actions": 305,
+        "compile_boot_actions": 6,
+        "links": 2,
+        "archives": 1,
+        "dependency_worker": [
+          "partial 1/956"
+        ],
+        "noop_counts": [
+          "compile=0 dep=0 link=0"
+        ],
+        "build-ids": [
+          "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6",
+          "2b5db923e5cde1624ee40a52a09c1cf9482fb3a6"
+        ],
+        "value": [
+          "156"
+        ]
+      }
+    },
+    "comparisons": {
+      "A": {
+        "module_count": 299,
+        "module_file_count": 1196,
+        "module_differences": [],
+        "boot_count": 207,
+        "boot_differences": [],
+        "products_count": 3,
+        "products_differences": [],
+        "cross_arm_build_id_match": true,
+        "stock_over_check_wall_ratio": 1.0223947446999104
+      },
+      "B": {
+        "module_count": 299,
+        "module_file_count": 1196,
+        "module_differences": [],
+        "boot_count": 207,
+        "boot_differences": [],
+        "products_count": 3,
+        "products_differences": [],
+        "cross_arm_build_id_match": true,
+        "stock_over_check_wall_ratio": 1.1889632107023411
+      },
+      "stock_median_s": 34.894999999999996,
+      "check_median_s": 31.695
+    }
+  },
+  "check_only_exact_command": {
+    "initial": {
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "phase": [],
+      "seconds": 0.6643105660332367
+    },
+    "unchanged": [
+      {
+        "exit": 0,
+        "stdout": "compilation IS NOT required\n",
+        "stderr": "",
+        "phase": [],
+        "seconds": 0.08213261503260583,
+        "artifacts": [
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o",
+            "47faade2e8e47b6d456e60f8939a6c11174c586a6cd54828bf06833b382333af",
+            false
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi",
+            "e2b0c282489f4832d52c20b1f18124f9328929e4bd3d9f4fbe141529b67eccd5",
+            false
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o",
+            "da2df89b7ecc872a0aeca4904acecda63353736d21bb69611b48461fb832738d",
+            false
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi",
+            "75d67e9379c19b998c5c7335fbd60e85e92ee074314513eff1d2df91951fb2d9",
+            false
+          ]
+        ]
+      },
+      {
+        "exit": 0,
+        "stdout": "compilation IS NOT required\n",
+        "stderr": "",
+        "phase": [
+          "T_HscRecomp:up-to-date"
+        ],
+        "seconds": 0.123667370993644,
+        "artifacts": [
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o",
+            "47faade2e8e47b6d456e60f8939a6c11174c586a6cd54828bf06833b382333af",
+            false
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi",
+            "e2b0c282489f4832d52c20b1f18124f9328929e4bd3d9f4fbe141529b67eccd5",
+            false
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o",
+            "da2df89b7ecc872a0aeca4904acecda63353736d21bb69611b48461fb832738d",
+            false
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi",
+            "75d67e9379c19b998c5c7335fbd60e85e92ee074314513eff1d2df91951fb2d9",
+            false
+          ]
+        ]
+      }
+    ],
+    "rhs_edit": [
+      {
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "phase": [],
+        "seconds": 0.3846564529812895,
+        "artifacts": [
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o",
+            "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+            true
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi",
+            "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+            true
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o",
+            "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+            true
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi",
+            "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+            true
+          ]
+        ]
+      },
+      {
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "phase": [
+          "T_HscRecomp:needed",
+          "shim:stock"
+        ],
+        "seconds": 0.3976743429666385,
+        "artifacts": [
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.o",
+            "fa61020dfcdde224b3c839edd82f1f9ea20a659a8be6613771916149dd099ccc",
+            true
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.hi",
+            "f623ff87df7b934b1fe1a0fd3538dbd1608dd09c7a29129c100a1ae339ff6f13",
+            true
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_o",
+            "326f829afe43069cf646a6b749de019e0feeb849074eceabfa5163cab9a75aa9",
+            true
+          ],
+          [
+            "_build/stage1/compiler/build/GHC/Cmm/Pipeline.dyn_hi",
+            "72a8d4a11106e44185e6895e740b264b492d49190cdbfca408f34673b0b6db5c",
+            true
+          ]
+        ]
+      }
+    ]
+  }
+}

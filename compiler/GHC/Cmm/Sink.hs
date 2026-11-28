@@ -466,6 +466,9 @@ tryToInline platform liveAfter node assigs =
   go _usages _live node _skipped [] = (node, [])
 
   go usages live node skipped (a@(l,rhs,_) : rest)
+   -- A live destination with a nontrivial RHS is always kept. The
+   -- conflict checks can only select the same keep path.
+   | l_live && not (isTrivial platform rhs) = dont_inline
    | cannot_inline            = dont_inline
    | occurs_none              = discard  -- See Note [discard during inlining]
    | occurs_once              = inline_and_discard

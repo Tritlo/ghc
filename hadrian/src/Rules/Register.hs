@@ -179,8 +179,10 @@ buildConfFinal rs context@Context {..} _conf = do
             need [path -/- "include/ghc-gmp.h"]
 
     -- Copy and register the package.
-    Cabal.copyPackage context
-    Cabal.registerPackage rs context
+    overlap <- if stage == Stage1 && package == compiler
+        then (== Just "1") <$> getEnv "HADRIAN_GHC_OVERLAP_REGISTRATION"
+        else pure False
+    Cabal.registerPackage overlap rs context
 
     -- We declare that this rule also produces files matching:
     --   - <root>/stage<N>/lib/<arch>-<os>-ghc-<version>/*libHS<pkgid>*

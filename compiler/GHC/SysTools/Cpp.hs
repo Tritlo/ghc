@@ -4,6 +4,7 @@
 
 module GHC.SysTools.Cpp
   ( doCpp
+  , doCppWithMacroHeader
   , CppOpts(..)
   , getGhcVersionPathName
   , getGhcVersionIncludeFlags
@@ -110,7 +111,15 @@ command line looks like:
 -- If you change the macros defined by this function make sure to update the
 -- user guide.
 doCpp :: Logger -> TmpFs -> DynFlags -> UnitEnv -> CppOpts -> FilePath -> FilePath -> IO ()
-doCpp logger tmpfs dflags unit_env opts input_fn output_fn = do
+doCpp logger tmpfs dflags unit_env opts input_fn output_fn =
+    void $ doCppWithMacroHeader logger tmpfs dflags unit_env opts input_fn output_fn
+
+-- | Run CPP. Return the path of the generated package version macro header,
+-- if CPP received one. The path has the same lifetime as any other temporary
+-- file for the current module.
+doCppWithMacroHeader :: Logger -> TmpFs -> DynFlags -> UnitEnv -> CppOpts
+                     -> FilePath -> FilePath -> IO (Maybe FilePath)
+doCppWithMacroHeader logger tmpfs dflags unit_env opts input_fn output_fn = do
     let hscpp_opts = picPOpts dflags
     let cmdline_include_paths = offsetIncludePaths dflags (includePaths dflags)
     let unit_state = ue_homeUnitState unit_env
@@ -189,7 +198,7 @@ doCpp logger tmpfs dflags unit_env opts input_fn output_fn = do
     -- MIN_VERSION macros
     let uids = explicitUnits unit_state
         pkgs = mapMaybe (lookupUnit unit_state . fst) uids
-    mb_macro_include <-
+    macro_header <-
         if not (null pkgs) && gopt Opt_VersionMacros dflags
             then do macro_stub <- newTempName logger tmpfs (tmpDir dflags) TFL_CurrentModule "h"
                     writeFile macro_stub (generatePackageVersionMacros pkgs)
@@ -198,8 +207,8 @@ doCpp logger tmpfs dflags unit_env opts input_fn output_fn = do
                     -- size of 1000 packages, it takes cpp an estimated 2
                     -- milliseconds to process this file. See #10970
                     -- comment 8.
-                    return [GHC.SysTools.FileOption "-include" macro_stub]
-            else return []
+                    return (Just macro_stub)
+            else return Nothing
 
     let line_pragmas
           | cppLinePragmas opts = [] -- on by default
@@ -215,7 +224,7 @@ doCpp logger tmpfs dflags unit_env opts input_fn output_fn = do
                     ++ map GHC.SysTools.Option hscpp_opts
                     ++ map GHC.SysTools.Option cpu_defs
                     ++ map GHC.SysTools.Option io_manager_defs
-                    ++ mb_macro_include
+                    ++ maybe [] (pure . GHC.SysTools.FileOption "-include") macro_header
                     ++ line_pragmas
         -- Set the language mode to assembler-with-cpp when preprocessing. This
         -- alleviates some of the C99 macro rules relating to whitespace and the hash
@@ -235,6 +244,7 @@ doCpp logger tmpfs dflags unit_env opts input_fn output_fn = do
                        , GHC.SysTools.Option     "-o"
                        , GHC.SysTools.FileOption "" output_fn
                        ])
+    return macro_header
 
 -- ---------------------------------------------------------------------------
 -- Macros (cribbed from Cabal)

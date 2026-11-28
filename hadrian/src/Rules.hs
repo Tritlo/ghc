@@ -9,11 +9,13 @@ import qualified Hadrian.Oracles.DirectoryContents
 import qualified Hadrian.Oracles.Path
 import qualified Hadrian.Oracles.TextFile
 import qualified Hadrian.Haskell.Hash
+import qualified Hadrian.Target as HTarget
 
 import BindistConfig
 import Expression
 import qualified Oracles.Flavour
 import qualified Oracles.ModuleFiles
+import qualified Oracles.Setting
 import Packages
 import qualified Rules.BinaryDist
 import qualified Rules.CabalReinstall
@@ -35,8 +37,8 @@ import UserSettings
 
 -- | This rule calls 'need' on all top-level build targets that Hadrian builds
 -- by default, respecting the 'finalStage' flag.
-topLevelTargets :: Rules ()
-topLevelTargets = action $ do
+topLevelTargets :: Action ()
+topLevelTargets = do
     verbosity <- getVerbosity
     forM_ [ Stage1, Stage2, Stage3] $ \stage -> do
       when (verbosity >= Verbose) $ do
@@ -142,7 +144,12 @@ buildRules = do
 
 oracleRules :: Rules ()
 oracleRules = do
-    Hadrian.Oracles.ArgsHash.argsHashOracle trackArgument getArgs
+    let cacheable t = case HTarget.builder t of
+            Ghc CompileHs Stage1 -> True
+            Ghc CompileCWithGhc Stage1 -> True
+            Cc (FindCDependencies CDep) Stage1 -> True
+            _ -> False
+    Hadrian.Oracles.ArgsHash.argsHashOracle trackArgument getArgs cacheable
     Hadrian.Oracles.Cabal.Rules.cabalOracle
     Hadrian.Haskell.Hash.pkgHashOracle
     Hadrian.Oracles.DirectoryContents.directoryContentsOracle
@@ -150,3 +157,4 @@ oracleRules = do
     Hadrian.Oracles.TextFile.textFileOracle
     Oracles.Flavour.oracles
     Oracles.ModuleFiles.moduleFilesOracle
+    Oracles.Setting.topDirectoryOracle

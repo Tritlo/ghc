@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-27",
+  "compiler_version": "10.1.20261115.1",
+  "compiler": "/home/tritlo/Code/ghc/_build/current/source/_build/stage0/bin/ghc",
+  "argv_capture": "/tmp/hadrian-worker.PilPLQ/actual-scan.argv",
+  "argv_capture_sha256": "cfdc676fc48950f2e1e2a14032643e6156d9243f2d719a187a4146af2a9e3fec",
+  "private_tree": "/tmp/worker-final-stage1.5EwQyxht/tree",
+  "argv_adjustment": "Replace the captured source root with the private tree. Retain +RTS -O64M -RTS.",
+  "job": "Shared Pueue, 4 GiB, CPUs 16–19",
+  "fingerprint": "GHC.Utils.Fingerprint.fingerprintByteString on raw ms_hspp_buf bytes from cur to len",
+  "runs": {
+    "A1": {
+      "setup_ns": 40479283,
+      "depanal_ns": 3519316704,
+      "hash_ns": 36885837,
+      "modules": 956,
+      "buffer_modules": 956,
+      "nonzero_cursors": 0,
+      "bytes": 32597661
+    },
+    "A2": {
+      "setup_ns": 44800855,
+      "depanal_ns": 3531521044,
+      "hash_ns": 37159523,
+      "modules": 956,
+      "buffer_modules": 956,
+      "nonzero_cursors": 0,
+      "bytes": 32597661
+    },
+    "B": {
+      "setup_ns": 44419513,
+      "depanal_ns": 3530065166,
+      "hash_ns": 38601779,
+      "modules": 956,
+      "buffer_modules": 956,
+      "nonzero_cursors": 0,
+      "bytes": 32597685
+    }
+  },
+  "comparisons": {
+    "unchanged": {
+      "common_sources": 956,
+      "added_sources": 0,
+      "removed_sources": 0,
+      "matching_fingerprints": 852,
+      "changed_fingerprints": 104,
+      "changed_preprocessed_paths": 104,
+      "changed_fingerprints_with_unchanged_paths": [],
+      "changed_paths_with_unchanged_fingerprints": []
+    },
+    "after_import_edit": {
+      "common_sources": 956,
+      "added_sources": 0,
+      "removed_sources": 0,
+      "matching_fingerprints": 851,
+      "changed_fingerprints": 105,
+      "changed_preprocessed_paths": 104,
+      "changed_fingerprints_with_unchanged_paths": [
+        "compiler/GHC/Cmm/Pipeline.hs"
+      ],
+      "changed_paths_with_unchanged_fingerprints": []
+    }
+  },
+  "import_edit": "Add import GHC.Data.Bool () to compiler/GHC/Cmm/Pipeline.hs",
+  "sample": {
+    "source": "compiler/GHC.hs",
+    "fresh_unchanged_runs": [
+      "C1",
+      "C2"
+    ],
+    "bytes_each": 81552,
+    "different_byte_offsets_zero_based": [
+      2950,
+      2951,
+      2952
+    ],
+    "line_number_one_based": 143,
+    "differing_line_before": "# 1 \"/tmp/stage0-pp-witness.9oOFokwq/tmp/ghc546414_tmp_0_0/ghc_tmp_0_2.h\" 1",
+    "differing_line_after": "# 1 \"/tmp/stage0-pp-witness.9oOFokwq/tmp/ghc546943_tmp_0_0/ghc_tmp_0_2.h\" 1"
+  },
+  "scope": "Raw fingerprint stability and cost only. Exact byte differences checked for one unstable buffer."
+}
