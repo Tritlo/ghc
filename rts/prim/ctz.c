@@ -2,6 +2,7 @@
 #include "Rts.h"
 #include <stdint.h>
 
+#if !defined(USE_RUST_RTS)
 // Fall-back implementations for count-trailing-zeros primop
 //
 // __builtin_ctz*() is supported by GCC and Clang
@@ -55,3 +56,4 @@ hs_ctz64(StgWord64 x)
 # error no suitable __builtin_ctz() found
 #endif
 }
+#endif

@@ -15,6 +15,7 @@
 #include "Trace.h"
 #include "RaiseAsync.h"
 #include "Schedule.h"
+#include "SuspendedCalls.h"
 #include "Updates.h"
 #include "STM.h"
 #include "sm/Sanity.h"
@@ -434,15 +435,20 @@ check_target:
     case BlockedOnCCall_Interruptible:
 #if defined(THREADED_RTS)
     {
-        Task *task = NULL;
         // walk suspended_ccalls to find the correct worker thread
+#if defined(USE_RUST_SUSPENDED_CALLS)
+        InCall *incall = ghc_rust_suspended_calls_find(cap->suspended_ccalls, target,
+                                                       offsetof(InCall, prev),
+                                                       offsetof(InCall, suspended_tso));
+#else
         InCall *incall;
         for (incall = cap->suspended_ccalls; incall != NULL; incall = incall->next) {
             if (incall->suspended_tso == target) {
-                task = incall->task;
                 break;
             }
         }
+#endif
+        Task *task = incall == NULL ? NULL : incall->task;
         if (task != NULL) {
             blockedThrowTo(cap, target, msg);
             if (!((target->flags & TSO_BLOCKEX) &&

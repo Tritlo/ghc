@@ -108,6 +108,16 @@ static spEntry *stable_ptr_free = NULL;
 static unsigned int SPT_size = 0;
 #define INIT_SPT_SIZE 64
 
+/* Keep the C atomic operations visible to ThreadSanitizer. */
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+#define USE_RUST_STABLE_PTR_TABLE 1
+RTS_PRIVATE void ghc_rust_init_stable_ptr_table(spEntry **table, spEntry **head, size_t count);
+RTS_PRIVATE void ghc_rust_exit_stable_ptr_table(spEntry **table, spEntry **head);
+RTS_PRIVATE StgWord ghc_rust_take_stable_ptr(spEntry *table, spEntry **head, StgPtr value);
+RTS_PRIVATE void ghc_rust_release_stable_ptr(spEntry **head, spEntry *slot);
+RTS_PRIVATE void ghc_rust_grow_stable_ptr_table(spEntry **table, spEntry **head, size_t old_count);
+RTS_PRIVATE void ghc_rust_free_old_stable_ptr_tables(void);
+#else
 /* Each time the stable pointer table is enlarged, we temporarily retain the old
  * version to ensure dereferences are thread-safe (see Note [Enlarging the
  * stable pointer table]).  Since we double the size of the table each time, we
@@ -125,6 +135,7 @@ static unsigned int SPT_size = 0;
 // old stable pointer tables
 static spEntry *old_SPTs[MAX_N_OLD_SPTS];
 static uint32_t n_old_SPTs = 0;
+#endif
 
 #if defined(THREADED_RTS)
 Mutex stable_ptr_mutex;
@@ -154,26 +165,34 @@ stablePtrUnlock(void)
  * Initialising the table
  * -------------------------------------------------------------------------- */
 
+#if !defined(USE_RUST_STABLE_PTR_TABLE)
 STATIC_INLINE void
 initSpEntryFreeList(spEntry *table, uint32_t n)
 {
   spEntry* free = NULL;
-  spEntry *p;
-  for (p = table + n - 1; p >= table; p--) {
+  while (n != 0) {
+      spEntry *p = &table[--n];
       p->addr = (P_)free;
       free = p;
   }
   stable_ptr_free = table;
 }
+#endif
 
 void
 initStablePtrTable(void)
 {
-    if (SPT_size > 0) return;
+    // stablePtrLock calls this before taking the mutex. Growth publishes
+    // the new table with a release store. See Note [Enlarging the stable pointer table].
+    if (ACQUIRE_LOAD(&stable_ptr_table) != NULL) return;
     SPT_size = INIT_SPT_SIZE;
+#if defined(USE_RUST_STABLE_PTR_TABLE)
+    ghc_rust_init_stable_ptr_table(&stable_ptr_table, &stable_ptr_free, INIT_SPT_SIZE);
+#else
     stable_ptr_table = stgMallocBytes(SPT_size * sizeof(spEntry),
                                       "initStablePtrTable");
     initSpEntryFreeList(stable_ptr_table,INIT_SPT_SIZE);
+#endif
 
 #if defined(THREADED_RTS)
     initMutex(&stable_ptr_mutex);
@@ -191,10 +210,17 @@ enlargeStablePtrTable(void)
     ASSERT_LOCK_HELD(&stable_ptr_mutex);
 
     uint32_t old_SPT_size = SPT_size;
-    spEntry *new_stable_ptr_table;
 
-    // 2nd and subsequent times
+    // Check both the entry count and the allocation size before doubling.
+    if (old_SPT_size > UINT32_MAX / 2 ||
+        (uint64_t)old_SPT_size * 2 * sizeof(spEntry) > SIZE_MAX) {
+        barf("enlargeStablePtrTable: stable pointer table size overflow");
+    }
     SPT_size *= 2;
+#if defined(USE_RUST_STABLE_PTR_TABLE)
+    ghc_rust_grow_stable_ptr_table(&stable_ptr_table, &stable_ptr_free, old_SPT_size);
+#else
+    spEntry *new_stable_ptr_table;
 
     /* We temporarily retain the old version instead of freeing it; see Note
      * [Enlarging the stable pointer table].
@@ -217,12 +243,13 @@ enlargeStablePtrTable(void)
 
     // add the new entries to the free list
     initSpEntryFreeList(stable_ptr_table + old_SPT_size, old_SPT_size);
+#endif
 }
 
 /* Note [Enlarging the stable pointer table]
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * To enlarge the stable pointer table, we allocate a new table, copy the
- * existing entries, and then store the old version of the table in old_SPTs
+ * existing entries, and keep the old version in the list of retired tables
  * until we free it during GC.  By not immediately freeing the old version
  * (or equivalently by not growing the table using realloc()), we ensure that
  * another thread simultaneously dereferencing a stable pointer using the old
@@ -242,24 +269,34 @@ enlargeStablePtrTable(void)
 static void
 freeOldSPTs(void)
 {
+#if defined(USE_RUST_STABLE_PTR_TABLE)
+    ghc_rust_free_old_stable_ptr_tables();
+#else
     uint32_t i;
 
     for (i = 0; i < n_old_SPTs; i++) {
         stgFree(old_SPTs[i]);
     }
     n_old_SPTs = 0;
+#endif
 }
 
 void
 exitStablePtrTable(void)
 {
+#if defined(USE_RUST_STABLE_PTR_TABLE)
+    ghc_rust_exit_stable_ptr_table(&stable_ptr_table, &stable_ptr_free);
+    SPT_size = 0;
+#else
     if (stable_ptr_table)
         stgFree(stable_ptr_table);
 
     stable_ptr_table = NULL;
+    stable_ptr_free = NULL;
     SPT_size = 0;
 
     freeOldSPTs();
+#endif
 
 #if defined(THREADED_RTS)
     closeMutex(&stable_ptr_mutex);
@@ -269,8 +306,12 @@ exitStablePtrTable(void)
 STATIC_INLINE void
 freeSpEntry(spEntry *sp)
 {
+#if defined(USE_RUST_STABLE_PTR_TABLE)
+    ghc_rust_release_stable_ptr(&stable_ptr_free, sp);
+#else
     RELAXED_STORE(&sp->addr, (P_)stable_ptr_free);
     stable_ptr_free = sp;
+#endif
 }
 
 void
@@ -312,6 +353,9 @@ getStablePtr(StgPtr p)
   if (!stable_ptr_free)
       enlargeStablePtrTable();
 
+#if defined(USE_RUST_STABLE_PTR_TABLE)
+  StgWord sp = ghc_rust_take_stable_ptr(stable_ptr_table, &stable_ptr_free, p);
+#else
   // find the index of free stable ptr
   StgWord sp = stable_ptr_free - stable_ptr_table;
 
@@ -320,6 +364,7 @@ getStablePtr(StgPtr p)
 
   // release store to pair with acquire load in deRefStablePtr
   RELEASE_STORE(&stable_ptr_table[sp].addr, p);
+#endif
 
   stablePtrUnlock();
 
@@ -332,20 +377,40 @@ getStablePtr(StgPtr p)
  * Treat stable pointers as roots for the garbage collector.
  * -------------------------------------------------------------------------- */
 
-#define FOR_EACH_STABLE_PTR(p, CODE)                                    \
-    do {                                                                \
-        spEntry *p;                                                     \
-        spEntry *__end_ptr = &stable_ptr_table[SPT_size];               \
-        for (p = stable_ptr_table; p < __end_ptr; p++) {                \
-            /* Internal pointers are free slots. NULL is last in free */ \
-            /* list. */                                                 \
-            if (p->addr &&                                              \
-                (p->addr < (P_)stable_ptr_table || p->addr >= (P_)__end_ptr)) \
-            {                                                           \
-                do { CODE } while(0);                                   \
-            }                                                           \
-        }                                                               \
-    } while(0)
+#if defined(USE_RUST_RTS)
+GHC_STATIC_ASSERT(offsetof(spEntry, addr) == 0 &&
+                  sizeof(spEntry) == sizeof(StgPtr) &&
+                  _Alignof(spEntry) == _Alignof(StgPtr),
+                  "Rust stable pointer entry layout");
+RTS_PRIVATE void ghc_rust_visit_stable_ptrs(spEntry *table, size_t count,
+                                             evac_fn evac, void *user);
+#endif
+
+/* Note [Stable pointer root slots]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * A free entry holds the address of the next free entry, or NULL.
+ * A live entry holds a heap pointer. Compare numerical addresses because
+ * the heap object and the stable pointer table are separate allocations.
+ * The collector needs the address of the live slot to update it in place.
+ */
+static void
+visitStablePtrTable(evac_fn evac, void *user)
+{
+#if defined(USE_RUST_RTS)
+    ghc_rust_visit_stable_ptrs(stable_ptr_table, SPT_size, evac, user);
+#else
+    spEntry *table = stable_ptr_table;
+    const unsigned int count = SPT_size;
+    const size_t bytes = (size_t)count * sizeof(*table);
+
+    for (unsigned int i = 0; i < count; i++) {
+        StgPtr addr = table[i].addr;
+        if (addr != NULL && (uintptr_t)addr - (uintptr_t)table >= bytes) {
+            evac(user, (StgClosure **)&table[i].addr);
+        }
+    }
+#endif
+}
 
 void
 markStablePtrTable(evac_fn evac, void *user)
@@ -355,7 +420,7 @@ markStablePtrTable(evac_fn evac, void *user)
      */
     freeOldSPTs();
 
-    FOR_EACH_STABLE_PTR(p, evac(user, (StgClosure **)&p->addr););
+    visitStablePtrTable(evac, user);
 }
 
 /* -----------------------------------------------------------------------------
@@ -369,5 +434,5 @@ markStablePtrTable(evac_fn evac, void *user)
 void
 threadStablePtrTable( evac_fn evac, void *user )
 {
-    FOR_EACH_STABLE_PTR(p, evac(user, (StgClosure **)&p->addr););
+    visitStablePtrTable(evac, user);
 }

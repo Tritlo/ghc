@@ -52,6 +52,29 @@
 #include "RtsUtils.h"
 #include "WSDeque.h"
 
+/* Keep instrumented C atomics and the release-store workaround under TSAN. */
+#if defined(USE_RUST_RTS) && defined(THREADED_RTS) && !defined(TSAN_ENABLED)
+#define USE_RUST_WSDEQUE 1
+
+/* Keep these checks beside the C entry points for the Rust layout. */
+_Static_assert(sizeof(StgInt) == 8 && sizeof(StgWord) == 8, "WSDeque index ABI");
+_Static_assert(sizeof(void *) == 8 && _Alignof(void *) == 8, "WSDeque slot ABI");
+_Static_assert(_Alignof(WSDeque) == 8 && sizeof(WSDeque) == 40, "WSDeque ABI");
+_Static_assert(offsetof(WSDeque, size) == 0 && offsetof(WSDeque, moduloSize) == 8,
+               "WSDeque size ABI");
+_Static_assert(offsetof(WSDeque, top) == 16 && offsetof(WSDeque, bottom) == 24,
+               "WSDeque atomic index ABI");
+_Static_assert(offsetof(WSDeque, elements) == 32, "WSDeque array ABI");
+
+#include "BeginPrivate.h"
+WSDeque *ghc_rust_new_wsdeque(uint32_t size);
+void ghc_rust_free_wsdeque(WSDeque *q);
+bool ghc_rust_push_wsdeque(WSDeque *q, void *elem);
+void *ghc_rust_pop_wsdeque(WSDeque *q);
+void *ghc_rust_steal_wsdeque_once(WSDeque *q);
+void *ghc_rust_steal_wsdeque(WSDeque *q);
+#include "EndPrivate.h"
+#else
 // Returns true on success.
 static inline bool
 cas_top(WSDeque *q, StgInt old, StgInt new)
@@ -59,14 +82,14 @@ cas_top(WSDeque *q, StgInt old, StgInt new)
     return (StgWord) old == SEQ_CST_RELAXED_CAS((StgPtr) &q->top,
                                                 (StgWord) old, (StgWord) new);
 }
+#endif
 
 
 /* -----------------------------------------------------------------------------
  * newWSDeque
  * -------------------------------------------------------------------------- */
 
-/* internal helpers ... */
-
+#if !defined(USE_RUST_WSDEQUE)
 static StgWord
 roundUp2(StgWord val)
 {
@@ -82,10 +105,14 @@ roundUp2(StgWord val)
     } while (0 != (val = val>>1));
     return rounded;
 }
+#endif
 
 WSDeque *
 newWSDeque (uint32_t size)
 {
+#if defined(USE_RUST_WSDEQUE)
+    WSDeque *q = ghc_rust_new_wsdeque(size);
+#else
     StgWord realsize;
     WSDeque *q;
 
@@ -100,6 +127,7 @@ newWSDeque (uint32_t size)
 
     q->top=0;
     RELEASE_STORE(&q->bottom, 0); /* read by writer, updated each time top is read */
+#endif
 
     ASSERT_WSDEQUE_INVARIANTS(q);
     return q;
@@ -112,8 +140,12 @@ newWSDeque (uint32_t size)
 void
 freeWSDeque (WSDeque *q)
 {
+#if defined(USE_RUST_WSDEQUE)
+    ghc_rust_free_wsdeque(q);
+#else
     stgFree(q->elements);
     stgFree(q);
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -132,6 +164,9 @@ freeWSDeque (WSDeque *q)
 void *
 popWSDeque (WSDeque *q)
 {
+#if defined(USE_RUST_WSDEQUE)
+    return ghc_rust_pop_wsdeque(q);
+#else
     StgInt b = RELAXED_LOAD(&q->bottom) - 1;
     RELAXED_STORE(&q->bottom, b);
     SEQ_CST_FENCE();
@@ -157,6 +192,7 @@ popWSDeque (WSDeque *q)
     }
 
     return result;
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -166,6 +202,9 @@ popWSDeque (WSDeque *q)
 void *
 stealWSDeque_ (WSDeque *q)
 {
+#if defined(USE_RUST_WSDEQUE)
+    return ghc_rust_steal_wsdeque_once(q);
+#else
     StgInt t = ACQUIRE_LOAD(&q->top);
     SEQ_CST_FENCE();
     StgInt b = ACQUIRE_LOAD(&q->bottom);
@@ -179,11 +218,15 @@ stealWSDeque_ (WSDeque *q)
         }
     }
     return result;
+#endif
 }
 
 void *
 stealWSDeque (WSDeque *q)
 {
+#if defined(USE_RUST_WSDEQUE)
+    return ghc_rust_steal_wsdeque(q);
+#else
     void *stolen;
 
     do {
@@ -191,6 +234,7 @@ stealWSDeque (WSDeque *q)
     } while (stolen == NULL && !looksEmptyWSDeque(q));
 
     return stolen;
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -203,6 +247,9 @@ stealWSDeque (WSDeque *q)
 bool
 pushWSDeque (WSDeque* q, void * elem)
 {
+#if defined(USE_RUST_WSDEQUE)
+    return ghc_rust_push_wsdeque(q, elem);
+#else
     StgInt b = ACQUIRE_LOAD(&q->bottom);
     StgInt t = ACQUIRE_LOAD(&q->top);
 
@@ -223,4 +270,5 @@ pushWSDeque (WSDeque* q, void * elem)
     RELAXED_STORE(&q->bottom, b+1);
 #endif
     return true;
+#endif
 }

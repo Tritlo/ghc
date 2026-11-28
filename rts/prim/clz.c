@@ -2,6 +2,7 @@
 #include "Rts.h"
 #include <stdint.h>
 
+#if !defined(USE_RUST_RTS)
 // Fall-back implementations for count-leading-zeros primop
 //
 // __builtin_clz*() is supported by GCC and Clang
@@ -39,3 +40,4 @@ hs_clz64(StgWord64 x)
 # error no suitable __builtin_clz() found
 #endif
 }
+#endif

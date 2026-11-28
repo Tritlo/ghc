@@ -1055,8 +1055,10 @@ trace_tso (MarkQueue *queue, StgTSO *tso)
     trace_trec_header(queue, tso->trec);
     markQueuePushClosure_(queue, (StgClosure *) tso->stackobj);
     markQueuePushClosure_(queue, (StgClosure *) tso->_link);
-    if (tso->label != NULL) {
-        markQueuePushClosure_(queue, (StgClosure *) tso->label);
+    // See Note [Thread label publication] in ThreadLabels.c.
+    StgArrBytes *label = ACQUIRE_LOAD(&tso->label);
+    if (label != NULL) {
+        markQueuePushClosure_(queue, (StgClosure *) label);
     }
     if (IsBlockInfoClosure(ACQUIRE_LOAD(&tso->why_blocked))) {
         /* This also follows the block_info.prev back-link in

@@ -21,6 +21,7 @@
 #include "Rts.h"
 
 #include "Capability.h"
+#include "SuspendedCalls.h"
 #include "Schedule.h"
 #include "Sparks.h"
 #include "Trace.h"
@@ -1337,7 +1338,9 @@ void
 markCapability (evac_fn evac, void *user, Capability *cap,
                 bool no_mark_sparks USED_IF_THREADS)
 {
+#if !defined(USE_RUST_SUSPENDED_CALLS)
     InCall *incall;
+#endif
 
     // Each GC thread is responsible for following roots from the
     // Capability of the same number.  There will usually be the same
@@ -1349,10 +1352,18 @@ markCapability (evac_fn evac, void *user, Capability *cap,
 #if defined(THREADED_RTS)
     evac(user, (StgClosure **)(void *)&cap->inbox);
 #endif
+#if defined(USE_RUST_SUSPENDED_CALLS)
+    // See Note [Suspended in-call list in Rust] in Schedule.c.
+    ghc_rust_suspended_calls_visit(cap->suspended_ccalls,
+                                   offsetof(InCall, prev),
+                                   offsetof(InCall, suspended_tso),
+                                   evac, user);
+#else
     for (incall = cap->suspended_ccalls; incall != NULL;
          incall=incall->next) {
         evac(user, (StgClosure **)(void *)&incall->suspended_tso);
     }
+#endif
 
 #if defined(THREADED_RTS)
     if (!no_mark_sparks) {

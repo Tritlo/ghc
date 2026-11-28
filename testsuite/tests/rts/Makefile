@@ -163,3 +163,9 @@ census_pinned:
 	'$(TEST_HC)' $(TEST_HC_OPTS) -O -rtsopts -v0 census_pinned.hs -o census_pinned
 	./census_pinned +RTS -hT -i0 -RTS
 	grep -m1 '^ARR_WORDS' census_pinned.hp
+
+.PHONY: census_block_sizes
+census_block_sizes:
+	'$(TEST_HC)' $(TEST_HC_OPTS) -O2 -threaded -debug -rtsopts -v0 census_block_sizes.hs -o census_block_sizes
+	./census_block_sizes +RTS -N2 --nonmoving-gc -Dn -RTS > census_block_sizes.out 2> census_block_sizes.log
+	'$(PYTHON)' census_block_sizes.py census_block_sizes.out census_block_sizes.log

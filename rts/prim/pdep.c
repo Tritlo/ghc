@@ -1,6 +1,7 @@
 #include "Rts.h"
 #include "MachDeps.h"
 
+#if !defined(USE_RUST_RTS)
 StgWord64
 hs_pdep64(StgWord64 src, StgWord64 mask)
 {
@@ -44,3 +45,5 @@ hs_pdep8(StgWord src, StgWord mask)
 {
   return (StgWord) ((StgWord8) hs_pdep64(src, mask));
 }
+
+#endif

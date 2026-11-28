@@ -18,14 +18,37 @@
 #include "Sweep.h"
 #include "Trace.h"
 
+typedef struct {
+    W_ marked, freed, fragmented, live;
+} SweepStats;
+
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+typedef struct {
+    W_ link, bitmap, flags, bitmap_words;
+} SweepLayout;
+
+RTS_PRIVATE SweepStats ghc_rust_sweep_blocks(bdescr **head, memcount *count,
+                                             const SweepLayout *layout);
+GHC_STATIC_ASSERT(BF_MARKED == 8 && BF_FRAGMENTED == 64 && BF_SWEPT == 256,
+                  "Rust sweep flags");
+GHC_STATIC_ASSERT(BLOCK_SIZE_W % BITS_IN(W_) == 0, "whole bitmap words");
+#endif
+
 void
 sweep(generation *gen)
 {
+    ASSERT(countBlocks(gen->old_blocks) == gen->n_old_blocks);
+
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    static const SweepLayout layout = {
+        offsetof(bdescr, link), offsetof(bdescr, u.bitmap), offsetof(bdescr, flags),
+        BLOCK_SIZE_W / BITS_IN(W_)
+    };
+    SweepStats stats = ghc_rust_sweep_blocks(&gen->old_blocks, &gen->n_old_blocks, &layout);
+#else
     bdescr *bd, *prev, *next;
     uint32_t i;
     W_ freed, resid, fragd, blocks, live;
-    
-    ASSERT(countBlocks(gen->old_blocks) == gen->n_old_blocks);
 
     live = 0; // estimate of live data in this gen
     freed = 0;
@@ -72,19 +95,22 @@ sweep(generation *gen)
         }
     }
 
-    gen->live_estimate = live;
+    SweepStats stats = { blocks, freed, fragd, live };
+#endif
+    gen->live_estimate = stats.live;
 
     debugTrace(DEBUG_gc, "sweeping: %" FMT_Word " blocks, "
                                    "%" FMT_Word " were copied, "
                                    "%" FMT_Word " freed (%" FMT_Word "%%), "
                                    "%" FMT_Word " are fragmented, "
                          "live estimate: %lu%%",
-          gen->n_old_blocks + freed,
-          gen->n_old_blocks - blocks + freed,
-          freed,
-          blocks == 0 ? 0 : (freed * 100) / blocks,
-          fragd, 
-          (unsigned long)((blocks - freed) == 0 ? 0 : ((live / BLOCK_SIZE_W) * 100) / (blocks - freed)));
+          gen->n_old_blocks + stats.freed,
+          gen->n_old_blocks - stats.marked + stats.freed,
+          stats.freed,
+          stats.marked == 0 ? 0 : (stats.freed * 100) / stats.marked,
+          stats.fragmented,
+          (unsigned long)((stats.marked == stats.freed) ? 0 :
+              ((stats.live / BLOCK_SIZE_W) * 100) / (stats.marked - stats.freed)));
 
     ASSERT(countBlocks(gen->old_blocks) == gen->n_old_blocks);
 }

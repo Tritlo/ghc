@@ -57,6 +57,13 @@ test('async001', normal, compile_and_run, [''])
 
 test('numsparks001', only_ways(['threaded1']), compile_and_run, [''])
 
+test('numsparks002',
+     [only_ways(['normal', 'threaded1', 'compacting_gc']),
+      extra_ways(['compacting_gc']),
+      req_ghc_with_threaded_rts,
+      extra_run_opts('+RTS -N1 -C0 -I0 -A32m -e3 -RTS')],
+     compile_and_run, ['-threaded -rtsopts'])
+
 test('T4262', [ skip, # skip for now, it doesn't give reliable results
                 only_ways(['threaded1']),
                 unless(opsys('linux'),skip) ],

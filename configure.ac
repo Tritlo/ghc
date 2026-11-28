@@ -864,6 +864,48 @@ dnl ** check for installed alex binary + version
 AC_ARG_VAR(ALEX,[Use as the path to alex [default=autodetect]])
 FPTOOLS_ALEX
 
+AC_ARG_ENABLE([rust-rts],
+    [AS_HELP_STRING([--enable-rust-rts],
+        [Build the experimental Rust RTS code on native x86_64 GNU/Linux])],
+    [], [enable_rust_rts=no])
+AC_ARG_VAR([RUSTC], [Path to the Rust compiler for --enable-rust-rts])
+RustRtsCompiler=
+RustRtsCompilerVersion=
+AS_CASE([$enable_rust_rts],
+    [yes], [
+        AS_IF([test "$CrossCompiling" = YES || test "$build" != "$target" || test "$host" != "$target"],
+            [AC_MSG_ERROR([--enable-rust-rts requires a native build])])
+        AS_CASE([$target_cpu-$target_os], [x86_64-linux-gnu], [],
+            [AC_MSG_ERROR([--enable-rust-rts requires an x86_64 GNU/Linux target])])
+        AC_PATH_PROG([RUSTC], [rustc])
+        AS_IF([test -z "$RUSTC"], [AC_MSG_ERROR([--enable-rust-rts requires rustc])])
+        RustRtsCompiler=$RUSTC
+        dnl Keep rustup's selection fixed for this configuration.
+        AS_IF([test "$RUSTC" -ef "$(dirname "$RUSTC")/rustup"], [
+            rust_rts_sysroot=$("$RUSTC" --print sysroot) ||
+                AC_MSG_ERROR([could not resolve the Rust toolchain selected by rustup])
+            RustRtsCompiler=$rust_rts_sysroot/bin/rustc
+        ])
+        RustRtsCompilerVersion=$("$RustRtsCompiler" --version | sed -n 's/^rustc \([[0-9.]][[0-9.]]*\) .*/\1/p')
+        AS_IF([test -z "$RustRtsCompilerVersion"],
+            [AC_MSG_ERROR([--enable-rust-rts requires a stable Rust compiler])])
+        FP_COMPARE_VERSIONS([$RustRtsCompilerVersion], [-lt], [1.100.0],
+            [AC_MSG_ERROR([--enable-rust-rts requires Rust 1.100.0 or newer])])
+
+        AC_MSG_CHECKING([whether rustc can compile for x86_64-unknown-linux-gnu])
+        AS_IF([printf '%s\n' '#!@<:@no_std@:>@' | "$RustRtsCompiler" --crate-name rts_probe \
+                --crate-type=lib --emit=obj --target=x86_64-unknown-linux-gnu \
+                -C panic=abort -o conftest-rust.o - >&AS_MESSAGE_LOG_FD 2>&1],
+            [AC_MSG_RESULT([yes])],
+            [AC_MSG_RESULT([no])
+             AC_MSG_ERROR([rustc needs the x86_64-unknown-linux-gnu target for --enable-rust-rts])])
+        rm -f conftest-rust.o
+    ],
+    [no], [],
+    [AC_MSG_ERROR([--enable-rust-rts takes only yes or no])])
+AC_SUBST([RustRtsCompiler])
+AC_SUBST([RustRtsCompilerVersion])
+
 dnl --------------------------------------------------
 dnl ### program checking section ends here ###
 dnl --------------------------------------------------

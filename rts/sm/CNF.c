@@ -265,23 +265,39 @@ firstBlockGetCompact(StgCompactNFDataBlock *block)
     return (StgCompactNFData*) ((W_)block + sizeof(StgCompactNFDataBlock));
 }
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE void ghc_rust_free_compact_blocks(StgCompactNFDataBlock *first);
+RTS_PRIVATE void ghc_c_free_compact_block(StgCompactNFDataBlock *block);
+#endif
+
+static inline void freeCompactBlock(StgCompactNFDataBlock *block)
+{
+    bdescr *bd = Bdescr((StgPtr)block);
+    // The non-moving collector can leave this flag set to prevent evacuation.
+    ASSERT(RtsFlags.GcFlags.useNonmoving || ((bd->flags & BF_EVACUATED) == 0));
+    freeGroup(bd);
+}
+
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE void ghc_c_free_compact_block(StgCompactNFDataBlock *block)
+{
+    freeCompactBlock(block);
+}
+#endif
+
 void
 compactFree(StgCompactNFData *str)
 {
-    StgCompactNFDataBlock *block, *next;
-    bdescr *bd;
-
-    block = compactGetFirstBlock(str);
-
+    StgCompactNFDataBlock *block = compactGetFirstBlock(str);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_free_compact_blocks(block);
+#else
+    StgCompactNFDataBlock *next;
     for ( ; block; block = next) {
         next = block->next;
-        bd = Bdescr((StgPtr)block);
-        ASSERT(RtsFlags.GcFlags.useNonmoving || ((bd->flags & BF_EVACUATED) == 0));
-            // When using the non-moving collector we leave compact object
-            // evacuated to the oldset gen as BF_EVACUATED to avoid evacuating
-            // objects in the non-moving heap.
-        freeGroup(bd);
+        freeCompactBlock(block);
     }
+#endif
 }
 
 #if defined(DEBUG)

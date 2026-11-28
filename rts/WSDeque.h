@@ -97,6 +97,26 @@ EXTERN_INLINE StgInt dequeElements   (WSDeque *q);
  * PRIVATE below here
  * -------------------------------------------------------------------------- */
 
+// Visit live closure slots in logical order. The visitor may update each
+// slot. The caller must exclude pushes, pops, and steals for the whole walk.
+INLINE_HEADER void
+visitWSDequeClosureSlots(WSDeque *q,
+                         void (*visit)(void *, StgClosure **), void *user)
+{
+    ASSERT_WSDEQUE_INVARIANTS(q);
+
+    StgWord top = q->top;
+    StgWord bottom = q->bottom;
+    StgClosure **slots = (StgClosure **)q->elements;
+    StgWord mask = q->moduloSize;
+
+    // Use logical bounds. The masked bounds coincide in a full deque.
+    while (top < bottom) {
+        visit(user, &slots[top & mask]);
+        top++;
+    }
+}
+
 EXTERN_INLINE StgInt
 dequeElements (WSDeque *q)
 {
@@ -117,4 +137,59 @@ EXTERN_INLINE void
 discardElements (WSDeque *q)
 {
     RELAXED_STORE(&q->top, RELAXED_LOAD(&q->bottom));
+}
+
+#if defined(USE_RUST_RTS) && defined(THREADED_RTS)
+#include "BeginPrivate.h"
+StgWord ghc_rust_retain_spark_slots(StgClosure **slots, StgWord top,
+                                    StgWord count, StgWord mask,
+                                    StgClosure *(*retain)(void *, StgClosure *),
+                                    void *user);
+#include "EndPrivate.h"
+#endif
+
+// Rewrite retained closure entries in logical order. A null result removes
+// the entry. The caller must exclude pushes, pops, and steals throughout.
+ATTR_ALWAYS_INLINE INLINE_HEADER void
+retainWSDequeClosureSlots(WSDeque *q,
+                          StgClosure *(*retain)(void *, StgClosure *),
+                          void *user)
+{
+    if (q->top > q->bottom) {
+        q->top = q->bottom;
+    }
+
+    // Reset the counters while there can be no concurrent steal.
+    q->bottom -= q->top & ~q->moduloSize;
+    q->top &= q->moduloSize;
+    ASSERT_WSDEQUE_INVARIANTS(q);
+
+    StgClosure **elements = (StgClosure **)q->elements;
+    StgWord top = q->top;
+    StgWord oldBottom = q->bottom;
+    StgWord mask = q->moduloSize;
+    StgWord count = oldBottom - top;
+    ASSERT(count <= (StgWord)q->size);
+
+    /* Use logical bounds. The masked bounds coincide in a full deque.
+     * The output starts at the old bottom and cannot overtake the input.
+     * Each read produces at most one write. */
+#if defined(USE_RUST_RTS) && defined(THREADED_RTS)
+    StgWord kept = ghc_rust_retain_spark_slots(elements, top, count, mask,
+                                              retain, user);
+#else
+    StgWord writeIndex = oldBottom;
+    for (StgWord readIndex = top; readIndex < oldBottom; ++readIndex) {
+        StgClosure *entry = retain(user, elements[readIndex & mask]);
+        if (entry != NULL) {
+            elements[writeIndex & mask] = entry;
+            ++writeIndex;
+        }
+    }
+    StgWord kept = writeIndex - oldBottom;
+    (void)count;
+#endif
+    ASSERT(kept <= count);
+    q->top = oldBottom & mask;
+    q->bottom = q->top + kept;
 }

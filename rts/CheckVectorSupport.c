@@ -1,6 +1,13 @@
 #include <stdio.h>
+#include "Rts.h"
 #include "CheckVectorSupport.h"
+#include "CheckVectorSupportInternal.h"
 
+#if defined(USE_RUST_RTS) && defined(__x86_64__) && defined(__linux__) && !defined(TSAN_ENABLED)
+#define USE_RUST_VECTOR_SUPPORT
+#endif
+
+#if !defined(USE_RUST_VECTOR_SUPPORT)
 // Check support for vector registers (conservative).
 //
 // 0: no support for vector registers
@@ -8,16 +15,27 @@
 // 2: support for 256-bit vector registers
 // 3: support for 512-bit vector registers
 int checkVectorSupport(void) {
-
     int supports_V16;
     int supports_V32;
     int supports_V64;
 
   // Detect x86/x86_64 support using CPUID
   #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-    int eax, ebx, ecx, edx;
+    unsigned int eax, ebx, ecx, edx;
+    unsigned int max_basic_leaf, leaf1_ecx, leaf1_edx, leaf7_ebx = 0;
+    unsigned int xcr0_eax = 0, xcr0_edx = 0;
+    unsigned long long xcr0 = 0;
 
-    // Check for SSE (128-bit)
+    // Find the highest supported basic CPUID leaf.
+    eax = 0;
+    __asm__ __volatile__ (
+        "cpuid"
+        : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
+        : "a" (eax)
+    );
+    max_basic_leaf = eax;
+
+    // Check for SSE (128-bit).
     eax = 1;
     __asm__ __volatile__ (
         "cpuid"
@@ -25,23 +43,33 @@ int checkVectorSupport(void) {
         : "a" (eax)
     );
 
-    // SSE
-    supports_V16 = edx & (1 << 25);
+    leaf1_ecx = ecx;
+    leaf1_edx = edx;
 
-    // Check for AVX2 and AVX512-F
-    eax = 7;
-    ecx = 0;
-    __asm__ __volatile__ (
-        "cpuid"
-        : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-        : "a" (eax), "c" (ecx)
-    );
+    // Check for AVX2 and AVX512-F when structured feature flags exist.
+    if (max_basic_leaf >= 7) {
+        eax = 7;
+        ecx = 0;
+        __asm__ __volatile__ (
+            "cpuid"
+            : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
+            : "a" (eax), "c" (ecx)
+        );
 
-    // AVX2
-    supports_V32 = ebx & (1 << 5);
+        leaf7_ebx = ebx;
+    }
 
-    // AVX-512F
-    supports_V64 = ebx & (1 << 16);
+    // See Note [Vector state availability].
+    if (leaf1_ecx & (1u << 27)) {
+        __asm__ __volatile__ (
+            "xgetbv"
+            : "=a" (xcr0_eax), "=d" (xcr0_edx)
+            : "c" (0)
+        );
+        xcr0 = ((unsigned long long)xcr0_edx << 32) | xcr0_eax;
+    }
+
+    return classifyVectorSupport(leaf1_ecx, leaf1_edx, leaf7_ebx, xcr0);
 
   // Detect AArch64 support
   #elif defined(__aarch64__)
@@ -99,3 +127,4 @@ int vectorSupportGlobalVar;
 void setVectorSupport(void){
   vectorSupportGlobalVar = checkVectorSupport();
 }
+#endif

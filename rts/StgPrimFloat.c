@@ -46,6 +46,67 @@
 #define H 1
 #endif
 
+#if defined(USE_RUST_RTS)
+
+/* Note [Floating-point environment for encoders]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Use the C compiler's conversions to preserve the caller's rounding mode
+ * and floating-point exceptions. Rust clamps the exponent, calls libm, and
+ * applies the sign. The Float helpers round before scaling and after it.
+ */
+RTS_PRIVATE StgDouble ghc_rust_encode_to_double(W_ value, bool is_signed);
+RTS_PRIVATE StgDouble ghc_rust_encode_to_float_as_double(W_ value, bool is_signed);
+RTS_PRIVATE StgFloat ghc_rust_encode_narrow(StgDouble value);
+
+StgDouble
+ghc_rust_encode_to_double(W_ value, bool is_signed)
+{
+    return is_signed ? (StgDouble)(I_)value : (StgDouble)value;
+}
+
+StgDouble
+ghc_rust_encode_to_float_as_double(W_ value, bool is_signed)
+{
+    return is_signed ? (StgFloat)(I_)value : (StgFloat)value;
+}
+
+StgFloat
+ghc_rust_encode_narrow(StgDouble value)
+{
+    return (StgFloat)value;
+}
+
+RTS_PRIVATE StgDouble ghc_rust_word_encode_double(W_ value, I_ exponent);
+RTS_PRIVATE StgDouble ghc_rust_int_encode_double(I_ value, I_ exponent);
+RTS_PRIVATE StgFloat ghc_rust_word_encode_float(W_ value, I_ exponent);
+RTS_PRIVATE StgFloat ghc_rust_int_encode_float(I_ value, I_ exponent);
+
+StgDouble
+__word_encodeDouble (W_ j, I_ e)
+{
+    return ghc_rust_word_encode_double(j, e);
+}
+
+StgDouble
+__int_encodeDouble (I_ j, I_ e)
+{
+    return ghc_rust_int_encode_double(j, e);
+}
+
+StgFloat
+__int_encodeFloat (I_ j, I_ e)
+{
+    return ghc_rust_int_encode_float(j, e);
+}
+
+StgFloat
+__word_encodeFloat (W_ j, I_ e)
+{
+    return ghc_rust_word_encode_float(j, e);
+}
+
+#else
+
 #define __abs(a)                (( (a) >= 0 ) ? (a) : (-(a)))
 
 /** #15271: Some large ratios are converted into double incorrectly.
@@ -86,7 +147,8 @@ __int_encodeDouble (I_ j, I_ e)
 {
   StgDouble r;
 
-  r = (StgDouble)__abs(j);
+  /* Only the minimum signed word needs unsigned negation. */
+  r = j == STG_INT_MIN ? (StgDouble)(-(W_)j) : (StgDouble)__abs(j);
 
   /* Now raise to the exponent */
   if ( r != 0.0 ) /* Lennart suggests this avoids a bug in MIPS's ldexp */
@@ -105,7 +167,7 @@ __int_encodeFloat (I_ j, I_ e)
 {
   StgFloat r;
 
-  r = (StgFloat)__abs(j);
+  r = j == STG_INT_MIN ? (StgFloat)(-(W_)j) : (StgFloat)__abs(j);
 
   /* Now raise to the exponent */
   if ( r != 0.0 ) /* Lennart suggests this avoids a bug in MIPS's ldexp */
@@ -133,6 +195,24 @@ __word_encodeFloat (W_ j, I_ e)
   return r;
 }
 
+#endif /* USE_RUST_RTS */
+
+#if defined(USE_RUST_RTS)
+RTS_PRIVATE StgInt ghc_rust_decode_double_int64(StgInt64 *mantissa, StgDouble dbl);
+RTS_PRIVATE void ghc_rust_decode_double_2int(I_ *sign, W_ *high, W_ *low, I_ *exp, StgDouble dbl);
+
+StgInt
+__decodeDouble_Int64(StgInt64 *mantissa, StgDouble dbl)
+{
+    return ghc_rust_decode_double_int64(mantissa, dbl);
+}
+
+void
+__decodeDouble_2Int(I_ *sign, W_ *high, W_ *low, I_ *exp, StgDouble dbl)
+{
+    ghc_rust_decode_double_2int(sign, high, low, exp, dbl);
+}
+#else
 /* This only supports IEEE floating point */
 
 void
@@ -207,13 +287,22 @@ __decodeDouble_Int64 (StgInt64 *const mantissa, const StgDouble dbl)
 #endif
 }
 
+#endif
+
 /* Convenient union types for checking the layout of IEEE 754 types -
    based on defs in GNU libc <ieee754.h>
 */
 
+#if defined(USE_RUST_RTS)
+RTS_PRIVATE void ghc_rust_decode_float_int(I_ *man, I_ *exp, StgFloat flt);
+#endif
+
 void
 __decodeFloat_Int (I_ *man, I_ *exp, StgFloat flt)
 {
+#if defined(USE_RUST_RTS)
+    ghc_rust_decode_float_int(man, exp, flt);
+#else
     /* Do some bit fiddling on IEEE */
     int high, sign;                 /* assuming 32 bit ints */
     union { float f; int i; } u;    /* assuming 32 bit float and int */
@@ -247,4 +336,5 @@ __decodeFloat_Int (I_ *man, I_ *exp, StgFloat flt)
         if (sign < 0)
             *man = - *man;
     }
+#endif
 }

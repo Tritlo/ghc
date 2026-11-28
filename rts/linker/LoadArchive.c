@@ -110,18 +110,28 @@ static bool loadFatArchive(char input[static 20], FILE* f, pathchar* path)
 }
 #endif
 
+/* Match the format tags in rts/rust/archive_member.rs. */
 enum ObjectFileFormat {
-    NotObject,
-    COFFAmd64,
-    COFFI386,
-    COFFAArch64,
-    ELF,
-    MachO32,
-    MachO64,
+    NotObject = 0,
+    COFFAmd64 = 1,
+    COFFI386 = 2,
+    COFFAArch64 = 3,
+    ELF = 4,
+    MachO32 = 5,
+    MachO64 = 6,
 };
+
+#if defined(USE_RUST_RTS)
+#include "BeginPrivate.h"
+int ghc_rust_identify_object_file(const char *buf, size_t sz);
+#include "EndPrivate.h"
+#endif
 
 static enum ObjectFileFormat identifyObjectFile_(char* buf, size_t sz)
 {
+#if defined(USE_RUST_RTS)
+    return (enum ObjectFileFormat)ghc_rust_identify_object_file(buf, sz);
+#else
     if (sz > 2 && ((uint16_t*)buf)[0] == 0x8664) {
         return COFFAmd64;
     }
@@ -145,6 +155,7 @@ static enum ObjectFileFormat identifyObjectFile_(char* buf, size_t sz)
         return COFFAmd64;
     }
     return NotObject;
+#endif
 }
 
 static enum ObjectFileFormat identifyObjectFile(FILE *f)

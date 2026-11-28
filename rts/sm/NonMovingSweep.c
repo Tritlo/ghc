@@ -25,6 +25,61 @@ enum SweepResult {
     SEGMENT_FILLED    // segment is full: place on filled list
 };
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE void ghc_rust_clear_segment_free_blocks(struct NonmovingSegment *seg,
+                                                     uint32_t block_size,
+                                                     uint32_t block_count);
+RTS_PRIVATE void ghc_rust_clear_segment(struct NonmovingSegment *seg);
+RTS_PRIVATE void ghc_rust_sweep_segments(struct NonmovingSegment **head,
+                                         const struct NonmovingAllocator *allocators,
+                                         uint8_t epoch);
+RTS_PRIVATE void ghc_rust_free_large_groups(bdescr *head, uint32_t max_groups);
+RTS_PRIVATE void ghc_rust_free_dead_compact_regions(bdescr *head);
+RTS_PRIVATE bdescr *ghc_c_sweeping_descriptor(struct NonmovingSegment *seg);
+RTS_PRIVATE void ghc_c_publish_swept_segment(struct NonmovingSegment *seg,
+                                              uint32_t ret);
+RTS_PRIVATE void ghc_c_yield_large_sweep_lock(void);
+GHC_STATIC_ASSERT(SEGMENT_FREE == 0 && SEGMENT_PARTIAL == 1 && SEGMENT_FILLED == 2,
+                  "Rust sweep result matches enum SweepResult");
+#endif
+
+static inline void publishSweptSegment(struct NonmovingSegment *seg, uint32_t ret)
+{
+    switch (ret) {
+    case SEGMENT_FREE:
+        ASSERT(seg->next_free == 0);
+        ASSERT(nonmovingSegmentInfo(seg)->next_free_snap == 0);
+        IF_DEBUG(sanity, nonmovingClearSegment(seg));
+        nonmovingPushFreeSegment(seg);
+        break;
+    case SEGMENT_PARTIAL:
+        IF_DEBUG(sanity, nonmovingClearSegmentFreeBlocks(seg));
+        nonmovingPushActiveSegment(seg);
+        break;
+    case SEGMENT_FILLED:
+        nonmovingPushFilledSegment(seg);
+        break;
+    default:
+        barf("nonmovingSweep: weird sweep return: %d\n", ret);
+    }
+}
+
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+// Preserve Bdescr's DEBUG heap assertion at the C boundary.
+RTS_PRIVATE bdescr *ghc_c_sweeping_descriptor(struct NonmovingSegment *seg)
+{
+    ASSERT_SEGMENT_STATE(seg, FILLED_SWEEPING);
+    return Bdescr((StgPtr)seg);
+}
+
+RTS_PRIVATE void ghc_c_publish_swept_segment(struct NonmovingSegment *seg,
+                                              uint32_t ret)
+{
+    publishSweptSegment(seg, ret);
+}
+#endif
+
+#if !defined(USE_RUST_RTS) || defined(TSAN_ENABLED)
 // Determine which list a marked segment should be placed on and initialize
 // next_free indices as appropriate. Additionally, we must clear the mark
 // bitmap entries associated with swept blocks.
@@ -71,39 +126,61 @@ nonmovingSweepSegment(struct NonmovingSegment *seg)
         return SEGMENT_FREE;
     }
 }
+#endif
 
 #if defined(DEBUG)
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE uint32_t ghc_rust_nonmoving_gc_cafs(
+    StgIndStatic *first, StgIndStatic *end, StgWord current_flag,
+    StgWord (*checked_flag)(StgIndStatic *),
+    void (*dead)(StgIndStatic *), void (*live)(StgIndStatic *));
+#endif
+
+static StgWord checkedCafFlag(StgIndStatic *caf)
+{
+    const StgInfoTable *info = get_itbl((StgClosure*)caf);
+    ASSERT(info->type == IND_STATIC);
+    return ((StgWord)caf->static_link) & STATIC_BITS;
+}
+
+static void stubDeadCaf(StgIndStatic *caf)
+{
+    debugTrace(DEBUG_gccafs, "CAF gc'd at 0x%p", caf);
+    SET_INFO((StgClosure*)caf, &stg_GCD_CAF_info);
+}
+
+static void retainLiveCaf(StgIndStatic *caf)
+{
+    debugTrace(DEBUG_gccafs, "CAF alive at 0x%p", caf);
+    ACQUIRE_SM_LOCK;
+    caf->saved_info = (const StgInfoTable*)debug_caf_list;
+    debug_caf_list = caf;
+    RELEASE_SM_LOCK;
+}
+
 void nonmovingGcCafs(void)
 {
-    uint32_t i = 0;
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    uint32_t live_count = ghc_rust_nonmoving_gc_cafs(
+        debug_caf_list_snapshot, (StgIndStatic*)END_OF_CAF_LIST, static_flag,
+        checkedCafFlag, stubDeadCaf, retainLiveCaf);
+#else
+    uint32_t live_count = 0;
     StgIndStatic *next;
-
     for (StgIndStatic *caf = debug_caf_list_snapshot;
-         caf != (StgIndStatic*) END_OF_CAF_LIST;
-         caf = next)
-    {
+         caf != (StgIndStatic*)END_OF_CAF_LIST; caf = next) {
         next = (StgIndStatic*)caf->saved_info;
-
-        const StgInfoTable *info = get_itbl((StgClosure*)caf);
-        ASSERT(info->type == IND_STATIC);
-
-        StgWord flag = ((StgWord) caf->static_link) & STATIC_BITS;
+        StgWord flag = checkedCafFlag(caf);
         if (flag != 0 && flag != static_flag) {
-            debugTrace(DEBUG_gccafs, "CAF gc'd at 0x%p", caf);
-            SET_INFO((StgClosure*)caf, &stg_GCD_CAF_info); // stub it
+            stubDeadCaf(caf);
         } else {
-            // CAF is alive, move it back to the debug_caf_list
-            ++i;
-            debugTrace(DEBUG_gccafs, "CAF alive at 0x%p", caf);
-            ACQUIRE_SM_LOCK; // debug_caf_list is global, locked by sm_mutex
-            caf->saved_info = (const StgInfoTable*)debug_caf_list;
-            debug_caf_list = caf;
-            RELEASE_SM_LOCK;
+            ++live_count;
+            retainLiveCaf(caf);
         }
     }
-
-    debugTrace(DEBUG_gccafs, "%d CAFs live", i);
+#endif
+    debugTrace(DEBUG_gccafs, "%d CAFs live", live_count);
     debug_caf_list_snapshot = (StgIndStatic*)END_OF_CAF_LIST;
 }
 
@@ -112,14 +189,21 @@ void nonmovingGcCafs(void)
 void
 nonmovingClearSegment(struct NonmovingSegment* seg)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_clear_segment(seg);
+#else
     size_t end = ((size_t)seg) + NONMOVING_SEGMENT_SIZE;
     memset(&seg->bitmap, 0, end - (size_t)&seg->bitmap);
+#endif
 }
 
 void
 nonmovingClearSegmentFreeBlocks(struct NonmovingSegment* seg)
 {
     unsigned int block_size = nonmovingSegmentBlockSize(seg);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_clear_segment_free_blocks(seg, block_size, nonmovingSegmentBlockCount(seg));
+#else
     for (unsigned int p_idx = 0; p_idx < nonmovingSegmentBlockCount(seg); ++p_idx) {
         // N.B. nonmovingSweepSegment helpfully clears the bitmap entries of
         // dead blocks
@@ -127,10 +211,15 @@ nonmovingClearSegmentFreeBlocks(struct NonmovingSegment* seg)
             memset(nonmovingSegmentGetBlock(seg, p_idx), 0, block_size);
         }
     }
+#endif
 }
 
 GNUC_ATTR_HOT void nonmovingSweep(void)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_sweep_segments(&nonmovingHeap.sweep_list, nonmovingHeap.allocators,
+                            nonmovingMarkEpoch);
+#else
     while (nonmovingHeap.sweep_list) {
         struct NonmovingSegment *seg = nonmovingHeap.sweep_list;
 
@@ -140,23 +229,23 @@ GNUC_ATTR_HOT void nonmovingSweep(void)
 
         enum SweepResult ret = nonmovingSweepSegment(seg);
 
-        switch (ret) {
-        case SEGMENT_FREE:
-            IF_DEBUG(sanity, nonmovingClearSegment(seg));
-            nonmovingPushFreeSegment(seg);
-            break;
-        case SEGMENT_PARTIAL:
-            IF_DEBUG(sanity, nonmovingClearSegmentFreeBlocks(seg));
-            nonmovingPushActiveSegment(seg);
-            break;
-        case SEGMENT_FILLED:
-            nonmovingPushFilledSegment(seg);
-            break;
-        default:
-            barf("nonmovingSweep: weird sweep return: %d\n", ret);
-        }
+        publishSweptSegment(seg, ret);
     }
+#endif
 }
+
+/* Note [Nonmoving mutable-list sweep]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * All capabilities are stopped. For each capability, install a fresh list
+ * before scanning the old blocks. Check liveness before inspecting a closure's
+ * info table. Record each live, dirty closure in the order of the old slots.
+ * Release the old blocks after all entries have been visited.
+ *
+ * Rust appends directly while the fresh block has room. C allocates and links
+ * a new block on rollover. With a reserved heap range, release builds compare
+ * the pointer with the range before reading its block descriptor. Other builds
+ * use the native heap membership test and its assertions.
+ */
 
 /* Must a closure remain on the mutable list?
  *
@@ -165,6 +254,33 @@ GNUC_ATTR_HOT void nonmovingSweep(void)
  *  1. it contains references to a younger generation
  *  2. it's a mutable closure (e.g. mutable array or MUT_PRIM)
  */
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE bool ghc_c_mut_list_pointer_clean(StgClosure *ptr);
+RTS_PRIVATE bool ghc_c_mut_list_alive_checked(StgClosure *closure);
+RTS_PRIVATE void ghc_c_record_mutable(StgClosure *closure, Capability *cap);
+RTS_PRIVATE void ghc_rust_sweep_mut_list_blocks(bdescr *old, Capability *cap,
+                                                StgWord heap_begin, StgWord heap_end,
+                                                generation *oldest,
+                                                bdescr **active_list);
+
+RTS_PRIVATE bool ghc_c_mut_list_pointer_clean(StgClosure *ptr)
+{
+    return !HEAP_ALLOCED(ptr) || Bdescr((StgPtr)ptr)->gen == oldest_gen;
+}
+
+RTS_PRIVATE bool ghc_c_mut_list_alive_checked(StgClosure *closure)
+{
+    ASSERT(Bdescr((StgPtr)closure)->gen == oldest_gen);
+    return nonmovingIsAlive(closure);
+}
+
+RTS_PRIVATE void ghc_c_record_mutable(StgClosure *closure, Capability *cap)
+{
+    recordMutableCap(closure, cap, oldest_gen->no);
+}
+#endif
+
+#if !defined(USE_RUST_RTS) || defined(TSAN_ENABLED)
 static bool is_closure_clean(StgClosure *p)
 {
     const StgInfoTable *info = get_itbl(p);
@@ -277,6 +393,7 @@ dirty_BLOCKING_QUEUE:
     }
 #undef CLEAN
 }
+#endif
 
 /* N.B. This happens during the pause so we own all capabilities. */
 void nonmovingSweepMutLists(void)
@@ -285,6 +402,18 @@ void nonmovingSweepMutLists(void)
         Capability *cap = getCapability(n);
         bdescr *old_mut_list = cap->mut_lists[oldest_gen->no];
         cap->mut_lists[oldest_gen->no] = allocBlockOnNode_lock(cap->node);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+#if defined(USE_LARGE_ADDRESS_SPACE)
+        StgWord heap_begin = mblock_address_space.begin;
+        StgWord heap_end = mblock_address_space.end;
+#else
+        StgWord heap_begin = 0;
+        StgWord heap_end = 0;
+#endif
+        ghc_rust_sweep_mut_list_blocks(old_mut_list, cap, heap_begin,
+                                      heap_end, oldest_gen,
+                                      &cap->mut_lists[oldest_gen->no]);
+#else
         for (bdescr *bd = old_mut_list; bd; bd = bd->link) {
             for (StgPtr p = bd->start; p < bd->free; p++) {
                 StgClosure **q = (StgClosure**)p;
@@ -294,33 +423,47 @@ void nonmovingSweepMutLists(void)
                 }
             }
         }
+#endif
         freeChain_lock(old_mut_list);
     }
 }
 
-/* A variant of freeChain_lock that will only hold the lock for at most max_dur
- * freed blocks to ensure that we don't starve other lock users (e.g. the
- * mutator).
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE void ghc_c_yield_large_sweep_lock(void)
+{
+#if defined(THREADED_RTS)
+    RELEASE_SM_LOCK;
+    yieldThread();
+    ACQUIRE_SM_LOCK;
+#endif
+}
+#endif
+
+/* In the threaded RTS, release the lock after at most max_groups calls to
+ * freeGroup. This prevents the sweep from starving other lock users.
  */
-static void freeChain_lock_max(bdescr *bd, int max_dur)
+static void freeChain_lock_max(bdescr *bd, int max_groups)
 {
   ACQUIRE_SM_LOCK;
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+  ghc_rust_free_large_groups(bd, max_groups);
+#else
   bdescr *next_bd;
-  int i = 0;
+  int groups = 0;
   while (bd != NULL) {
     next_bd = bd->link;
     freeGroup(bd);
     bd = next_bd;
-    if (i == max_dur) {
+    if (++groups == max_groups) {
 #if defined(THREADED_RTS)
         RELEASE_SM_LOCK;
         yieldThread();
         ACQUIRE_SM_LOCK;
 #endif
-        i = 0;
+        groups = 0;
     }
-    i++;
   }
+#endif
   RELEASE_SM_LOCK;
 }
 
@@ -335,12 +478,16 @@ void nonmovingSweepLargeObjects(void)
 
 void nonmovingSweepCompactObjects(void)
 {
-    bdescr *next;
     ACQUIRE_SM_LOCK;
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_free_dead_compact_regions(nonmoving_compact_objects);
+#else
+    bdescr *next;
     for (bdescr *bd = nonmoving_compact_objects; bd; bd = next) {
         next = bd->link;
         compactFree(((StgCompactNFDataBlock*)bd->start)->owner);
     }
+#endif
     RELEASE_SM_LOCK;
     nonmoving_compact_objects = nonmoving_marked_compact_objects;
     n_nonmoving_compact_blocks = n_nonmoving_marked_compact_blocks;
@@ -390,19 +537,5 @@ void nonmovingSweepStableNameTable(void)
     // a stable name can die during moving heap collection and we can't use
     // nonmovingIsAlive on those objects. Inefficient.
 
-    stableNameLock();
-    FOR_EACH_STABLE_NAME(
-        p, {
-            if (p->sn_obj != NULL) {
-                if (!is_alive((StgClosure*)p->sn_obj)) {
-                    p->sn_obj = NULL; // Just to make an assertion happy
-                    freeSnEntry(p);
-                } else if (p->addr != NULL) {
-                    if (!is_alive((StgClosure*)p->addr)) {
-                        p->addr = NULL;
-                    }
-                }
-            }
-        });
-    stableNameUnlock();
+    sweepStableNameTableNonmoving(is_alive);
 }

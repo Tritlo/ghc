@@ -14,6 +14,58 @@ build-type: Configure
 extra-source-files:
     configure
     configure.ac
+    SuspendedCalls.h
+    rust/adjustor_slots.rs
+    rust/alloc_array.rs
+    rust/archive_member.rs
+    rust/block_count.rs
+    rust/c_finalizers.rs
+    rust/cafs.rs
+    rust/ClosureLayout.h
+    rust/ClosureSizeConstants.c
+    rust/HeapPointerConstants.c
+    rust/heap_pointers.rs
+    rust/mutable_list.rs
+    rust/closure_size.rs
+    rust/compact.rs
+    rust/nonmoving.rs
+    rust/closure_table.rs
+    rust/clone_stack.rs
+    rust/arena.rs
+    rust/check_vector_support.rs
+    rust/prim_bits.rs
+    rust/encode.rs
+    rust/exec_page.rs
+    rust/eventlog_file_writer.rs
+    rust/file_lock.rs
+    rust/finalizer_batch.rs
+    rust/foreign_exports.rs
+    rust/gc_budget.rs
+    rust/hash_chain.rs
+    rust/hash_insert.rs
+    rust/hash_walk.rs
+    rust/lib.rs
+    rust/incall.rs
+    rust/liveness.rs
+    rust/mark_count.rs
+    rust/mark_weak.rs
+    rust/mblock_extents.rs
+    rust/poll_slots.rs
+    rust/pool.rs
+    rust/posix_getenv.rs
+    rust/pathdir.rs
+    rust/prim_float.rs
+    rust/profiler_json.rs
+    rust/spark_retain.rs
+    rust/stable_name.rs
+    rust/stable_ptr.rs
+    rust/static_ptr_table.rs
+    rust/suspended_calls.rs
+    rust/sweep.rs
+    rust/thread_label.rs
+    rust/timeout_queue.rs
+    rust/top_handler.rs
+    rust/wsdeque.rs
 
 extra-tmp-files:
     autom4te.cache

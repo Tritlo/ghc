@@ -7,7 +7,7 @@ module Oracles.Setting (
     -- * Helpers
     ghcCanonVersion, cmdLineLengthLimit, targetSupportsRPaths, topDirectory,
     libsuf, ghcVersionStage, shPath, perStageTarget, crossStage, queryTarget, queryPerStageTargetSpec,
-    isHostStage, libraryStageFor,
+    isHostStage, libraryStageFor, rtsRustCompiler,
 
     -- ** Target platform things
     anyTargetOs, anyTargetArch, anyHostOs,
@@ -57,6 +57,8 @@ data ProjectSetting =
              | ProjectPatchLevel1
              | ProjectPatchLevel2
              | SystemGhc
+             | RustRtsCompiler
+             | RustRtsCompilerVersion
              | TargetPlatformFull
              | BuildPlatformFull
              | HostPlatformFull
@@ -100,11 +102,18 @@ setting key = lookupSystemConfig $ case key of
     ProjectPatchLevel1 -> "project-patch-level1"
     ProjectPatchLevel2 -> "project-patch-level2"
     SystemGhc          -> "system-ghc"
+    RustRtsCompiler    -> "rust-rts-compiler"
+    RustRtsCompilerVersion -> "rust-rts-version"
     TargetPlatformFull -> "target-platform-full"
     BuildPlatformFull  -> "build-platform-full"
     HostPlatformFull   -> "host-platform-full"
     BourneShell        -> "bourne-shell"
     EmsdkVersion       -> "emsdk-version"
+
+-- | Get the compiler for the optional Rust RTS. The empty path selects C.
+rtsRustCompiler :: Stage -> Action FilePath
+rtsRustCompiler Stage0 {} = pure ""
+rtsRustCompiler _ = setting RustRtsCompiler
 
 buildSetting :: BuildSetting -> Stage -> Action String
 buildSetting key stage = tgtConfig stage $ case key of

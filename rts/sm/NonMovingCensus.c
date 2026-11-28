@@ -14,6 +14,14 @@
 #include "Trace.h"
 #include "NonMovingCensus.h"
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE uint32_t ghc_rust_count_nonmoving_marks(const uint8_t *bits, uint32_t n, uint8_t epoch);
+RTS_PRIVATE void ghc_rust_stopped_allocator_census(
+    const struct NonmovingAllocator *alloc, uint32_t alloc_idx,
+    Capability *const *caps, uint32_t n_caps, uint8_t epoch,
+    struct NonmovingAllocCensus *out);
+#endif
+
 // N.B. This may miss segments in the event of concurrent mutation (e.g. if a
 // mutator retires its current segment to the filled list).
 //
@@ -25,6 +33,14 @@ nonmovingAllocatorCensus_(uint32_t alloc_idx, bool collect_live_words)
 {
     struct NonmovingAllocCensus census = {collect_live_words, 0, 0, 0, 0};
     struct NonmovingAllocator *alloc = &nonmovingHeap.allocators[alloc_idx];
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    if (collect_live_words) {
+        ghc_rust_stopped_allocator_census(alloc, alloc_idx, capabilities,
+                                          getNumCapabilities(), nonmovingMarkEpoch,
+                                          &census);
+        return census;
+    }
+#endif
 
     // filled segments
     for (struct NonmovingSegment *seg = alloc->filled;
@@ -34,12 +50,14 @@ nonmovingAllocatorCensus_(uint32_t alloc_idx, bool collect_live_words)
         unsigned int n = nonmovingSegmentBlockCount(seg);
         census.n_filled_segs++;
         census.n_live_blocks += n;
+#if !defined(USE_RUST_RTS) || defined(TSAN_ENABLED)
         if (collect_live_words) {
             for (unsigned int i=0; i < n; i++) {
                 StgClosure *c = (StgClosure *) nonmovingSegmentGetBlock(seg, i);
                 census.n_live_words += closure_sizeW(c);
             }
         }
+#endif
     }
 
     // active segments
@@ -49,6 +67,9 @@ nonmovingAllocatorCensus_(uint32_t alloc_idx, bool collect_live_words)
     {
         census.n_active_segs++;
         unsigned int n = nonmovingSegmentBlockCount(seg);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+        census.n_live_blocks += ghc_rust_count_nonmoving_marks(seg->bitmap, n, nonmovingMarkEpoch);
+#else
         for (unsigned int i=0; i < n; i++) {
             if (nonmovingGetMark(seg, i) == nonmovingMarkEpoch) {
                 StgClosure *c = (StgClosure *) nonmovingSegmentGetBlock(seg, i);
@@ -57,6 +78,7 @@ nonmovingAllocatorCensus_(uint32_t alloc_idx, bool collect_live_words)
                 census.n_live_blocks++;
             }
         }
+#endif
     }
 
     // current segments
@@ -65,6 +87,9 @@ nonmovingAllocatorCensus_(uint32_t alloc_idx, bool collect_live_words)
         Capability *cap = getCapability(cap_n);
         struct NonmovingSegment *seg = cap->current_segments[alloc_idx];
         unsigned int n = nonmovingSegmentBlockCount(seg);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+        census.n_live_blocks += ghc_rust_count_nonmoving_marks(seg->bitmap, n, 0);
+#else
         for (unsigned int i=0; i < n; i++) {
             if (nonmovingGetMark(seg, i)) {
                 StgClosure *c = (StgClosure *) nonmovingSegmentGetBlock(seg, i);
@@ -73,6 +98,7 @@ nonmovingAllocatorCensus_(uint32_t alloc_idx, bool collect_live_words)
                 census.n_live_blocks++;
             }
         }
+#endif
     }
     return census;
 }
@@ -95,23 +121,24 @@ nonmovingAllocatorCensus(uint32_t alloc_idx)
 
 static void print_alloc_census(int i, struct NonmovingAllocCensus census)
 {
-    uint32_t blk_size = 1 << (i + NONMOVING_ALLOCA0);
-    int sz_min = 1 << (i + NONMOVING_ALLOCA0 - 1);
-    int sz_max = 1 << (i + NONMOVING_ALLOCA0);
-    (void) sz_min; (void) sz_max;
+    unsigned int blk_size = nonmovingHeap.allocators[i].block_size;
+    unsigned int sz_min = i == 0 ? 0 : nonmovingHeap.allocators[i - 1].block_size;
+    (void) sz_min; (void) blk_size;
 
     if (census.collected_live_words) {
         // We define occupancy as the fraction of space that is used for useful
         // data (that is, live and not slop).
-        double occupancy = 100.0 * census.n_live_words * sizeof(W_)
-            / (census.n_live_blocks * blk_size);
-        if (census.n_live_blocks == 0) occupancy = 100;
+        double occupancy = 100.0;
+        if (census.n_live_blocks != 0) {
+            occupancy = 100.0 * census.n_live_words * sizeof(W_)
+                / ((double)census.n_live_blocks * blk_size);
+        }
         (void) occupancy; // silence warning if !DEBUG
         debugTrace(DEBUG_nonmoving_gc,
-                   "Allocator %d (%d bytes - %d bytes): "
+                   "Allocator %d (%u bytes - %u bytes): "
                    "%"PRIu32" active segs, %"PRIu32" filled segs, %"PRIu32" live blocks, "
                    "%"PRIu32" live words (%2.1f%% occupancy)",
-                   i, sz_min, sz_max,
+                   i, sz_min, blk_size,
                    census.n_active_segs,
                    census.n_filled_segs,
                    census.n_live_blocks,
@@ -119,9 +146,9 @@ static void print_alloc_census(int i, struct NonmovingAllocCensus census)
                    occupancy);
     } else {
         debugTrace(DEBUG_nonmoving_gc,
-                   "Allocator %d (%d bytes - %d bytes): "
+                   "Allocator %d (%u bytes - %u bytes): "
                    "%"PRIu32" active segs, %"PRIu32" filled segs, %"PRIu32" live blocks",
-                   i, sz_min, sz_max,
+                   i, sz_min, blk_size,
                    census.n_active_segs,
                    census.n_filled_segs,
                    census.n_live_blocks);

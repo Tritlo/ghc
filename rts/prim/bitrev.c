@@ -1,5 +1,6 @@
 #include "Rts.h"
 
+#if !defined(USE_RUST_RTS)
 /*
 Note [Bit reversal primop]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,3 +75,5 @@ hs_bitrev64(StgWord64 x)
   x = ( x >> 32                      ) | ( x << 32                      );
   return x;
 }
+
+#endif

@@ -9,10 +9,48 @@
 #include "Rts.h"
 #include "RtsUtils.h"
 #include "ForeignExports.h"
+#include <stddef.h>
+
+#if defined(USE_RUST_RTS) && defined(__x86_64__) && defined(__linux__) && !defined(TSAN_ENABLED)
+#define USE_RUST_FOREIGN_EXPORTS 1
+GHC_STATIC_ASSERT(sizeof(struct ForeignExportsList) == 32, "ForeignExportsList size");
+GHC_STATIC_ASSERT(offsetof(struct ForeignExportsList, next) == 0, "ForeignExportsList next");
+GHC_STATIC_ASSERT(offsetof(struct ForeignExportsList, n_entries) == 8, "ForeignExportsList n_entries");
+GHC_STATIC_ASSERT(offsetof(struct ForeignExportsList, oc) == 16, "ForeignExportsList oc");
+GHC_STATIC_ASSERT(offsetof(struct ForeignExportsList, stable_ptrs) == 24, "ForeignExportsList stable_ptrs");
+GHC_STATIC_ASSERT(offsetof(struct ForeignExportsList, exports) == 32, "ForeignExportsList exports");
+RTS_PRIVATE void ghc_rust_foreign_exports_enqueue(struct ForeignExportsList *exports);
+RTS_PRIVATE bool ghc_rust_foreign_exports_is_loading(void);
+RTS_PRIVATE void ghc_rust_foreign_exports_begin_loading(ObjectCode *oc);
+RTS_PRIVATE void ghc_rust_foreign_exports_finish_loading(
+    void (*check)(struct ForeignExportsList *),
+    struct ForeignExportsList **(*head)(ObjectCode *));
+RTS_PRIVATE void ghc_rust_foreign_exports_process(
+    void (*check)(struct ForeignExportsList *),
+    struct ForeignExportsList **(*head)(ObjectCode *));
+
+/* Keep the private ObjectCode layout in C. */
+static struct ForeignExportsList **foreignExportsHead(ObjectCode *oc)
+{
+    return &oc->foreign_exports;
+}
+
+#if defined(DEBUG)
+static void assertUnprocessedForeignExports(struct ForeignExportsList *exports)
+{
+    ASSERT(exports->stable_ptrs == NULL);
+}
+#define RUST_EXPORTS_CHECK assertUnprocessedForeignExports
+#else
+#define RUST_EXPORTS_CHECK NULL
+#endif
+#endif
 
 /* protected by linker_mutex after start-up */
+#if !defined(USE_RUST_FOREIGN_EXPORTS)
 static struct ForeignExportsList *pending = NULL;
 static ObjectCode *loading_obj = NULL;
+#endif
 
 /*
  * Note [Tracking foreign exports]
@@ -56,15 +94,24 @@ static ObjectCode *loading_obj = NULL;
  * StablePtrs we create in the ->stable_ptrs array of ForeignExportsList so
  * they can be enumerated during unloading.
  *
+ * The mixed RTS keeps the pending head and the current owner in Rust.
+ * After startup the caller holds linker_mutex. Remove each list from the
+ * pending queue before creating roots. A constructor that registers another
+ * list during root creation must see the updated head. Clear the current
+ * owner before draining at the end of a load.
  */
 
 void registerForeignExports(struct ForeignExportsList *exports)
 {
     ASSERT(exports->next == NULL);
     ASSERT(exports->oc == NULL);
+#if defined(USE_RUST_FOREIGN_EXPORTS)
+    ghc_rust_foreign_exports_enqueue(exports);
+#else
     exports->next = pending;
     exports->oc = loading_obj;
     pending = exports;
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -79,21 +126,34 @@ void registerForeignExports(struct ForeignExportsList *exports)
 
 void foreignExportsLoadingObject(ObjectCode *oc)
 {
+#if defined(USE_RUST_FOREIGN_EXPORTS)
+    ASSERT(!ghc_rust_foreign_exports_is_loading());
+    ghc_rust_foreign_exports_begin_loading(oc);
+#else
     ASSERT(loading_obj == NULL);
     loading_obj = oc;
+#endif
 }
 
 void foreignExportsFinishedLoadingObject(void)
 {
+#if defined(USE_RUST_FOREIGN_EXPORTS)
+    ASSERT(ghc_rust_foreign_exports_is_loading());
+    ghc_rust_foreign_exports_finish_loading(RUST_EXPORTS_CHECK, foreignExportsHead);
+#else
     ASSERT(loading_obj != NULL);
     loading_obj = NULL;
     processForeignExports();
+#endif
 }
 
 /* Caller must own linker_mutex so that we can safely modify
  * oc->stable_ptrs. */
 void processForeignExports(void)
 {
+#if defined(USE_RUST_FOREIGN_EXPORTS)
+    ghc_rust_foreign_exports_process(RUST_EXPORTS_CHECK, foreignExportsHead);
+#else
     while (pending) {
         struct ForeignExportsList *cur = pending;
         pending = cur->next;
@@ -126,4 +186,5 @@ void processForeignExports(void)
             }
         }
     }
+#endif
 }

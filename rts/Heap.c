@@ -15,11 +15,20 @@
 #include "Printer.h"
 #include "AllocArray.h"
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+GHC_STATIC_ASSERT(sizeof(StgWord) == sizeof(size_t) &&
+                  sizeof(StgClosure *) == sizeof(StgWord),
+                  "Rust PAP bitmap uses native stack words");
+RTS_PRIVATE StgMutArrPtrs *ghc_rust_heap_view_closure_ptrs(
+    Capability *cap, StgClosure *closure, StgWord size);
+#endif
+
 StgWord heap_view_closureSize(StgClosure *closure) {
     ASSERT(LOOKS_LIKE_CLOSURE_PTR(closure));
     return closure_sizeW(closure);
 }
 
+#if !defined(USE_RUST_RTS) || defined(TSAN_ENABLED)
 static void
 heap_view_closure_ptrs_in_large_bitmap(StgClosure *ptrs[], StgWord *nptrs
                         , StgClosure **p, StgLargeBitmap *large_bitmap
@@ -42,7 +51,9 @@ heap_view_closure_ptrs_in_large_bitmap(StgClosure *ptrs[], StgWord *nptrs
         }
     }
 }
+#endif
 
+#if !defined(USE_RUST_RTS) || defined(TSAN_ENABLED)
 void heap_view_closure_ptrs_in_pap_payload(StgClosure *ptrs[], StgWord *nptrs
                       , StgClosure *fun, StgClosure **payload, StgWord size) {
     StgWord bitmap;
@@ -78,9 +89,30 @@ void heap_view_closure_ptrs_in_pap_payload(StgClosure *ptrs[], StgWord *nptrs
         break;
     }
 }
+#endif
+
+/* Keep unsupported-tag reporting in the native RTS. */
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+#define HEAP_HELPER RTS_PRIVATE
+RTS_PRIVATE void ghc_heap_unknown_type(StgHalfWord type);
+RTS_PRIVATE StgWord ghc_rust_collect_pointers(StgClosure *, StgClosure **,
+                                              const StgInfoTable *);
+#else
+#define HEAP_HELPER static
+#endif
+
+HEAP_HELPER void ghc_heap_unknown_type(StgHalfWord type)
+{
+    fprintf(stderr, "closurePtrs: Cannot handle type %s yet\n", closure_type_names[type]);
+}
+
+#undef HEAP_HELPER
 
 // See Heap.h
 StgWord collect_pointers(StgClosure *closure, StgClosure *ptrs[]) {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    return ghc_rust_collect_pointers(closure, ptrs, get_itbl(closure));
+#else
     StgClosure **end;
     const StgInfoTable *info = get_itbl(closure);
     StgWord nptrs = 0;
@@ -258,17 +290,21 @@ StgWord collect_pointers(StgClosure *closure, StgClosure *ptrs[]) {
         }
 
         default:
-            fprintf(stderr,"closurePtrs: Cannot handle type %s yet\n",
-                           closure_type_names[info->type]);
+            ghc_heap_unknown_type(info->type);
             break;
     }
 
     return nptrs;
+#endif
 }
 
 StgMutArrPtrs *heap_view_closurePtrs(Capability *cap, StgClosure *closure) {
     ASSERT(LOOKS_LIKE_CLOSURE_PTR(closure));
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    return ghc_rust_heap_view_closure_ptrs(cap, closure,
+                                           heap_view_closureSize(closure));
+#else
     StgWord size = heap_view_closureSize(closure);
 
     // First collect all pointers here, with the comfortable memory bound
@@ -289,4 +325,5 @@ StgMutArrPtrs *heap_view_closurePtrs(Capability *cap, StgClosure *closure) {
 end:
     stgFree(ptrs);
     return arr;
+#endif
 }

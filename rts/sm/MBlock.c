@@ -87,6 +87,74 @@ W_ mpc_misses = 0;
 // lists in BlockAlloc.c which are stored in block descriptors,
 // because we cannot touch the contents of decommitted mblocks.
 
+/*
+ * it is quite important that these are in the same cache line as they
+ * are both needed by HEAP_ALLOCED. Moreover, we need to ensure that they
+ * don't share a cache line with anything else to prevent false sharing.
+ */
+struct mblock_address_range mblock_address_space = { 0, 0, {} };
+
+#if defined(USE_RUST_RTS)
+/* Note [Large-address-space extent ownership]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Rust owns the free extents and the high-water mark. C owns the
+ * reservation and its bounds. It also commits and decommits memory.
+ *
+ * The storage manager serializes changes. Debug heap enumeration runs
+ * while the heap is stable. An iteration cursor is valid until the
+ * index changes. It is opaque to C.
+ *
+ * Reuse removes a range from the index before committing it. A fresh
+ * allocation advances the high-water mark after committing it. Keep
+ * the storage manager's exclusion across both operations.
+ */
+RTS_PRIVATE void rts_rust_mblock_reset(W_ watermark);
+RTS_PRIVATE W_ rts_rust_mblock_take(W_ size, W_ limit, bool *fresh);
+RTS_PRIVATE void rts_rust_mblock_commit_fresh(W_ size);
+RTS_PRIVATE bool rts_rust_mblock_release(W_ address, W_ size);
+RTS_PRIVATE W_ rts_rust_mblock_find(void **state, W_ address, bool first);
+RTS_PRIVATE W_ rts_rust_mblock_watermark(void);
+
+void *getFirstMBlock(void **state)
+{
+    return (void *)rts_rust_mblock_find(state, mblock_address_space.begin, true);
+}
+
+void *getNextMBlock(void **state, void *mblock)
+{
+    return (void *)rts_rust_mblock_find(state, (W_)mblock + MBLOCK_SIZE, false);
+}
+
+static void *getCommittedMBlocks(uint32_t n)
+{
+    W_ size = MBLOCK_SIZE * (W_)n;
+    bool fresh;
+    void *addr = (void *)rts_rust_mblock_take(size, mblock_address_space.end,
+                                           &fresh);
+    if (addr == NULL) {
+        errorBelch("out of memory");
+        stg_exit(EXIT_HEAPOVERFLOW);
+    }
+
+    osCommitMemory(addr, size);
+    if (fresh) {
+        rts_rust_mblock_commit_fresh(size);
+    }
+
+    ASSERT(addr != (void *)-1);
+    return addr;
+}
+
+static void decommitMBlocks(char *addr, uint32_t n)
+{
+    W_ size = MBLOCK_SIZE * (W_)n;
+    osDecommitMemory(addr, size);
+    bool released = rts_rust_mblock_release((W_)addr, size);
+    ASSERT(released);
+    (void)released;
+}
+
+#else /* !USE_RUST_RTS */
 typedef struct free_list {
     struct free_list *prev;
     struct free_list *next;
@@ -100,12 +168,6 @@ static free_list *free_list_head;
 // will be the address of the next new MBlock committed when the free list is
 // empty.
 static W_ mblock_high_watermark;
-/*
- * it is quite important that these are in the same cache line as they
- * are both needed by HEAP_ALLOCED. Moreover, we need to ensure that they
- * don't share a cache line with anything else to prevent false sharing.
- */
-struct mblock_address_range mblock_address_space = { 0, 0, {} };
 
 // Search for the first committed MBlock at or after startingAt.
 //
@@ -390,6 +452,8 @@ static void decommitMBlocks(char *addr, uint32_t n)
     }
 }
 
+#endif /* !USE_RUST_RTS */
+
 void releaseFreeMemory(void)
 {
     // This function exists for releasing address space
@@ -398,8 +462,14 @@ void releaseFreeMemory(void)
     // Do nothing if USE_LARGE_ADDRESS_SPACE, we never want
     // to release address space
 
+#if defined(USE_RUST_RTS)
+    W_ watermark = rts_rust_mblock_watermark();
+    debugTrace(DEBUG_gc, "mblock_high_watermark: %p\n", (void*)watermark);
+    (void)watermark;
+#else
     debugTrace(DEBUG_gc, "mblock_high_watermark: %p\n",
                          (void*)mblock_high_watermark);
+#endif
 }
 
 #else // !USE_LARGE_ADDRESS_SPACE
@@ -685,6 +755,9 @@ freeAllMBlocks(void)
     debugTrace(DEBUG_gc, "freeing all megablocks");
 
 #if defined(USE_LARGE_ADDRESS_SPACE)
+#if defined(USE_RUST_RTS)
+    rts_rust_mblock_reset((W_)-1);
+#else
     {
         struct free_list *iter, *next;
 
@@ -694,12 +767,15 @@ freeAllMBlocks(void)
             stgFree(iter);
         }
     }
+#endif
 
     osReleaseHeapMemory();
 
     mblock_address_space.begin = (W_)-1;
     mblock_address_space.end = (W_)-1;
+#if !defined(USE_RUST_RTS)
     mblock_high_watermark = (W_)-1;
+#endif
 #else
     osFreeAllMBlocks();
 
@@ -730,7 +806,11 @@ initMBlocks(void)
 
         mblock_address_space.begin = (W_)addr;
         mblock_address_space.end = (W_)addr + RtsFlags.GcFlags.addressSpaceSize;
+#if defined(USE_RUST_RTS)
+        rts_rust_mblock_reset((W_)addr);
+#else
         mblock_high_watermark = (W_)addr;
+#endif
     }
 #elif SIZEOF_VOID_P == 8
     memset(mblock_cache,0xff,sizeof(mblock_cache));

@@ -41,6 +41,8 @@ emsdk-version     = @ConfiguredEmsdkVersion@
 
 ghc-source-path      = @hardtop@
 use-ghc-toolchain    = @EnableGhcToolchain@
+rust-rts-compiler    = @RustRtsCompiler@
+rust-rts-version     = @RustRtsCompilerVersion@
 
 # Information about build, host and target systems:
 #==================================================

@@ -9,6 +9,10 @@
 #include "sm/OSMem.h"
 #include "linker/MMap.h"
 
+#if defined(USE_RUST_RTS)
+_Static_assert(MEM_READ_EXECUTE == 4, "Rust ExecPage protection mode changed");
+#else
+
 ExecPage *allocateExecPage(void) {
 #if defined(wasm32_HOST_ARCH)
     return NULL;
@@ -30,3 +34,5 @@ void freeExecPage(ExecPage *page) {
     munmapForLinker(page, getPageSize(), "freeExecPage");
 #endif
 }
+
+#endif

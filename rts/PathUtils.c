@@ -7,6 +7,11 @@
 
 #include <libgen.h>
 #include <ctype.h>
+#if defined(USE_RUST_RTS) && defined(__x86_64__) && defined(__linux__) && defined(__GLIBC__) && !defined(TSAN_ENABLED)
+RTS_PRIVATE pathchar *ghc_rust_pathdir(const pathchar *path);
+RTS_PRIVATE pathchar *ghc_rust_pathdup(const pathchar *path);
+RTS_PRIVATE HsBool ghc_rust_ends_with_path(const pathchar *base, const pathchar *str);
+#endif
 #if defined(mingw32_HOST_OS)
 /* Using Secure APIs */
 #define MINGW_HAS_SECURE_API 1
@@ -18,6 +23,8 @@ pathchar* pathdup(const pathchar *path)
     pathchar *ret;
 #if defined(mingw32_HOST_OS)
     ret = wcsdup(path);
+#elif defined(USE_RUST_RTS) && defined(__x86_64__) && defined(__linux__) && defined(__GLIBC__) && !defined(TSAN_ENABLED)
+    ret = ghc_rust_pathdup(path);
 #else
     /* sigh, strdup() isn't a POSIX function, so do it the long way */
     ret = stgMallocBytes( strlen(path)+1, "pathdup" );
@@ -39,14 +46,18 @@ pathchar* pathdir(const pathchar *path)
     pathprintf(ret, memberLen, WSTR("%" PATH_FMT "%" PATH_FMT), drive, dirName);
     stgFree(drive);
     stgFree(dirName);
+#elif defined(USE_RUST_RTS) && defined(__x86_64__) && defined(__linux__) && defined(__GLIBC__) && !defined(TSAN_ENABLED)
+    ret = ghc_rust_pathdir(path);
 #else
-    // N.B. cast is safe as we do not modify dirName
-    const pathchar* dirName = dirname((pathchar *) path);
+    pathchar *pathCopy = stgMallocBytes(pathsize * (pathlen(path) + 1), "pathdir(path)");
+    pathcopy(pathCopy, path);
+    const pathchar* dirName = dirname(pathCopy);
     size_t memberLen  = pathlen(dirName);
     ret = stgMallocBytes(pathsize * (memberLen + 2), "pathdir(path)");
     strcpy(ret, dirName);
     ret[memberLen  ] = '/';
     ret[memberLen+1] = '\0';
+    stgFree(pathCopy);
 #endif
     return ret;
 }
@@ -68,7 +79,11 @@ pathchar* mkPath(const char* path)
 }
 
 HsBool endsWithPath(const pathchar* base, const pathchar* str) {
-    int blen = pathlen(base);
-    int slen = pathlen(str);
+#if defined(USE_RUST_RTS) && defined(__x86_64__) && defined(__linux__) && defined(__GLIBC__) && !defined(TSAN_ENABLED)
+    return ghc_rust_ends_with_path(base, str);
+#else
+    size_t blen = pathlen(base);
+    size_t slen = pathlen(str);
     return (blen >= slen) && (0 == pathcmp(base + blen - slen, str));
+#endif
 }

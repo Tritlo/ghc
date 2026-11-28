@@ -26,6 +26,40 @@
 #include <string.h>
 
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+typedef struct {
+  size_t stack_size_offset, dirty_offset, sp_offset, stack_offset;
+  size_t underflow_bytes, underflow_info_offset, underflow_next_offset;
+  const StgInfoTable *underflow_info[4];
+  StgOffset (*check)(const StgClosure *);
+} CloneStackLayout;
+
+RTS_PRIVATE StgStack *ghc_rust_clone_stack(Capability *capability,
+                                           const StgStack *stack,
+                                           const CloneStackLayout *layout);
+GHC_STATIC_ASSERT(sizeof(StgStack) == offsetof(StgStack, stack) &&
+                  sizeof(((StgStack *)0)->stack_size) == sizeof(uint32_t) &&
+                  sizeof(((StgStack *)0)->dirty) == sizeof(uint8_t) &&
+                  sizeof(StgUnderflowFrame) % sizeof(StgWord) == 0 &&
+                  sizeof(StgWord) == sizeof(size_t),
+                  "Rust stack clone uses native stack word layout");
+
+static const CloneStackLayout cloneStackLayout = {
+  offsetof(StgStack, stack_size), offsetof(StgStack, dirty),
+  offsetof(StgStack, sp), offsetof(StgStack, stack),
+  sizeof(StgUnderflowFrame), offsetof(StgUnderflowFrame, info),
+  offsetof(StgUnderflowFrame, next_chunk),
+  { &stg_stack_underflow_frame_d_info,
+    &stg_stack_underflow_frame_v16_info,
+    &stg_stack_underflow_frame_v32_info,
+    &stg_stack_underflow_frame_v64_info },
+#if defined(DEBUG)
+  checkClosure
+#else
+  NULL
+#endif
+};
+#else
 static StgStack* cloneStackChunk(Capability* capability, const StgStack* stack)
 {
   StgWord spOffset = stack->sp - stack->stack;
@@ -46,15 +80,22 @@ static StgStack* cloneStackChunk(Capability* capability, const StgStack* stack)
 
   return newStackClosure;
 }
+#endif
 
 StgStack* cloneStack(Capability* capability, const StgStack* stack)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+  return ghc_rust_clone_stack(capability, stack, &cloneStackLayout);
+#else
   StgStack *top_stack = cloneStackChunk(capability, stack);
   StgStack *last_stack = top_stack;
   while (true) {
-    // check whether the stack ends in an underflow frame
-    StgUnderflowFrame *frame = (StgUnderflowFrame *) (last_stack->stack
-      + last_stack->stack_size - sizeofW(StgUnderflowFrame));
+    StgPtr end = last_stack->stack + last_stack->stack_size;
+    // The collector copies only the live words from sp to end.
+    if ((size_t)(end - last_stack->sp) < sizeofW(StgUnderflowFrame)) {
+      break;
+    }
+    StgUnderflowFrame *frame = (StgUnderflowFrame *)(end - sizeofW(StgUnderflowFrame));
     if (frame->info == &stg_stack_underflow_frame_d_info
       ||frame->info == &stg_stack_underflow_frame_v16_info
       ||frame->info == &stg_stack_underflow_frame_v32_info
@@ -67,6 +108,7 @@ StgStack* cloneStack(Capability* capability, const StgStack* stack)
     }
   }
   return top_stack;
+#endif
 }
 
 #if defined(THREADED_RTS)

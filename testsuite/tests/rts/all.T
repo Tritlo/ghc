@@ -16,6 +16,29 @@ test('testmblockalloc',
 # the leak detector is expecting.
 
 
+test('testarena', [extra_files(['../../../rts/Arena.h']),
+                   unless(in_tree_compiler(), skip),
+                   when(arch('wasm32'), skip),
+                   c_src, only_ways(['normal'])],
+                   compile_and_run, [''])
+
+test('testarenaConcurrent',
+     [unless(in_tree_compiler(), skip),
+      when(arch('wasm32'), skip),
+      only_ways(['threaded1', 'threaded2']),
+      extra_run_opts('+RTS -N4 -I0 -A4m -RTS')],
+     compile_and_run, ['-static -rtsopts'])
+
+test('testResourcePool', [extra_files(['../../../rts/Pool.h']),
+                          unless(in_tree_compiler(), skip), c_src,
+                          only_ways(['normal', 'threaded1', 'threaded2'])],
+     compile_and_run, [''])
+
+test('testResourcePoolWait', [extra_files(['../../../rts/Pool.h']),
+                              unless(in_tree_compiler() and opsys('linux'), skip),
+                              c_src, only_ways(['threaded1', 'threaded2'])],
+     compile_and_run, ['-static -optl-Wl,--wrap=waitCondition'])
+
 # See bug #101, test requires +RTS -c (or equivalently +RTS -M<something>)
 # only GHCi triggers the bug, but we run the test all ways for completeness.
 test('bug1010',
@@ -694,6 +717,10 @@ test('T25280', [unless(opsys('linux'),skip),req_process,js_skip], compile_and_ru
 test('T25560', [req_c_rts, ignore_stderr], compile_and_run, [''])
 
 test('TestProddableBlockSet', [req_c_rts], multimod_compile_and_run, ['TestProddableBlockSet.c', '-no-hs-main'])
+test('CheckVectorSupportClassifier',
+     [c_src, only_ways(['normal']),
+      extra_files(['../../../rts/CheckVectorSupportInternal.h'])],
+     compile_and_run, [''])
 test('T22859',
      [js_skip,
       # This test is vulnerable to changes in allocation behaviour, so we disable it in some ways
@@ -743,6 +770,11 @@ test('T19048',
      compile_and_run, ['-O -rtsopts'])
 
 test('census_pinned', [js_skip], makefile_test, [])
+
+test('census_block_sizes',
+     [unless(debug_rts(), skip), req_target_smp, req_ghc_with_threaded_rts,
+      js_skip, ignore_stdout, ignore_stderr],
+     makefile_test, [])
 
 test('T27585',
      [ omit_ghci
@@ -800,6 +832,11 @@ test('T26169',
       req_target_smp,
       extra_run_opts('+RTS -T -qn2 -RTS')],
      compile_and_run, [''])
+
+test('nonmoving_large_sweep_yield',
+     [c_src, unless(in_tree_compiler() and opsys('linux'), skip),
+      only_ways(['threaded1'])],
+     compile_and_run, ['-static -optl-Wl,--wrap=freeGroup -optl-Wl,--wrap=yieldThread'])
 
 test('T27376',
      [ req_target_smp,

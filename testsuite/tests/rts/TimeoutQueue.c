@@ -65,6 +65,7 @@ static void assertInvariant (StgTimeoutQueue *h)
     if (h->b != EMPTY) { ASSERT(h->b->parent == h); };
 
     /* leftist-heap rank property */
+    ASSERT(rank(h->a) >= rank(h->b));
     ASSERT(h->rank == min(rank(h->a), rank(h->b)) + 1);
 
     /* the same, recursively */

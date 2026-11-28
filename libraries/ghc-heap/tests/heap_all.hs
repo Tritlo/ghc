@@ -200,6 +200,17 @@ data BA = BA ByteArray#
 data MBA = MBA (MutableByteArray# RealWorld)
 data APC a = APC a
 
+-- | Accept two heap references and one unboxed word.
+mixedPAPTarget :: IORef Int -> Int# -> IORef Int -> Int -> Int
+mixedPAPTarget _ _ _ result = result
+{-# NOINLINE mixedPAPTarget #-}
+
+-- | Apply the first three arguments at run time.
+mixedPAPCapture :: (IORef Int -> Int# -> IORef Int -> Int -> Int)
+                -> IORef Int -> IORef Int -> Int# -> Int -> Int
+mixedPAPCapture target first second word = target first word second
+{-# NOINLINE mixedPAPCapture #-}
+
 main :: IO ()
 main = do
 
@@ -349,6 +360,21 @@ main = do
     -- Other
     -- getClosureData (Just 1) >>=
     --    assertClosuresEq exOtherClosure
+
+    first <- newIORef (1 :: Int)
+    second <- newIORef (2 :: Int)
+    I# word <- readIORef first
+    let !mixed = mixedPAPCapture mixedPAPTarget first second word
+    performMajorGC
+    mixedClosure <- getClosureData mixed
+    case mixedClosure of
+        PAPClosure{n_args=wordsUsed, payload=saved} -> do
+            unless (wordsUsed == 3 && length saved == 2) $
+                fail "Mixed PAP size changed"
+            matches <- zipWithM areBoxesEqual saved [asBox first, asBox second]
+            unless (and matches) $
+                fail "Mixed PAP pointer order changed"
+        _ -> fail "Expected a mixed PAP"
 
     putStrLn "Done. No errors."
 

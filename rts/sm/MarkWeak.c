@@ -29,6 +29,83 @@
 #include "sm/MarkWeak.h"
 #include "sm/Sanity.h"
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+#define USE_RUST_WEAK_GC
+/* Note [Weak generation traversal from Rust]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * C supplies the generation fields and TSO layout. Rust visits collected
+ * generations in order. The C callbacks inspect heap objects and retain
+ * the existing GC worker register rules.
+ */
+typedef struct {
+    generation *generations;
+    size_t stride;
+    size_t old_threads_offset;
+    size_t live_weaks_offset;
+    size_t old_weaks_offset;
+    size_t number_offset;
+    uint32_t collected;
+    uint32_t oldest;
+    bool nonmoving;
+} WeakGenerations;
+
+typedef struct {
+    StgClosure *(*liveKey)(StgWeak *, const StgInfoTable *);
+    StgWeak **(*destination)(StgWeak *, uint32_t *);
+    void (*remember)(gc_thread *, StgWeak *, uint32_t);
+    void (*trace)(StgWeak *, uint32_t, uint32_t);
+} WeakListOps;
+
+static const WeakListOps weakListOps;
+static StgTSO **inspectTidyThread(StgTSO **current);
+
+typedef struct {
+    size_t stride;
+    size_t old_threads_offset;
+    size_t live_weaks_offset;
+    size_t old_weaks_offset;
+    size_t number_offset;
+    size_t weak_payload_offset;
+    size_t tso_link_offset;
+    size_t tso_what_next_offset;
+    StgTSO *end_tso;
+    StgWord16 killed;
+    StgWord16 complete;
+    StgTSO **(*inspect_tso)(StgTSO **);
+    const WeakListOps *weak_ops;
+    void (*check_oldest)(StgWeak **);
+} WeakStageLayout;
+
+typedef struct {
+    generation *generations;
+    uint32_t collected;
+    uint32_t oldest;
+    bool nonmoving;
+    gc_thread *worker;
+    StgWeak **dead;
+    StgTSO **resurrected;
+    uint32_t *evac_gen;
+    bool *failed;
+    StgWeak **oldest_old_slot;
+} WeakStageRun;
+
+static const WeakStageLayout weakStageLayout;
+RTS_PRIVATE void ghc_rust_init_weak_generations(generation *gens, size_t stride,
+    size_t live_offset, size_t old_offset, uint32_t collected, uint32_t oldest, bool nonmoving);
+RTS_PRIVATE bool ghc_rust_traverse_weaks(const WeakStageLayout *layout,
+    const WeakStageRun *run);
+
+static WeakGenerations weakGenerationLayout(void)
+{
+    return (WeakGenerations) {
+        generations, weakStageLayout.stride, weakStageLayout.old_threads_offset,
+        weakStageLayout.live_weaks_offset, weakStageLayout.old_weaks_offset,
+        weakStageLayout.number_offset, N, oldest_gen->no,
+        RtsFlags.GcFlags.useNonmoving
+    };
+}
+#endif
+
 /* -----------------------------------------------------------------------------
    Weak Pointers
 
@@ -74,13 +151,17 @@
 /* Which stage of processing various kinds of weak pointer are we at?
  * (see traverseWeakPtrList() below for discussion).
  */
+#if !defined(USE_RUST_WEAK_GC)
 typedef enum { WeakPtrs, WeakThreads, WeakDone } WeakStage;
 static WeakStage weak_stage;
+#endif
 
+#if !defined(USE_RUST_WEAK_GC)
 static void    collectDeadWeakPtrs (generation *gen, StgWeak **dead_weak_ptr_list);
-static bool tidyWeakList (generation *gen);
 static bool resurrectUnreachableThreads (generation *gen, StgTSO **resurrected_threads);
-static void    tidyThreadList (generation *gen);
+static void tidyThreadList (generation *gen);
+static bool tidyWeakList (generation *gen);
+#endif
 
 /*
  * Note [Weak pointer processing and the non-moving GC]
@@ -115,6 +196,11 @@ static void    tidyThreadList (generation *gen);
 void
 initWeakForGC(void)
 {
+#if defined(USE_RUST_WEAK_GC)
+    ghc_rust_init_weak_generations(generations, weakStageLayout.stride,
+        weakStageLayout.live_weaks_offset, weakStageLayout.old_weaks_offset,
+        N, oldest_gen->no, RtsFlags.GcFlags.useNonmoving);
+#else
     uint32_t oldest = N;
     if (RtsFlags.GcFlags.useNonmoving && N == oldest_gen->no) {
         // See Note [Weak pointer processing and the non-moving GC].
@@ -128,6 +214,7 @@ initWeakForGC(void)
     }
 
     weak_stage = WeakThreads;
+#endif
 }
 
 /*
@@ -141,6 +228,13 @@ initWeakForGC(void)
 bool
 traverseWeakPtrList(StgWeak **dead_weak_ptr_list, StgTSO **resurrected_threads)
 {
+#if defined(USE_RUST_WEAK_GC)
+  WeakStageRun run = { generations, N, oldest_gen->no,
+      RtsFlags.GcFlags.useNonmoving, gct, dead_weak_ptr_list,
+      resurrected_threads, &gct->evac_gen_no, &gct->failed_to_evac,
+      &oldest_gen->old_weak_ptr_list };
+  return ghc_rust_traverse_weaks(&weakStageLayout, &run);
+#else
   bool flag = false;
 
   switch (weak_stage) {
@@ -222,6 +316,7 @@ traverseWeakPtrList(StgWeak **dead_weak_ptr_list, StgTSO **resurrected_threads)
       barf("traverseWeakPtrList");
       return true;
   }
+#endif
 }
 
 /*
@@ -229,6 +324,39 @@ traverseWeakPtrList(StgWeak **dead_weak_ptr_list, StgTSO **resurrected_threads)
  * This means marking the finalizer (and possibly value) in preparation for
  * later finalization.
  */
+#if defined(USE_RUST_WEAK_GC)
+/* Note [Visiting dead weak pointers from Rust]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * The main GC thread runs this pass after the weak keys reach a fixed point.
+ * Keep each Haskell finalizer alive. A C finalizer also needs the weak value
+ * to stay alive until its callback runs. See Note [MallocPtr finalizers] in
+ * GHC.Internal.ForeignPtr.
+ *
+ * Rust passes the addresses of both slots to mark_root. The collector can
+ * replace the pointers in these slots. mark_root restores the GC thread
+ * register before calling evacuate and restores the caller's register on
+ * return. Rust can then link the weak object into the pending list.
+ */
+// The header size depends on the RTS way. The payload contains five pointers.
+#define WEAK_FIELD_OFFSET(field) (offsetof(StgWeak, field) - offsetof(StgWeak, cfinalizers))
+GHC_STATIC_ASSERT(WEAK_FIELD_OFFSET(key) == sizeof(void *) &&
+                  WEAK_FIELD_OFFSET(value) == 2 * sizeof(void *) &&
+                  WEAK_FIELD_OFFSET(finalizer) == 3 * sizeof(void *) &&
+                  WEAK_FIELD_OFFSET(link) == 4 * sizeof(void *), "Rust weak payload layout");
+#undef WEAK_FIELD_OFFSET
+RTS_PRIVATE void ghc_rust_mark_weak_generations(const WeakGenerations *gens, void *gc_thread_ptr,
+    size_t payload_offset, void (*check)(StgWeak *));
+RTS_PRIVATE void ghc_rust_scavenge_live_weak(StgWeak *w, void *gc_thread_ptr,
+    size_t payload_offset);
+GHC_STATIC_ASSERT(offsetof(Capability, weak_ptr_list_tl) ==
+                  offsetof(Capability, weak_ptr_list_hd) + sizeof(StgWeak *),
+                  "Rust capability weak list endpoints");
+RTS_PRIVATE void ghc_rust_collect_fresh_weaks(StgWeak **nursery, Capability **caps,
+    uint32_t count, size_t endpoints_offset, size_t payload_offset,
+    void (*check)(StgWeak *, StgWeak *));
+#endif
+
+#if !defined(USE_RUST_WEAK_GC)
 static void collectDeadWeakPtrs (generation *gen, StgWeak **dead_weak_ptr_list)
 {
     StgWeak *w, *next_w;
@@ -244,11 +372,13 @@ static void collectDeadWeakPtrs (generation *gen, StgWeak **dead_weak_ptr_list)
         *dead_weak_ptr_list = w;
     }
 }
+#endif
 
 /*
  * Deal with threads left on the old_threads list after GC has concluded,
  * moving them onto the resurrected_threads list where appropriate.
  */
+#if !defined(USE_RUST_WEAK_GC)
 static bool resurrectUnreachableThreads (generation *gen, StgTSO **resurrected_threads)
 {
     StgTSO *t, *next;
@@ -285,7 +415,77 @@ static bool resurrectUnreachableThreads (generation *gen, StgTSO **resurrected_t
     gen->old_threads = END_TSO_QUEUE;
     return flag;
 }
+#endif
 
+#if defined(USE_RUST_WEAK_GC)
+// Rust owns the list links. C supplies the heap layout and mutable-list operations.
+static StgClosure *liveWeakKey(StgWeak *w, const StgInfoTable *info)
+{
+    const StgInfoTable *table = INFO_PTR_TO_STRUCT(info);
+    if (table->type != WEAK) {
+        barf("tidyWeakList: not WEAK: %d, %p", table->type, w);
+    }
+    return isAlive(w->key);
+}
+
+static StgWeak **weakDestination(StgWeak *w, uint32_t *number)
+{
+    generation *dest = Bdescr((P_)w)->gen;
+    *number = dest->no;
+    return &dest->weak_ptr_list;
+}
+
+static void rememberUnpromotedWeak(gc_thread *worker USED_IF_THREADS, StgWeak *w, uint32_t gen)
+{
+#if defined(THREADED_RTS)
+    gc_thread *saved = gct;
+#endif
+    SET_GCT(worker);
+    debugTrace(DEBUG_weak, "putting weak pointer %p into mutable list", w);
+    gct->failed_to_evac = false;
+    recordMutableGen_GC((StgClosure *)w, gen);
+    SET_GCT(saved);
+}
+
+#if defined(DEBUG)
+static void traceLiveWeak(StgWeak *w, uint32_t from, uint32_t to)
+{
+    if (from != to) {
+        debugTrace(DEBUG_weak, "moving weak pointer %p from %d to %d", w, from, to);
+    }
+    debugTrace(DEBUG_weak, "weak pointer still alive at %p -> %p", w, w->key);
+}
+#define TRACE_LIVE_WEAK traceLiveWeak
+#else
+#define TRACE_LIVE_WEAK NULL
+#endif
+
+static const WeakListOps weakListOps = {
+    liveWeakKey, weakDestination, rememberUnpromotedWeak, TRACE_LIVE_WEAK
+};
+
+#if defined(ASSERTS_ENABLED)
+static void checkOldestWeakList(StgWeak **slot)
+{
+    ASSERT(*slot == NULL);
+}
+#define CHECK_OLDEST_WEAK_LIST checkOldestWeakList
+#else
+#define CHECK_OLDEST_WEAK_LIST NULL
+#endif
+
+static const WeakStageLayout weakStageLayout = {
+    sizeof(generation), offsetof(generation, old_threads),
+    offsetof(generation, weak_ptr_list), offsetof(generation, old_weak_ptr_list),
+    offsetof(generation, no), offsetof(StgWeak, cfinalizers),
+    offsetof(StgTSO, global_link), offsetof(StgTSO, what_next),
+    END_TSO_QUEUE, ThreadKilled, ThreadComplete,
+    inspectTidyThread, &weakListOps, CHECK_OLDEST_WEAK_LIST
+};
+#undef CHECK_OLDEST_WEAK_LIST
+#endif
+
+#if !defined(USE_RUST_WEAK_GC)
 /*
  * Walk over the `old_weak_ptr_list` of the given generation and:
  *
@@ -387,6 +587,7 @@ static bool tidyWeakList(generation *gen)
 
     return flag;
 }
+#endif
 
 /*
  * Walk over the given generation's thread list and promote TSOs which are
@@ -396,6 +597,32 @@ static bool tidyWeakList(generation *gen)
  * This has the side-effect of updating the global thread list to account for
  * indirections introduced by evacuation.
  */
+/* Note [Tidy thread list ownership]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * isAlive can return a relocated TSO. The C callback updates the pointer
+ * and finds its destination generation. Rust reads the next link from
+ * that TSO and updates the old list and the destination list. The callback
+ * uses isAlive from GCAux.c, which does not use the gct register.
+ */
+#if defined(USE_RUST_WEAK_GC)
+static StgTSO **inspectTidyThread(StgTSO **current)
+{
+    StgTSO *t = *current;
+    StgTSO *live = (StgTSO *)isAlive((StgClosure *)t);
+    if (live != NULL) t = live;
+
+    ASSERT(get_itbl((StgClosure *)t)->type == TSO);
+    ASSERT(t->blocked_exceptions == END_BLOCKED_EXCEPTIONS_QUEUE
+           || t->why_blocked == BlockedOnCCall
+           || t->why_blocked == BlockedOnCCall_Interruptible
+           || (t->flags & TSO_BLOCKEX));
+
+    *current = t;
+    return live != NULL ? &Bdescr((P_)t)->gen->threads : NULL;
+}
+#endif
+
+#if !defined(USE_RUST_WEAK_GC)
 static void tidyThreadList (generation *gen)
 {
     StgTSO *next;
@@ -437,6 +664,7 @@ static void tidyThreadList (generation *gen)
         }
     }
 }
+#endif
 
 #if defined(DEBUG)
 static void checkWeakPtrSanity(StgWeak *hd, StgWeak *tl)
@@ -457,8 +685,28 @@ static void checkWeakPtrSanity(StgWeak *hd, StgWeak *tl)
  * Traverse the capabilities' local new-weak-pointer lists at the beginning of
  * GC and move them to the nursery's weak_ptr_list.
  */
+#if defined(USE_RUST_WEAK_GC) && defined(ASSERTS_ENABLED)
+static void checkFreshWeakList(StgWeak *head, StgWeak *tail)
+{
+    if (tail == NULL) {
+        ASSERT(head == NULL);
+    } else {
+        IF_DEBUG(sanity, checkWeakPtrSanity(head, tail));
+    }
+}
+#define CHECK_FRESH_WEAK_LIST checkFreshWeakList
+#else
+#define CHECK_FRESH_WEAK_LIST NULL
+#endif
+
 void collectFreshWeakPtrs( void )
 {
+#if defined(USE_RUST_WEAK_GC)
+    // GC owns all capability lists until scavenging starts.
+    ghc_rust_collect_fresh_weaks(&g0->weak_ptr_list, capabilities, getNumCapabilities(),
+        offsetof(Capability, weak_ptr_list_hd), offsetof(StgWeak, cfinalizers),
+        CHECK_FRESH_WEAK_LIST);
+#else
     uint32_t i;
     // move recently allocated weak_ptr_list to the old list as well
     for (i = 0; i < getNumCapabilities(); i++) {
@@ -473,6 +721,7 @@ void collectFreshWeakPtrs( void )
             ASSERT(cap->weak_ptr_list_hd == NULL);
         }
     }
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -480,12 +729,29 @@ void collectFreshWeakPtrs( void )
    the link fields.
    -------------------------------------------------------------------------- */
 
+#if defined(ASSERTS_ENABLED)
+static inline void checkWeakBeforeEvacuation(StgWeak *w)
+{
+    // A parallel worker can replace the info pointer with a forwarding pointer.
+    const StgInfoTable *info = RELAXED_LOAD(&w->header.info);
+    ASSERT(IS_FORWARDING_PTR(info)
+           || info == &stg_DEAD_WEAK_info
+           || INFO_PTR_TO_STRUCT(info)->type == WEAK);
+}
+#define CHECK_WEAK_BEFORE_EVACUATION checkWeakBeforeEvacuation
+#else
+#define CHECK_WEAK_BEFORE_EVACUATION NULL
+#endif
+
 void
 markWeakPtrList ( void )
 {
-    uint32_t g;
-
-    for (g = 0; g <= N; g++) {
+#if defined(USE_RUST_WEAK_GC)
+    WeakGenerations gens = weakGenerationLayout();
+    ghc_rust_mark_weak_generations(&gens, gct, offsetof(StgWeak, cfinalizers),
+                                   CHECK_WEAK_BEFORE_EVACUATION);
+#else
+    for (uint32_t g = 0; g <= N; g++) {
         generation *gen = &generations[g];
         StgWeak *w, **last_w;
 
@@ -494,13 +760,7 @@ markWeakPtrList ( void )
             // w might be WEAK, EVACUATED, or DEAD_WEAK (actually CON_STATIC) here
 
 #if defined(ASSERTS_ENABLED)
-            {   // careful to do this assertion only reading the info ptr
-                // once, because during parallel GC it might change under our feet.
-                const StgInfoTable *info = RELAXED_LOAD(&w->header.info);
-                ASSERT(IS_FORWARDING_PTR(info)
-                       || info == &stg_DEAD_WEAK_info
-                       || INFO_PTR_TO_STRUCT(info)->type == WEAK);
-            }
+            checkWeakBeforeEvacuation(w);
 #endif
 
             evacuate((StgClosure **)last_w);
@@ -508,6 +768,7 @@ markWeakPtrList ( void )
             last_w = &(w->link);
         }
     }
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -521,8 +782,34 @@ markWeakPtrList ( void )
 void
 scavengeLiveWeak(StgWeak *w)
 {
+#if defined(USE_RUST_WEAK_GC)
+    ghc_rust_scavenge_live_weak(w, gct, offsetof(StgWeak, cfinalizers));
+#else
     evacuate(&w->value);
     evacuate(&w->key);
     evacuate(&w->finalizer);
     evacuate(&w->cfinalizers);
+#endif
 }
+
+#if defined(USE_RUST_WEAK_GC)
+/* Note [Live weak roots from Rust]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Rust selects the four writable fields and their visit order. Install the
+ * GC worker once while C evacuates those fields. Each slot can change.
+ */
+RTS_PRIVATE void ghc_rust_mark_weak_roots(gc_thread *worker USED_IF_THREADS,
+    StgClosure **value, StgClosure **key, StgClosure **finalizer,
+    StgClosure **cfinalizers)
+{
+#if defined(THREADED_RTS)
+    gc_thread *saved = gct;
+#endif
+    SET_GCT(worker);
+    evacuate(value);
+    evacuate(key);
+    evacuate(finalizer);
+    evacuate(cfinalizers);
+    SET_GCT(saved);
+}
+#endif

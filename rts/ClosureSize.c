@@ -8,6 +8,7 @@
 
 #include "Rts.h"
 
+#if !defined(USE_RUST_RTS) || defined(TSAN_ENABLED)
 uint32_t
 closure_sizeW_ (const StgClosure *p, const StgInfoTable *info)
 {
@@ -69,3 +70,4 @@ closure_sizeW_ (const StgClosure *p, const StgInfoTable *info)
         return sizeW_fromITBL(info);
     }
 }
+#endif

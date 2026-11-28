@@ -24,6 +24,7 @@ void        insertHashTable ( HashTable *table, StgWord key, const void *data );
 void *      lookupHashTable ( const HashTable *table, StgWord key );
 void *      removeHashTable ( HashTable *table, StgWord key, const void *data );
 
+// The count fits in int. Insertion aborts when the table has INT_MAX entries.
 int keyCountHashTable (HashTable *table);
 
 // Puts up to szKeys keys of the hash table into the given array. Returns the

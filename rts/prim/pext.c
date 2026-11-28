@@ -1,6 +1,7 @@
 #include "Rts.h"
 #include "MachDeps.h"
 
+#if !defined(USE_RUST_RTS)
 static StgWord64
 hs_pext(const unsigned char bit_width, const StgWord64 src, const StgWord64 mask)
 {
@@ -46,3 +47,5 @@ hs_pext8(const StgWord src, const StgWord mask)
 {
   return (StgWord) ((StgWord8) hs_pext(8, src, mask));
 }
+
+#endif

@@ -1192,35 +1192,60 @@ void commitMBlockFreeing(void) {
    Stats / metrics
    -------------------------------------------------------------------------- */
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+RTS_PRIVATE W_ ghc_rust_count_blocks(const bdescr *head, W_ link_offset,
+                                     W_ blocks_offset, W_ megablock_shift,
+                                     W_ descriptor_blocks);
+GHC_STATIC_ASSERT(sizeof(((bdescr *)0)->blocks) == sizeof(uint32_t),
+                  "Rust block count reads a 32-bit block field");
+GHC_STATIC_ASSERT(sizeof(W_) == sizeof(size_t) &&
+                  MBLOCK_SHIFT > BLOCK_SHIFT &&
+                  MBLOCK_SHIFT - BLOCK_SHIFT < BITS_IN(W_),
+                  "Rust block count uses native word geometry");
+GHC_STATIC_ASSERT(MBLOCK_SIZE / BLOCK_SIZE == (1UL << (MBLOCK_SHIFT - BLOCK_SHIFT)),
+                  "megablock block count is a power of two");
+#endif
+
 W_
 countBlocks(bdescr *bd)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    return ghc_rust_count_blocks(bd, offsetof(bdescr, link),
+                                 offsetof(bdescr, blocks), 0, 0);
+#else
     W_ n;
     for (n=0; bd != NULL; bd=bd->link) {
         n += bd->blocks;
     }
     return n;
+#endif
 }
 
-// (*1) Just like countBlocks, except that we adjust the count for a
-// megablock group so that it doesn't include the extra few blocks
-// that would be taken up by block descriptors in the second and
-// subsequent megablock.  This is so we can tally the count with the
-// number of blocks allocated in the system, for memInventory().
+/* Note [Counting allocated blocks]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Each megablock after the first includes descriptor blocks in bd->blocks.
+ * Subtract these blocks when memInventory() counts allocated blocks.
+ */
 W_
 countAllocdBlocks(bdescr *bd)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    return ghc_rust_count_blocks(bd, offsetof(bdescr, link),
+                                 offsetof(bdescr, blocks), MBLOCK_SHIFT - BLOCK_SHIFT,
+                                 MBLOCK_SIZE / BLOCK_SIZE - BLOCKS_PER_MBLOCK);
+#else
     W_ n;
     for (n=0; bd != NULL; bd=bd->link) {
         n += bd->blocks;
 
-        // hack for megablock groups: see (*1) above
+        // See Note [Counting allocated blocks].
         if (bd->blocks > BLOCKS_PER_MBLOCK) {
             n -= (MBLOCK_SIZE / BLOCK_SIZE - BLOCKS_PER_MBLOCK)
                 * (bd->blocks/(MBLOCK_SIZE/BLOCK_SIZE));
         }
     }
     return n;
+#endif
 }
 
 // Returns the number of blocks which were able to be freed

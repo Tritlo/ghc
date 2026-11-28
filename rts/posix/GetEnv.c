@@ -9,6 +9,16 @@
 #include "Rts.h"
 #include "GetEnv.h"
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+
+RTS_PRIVATE void ghc_rust_get_prog_envv(int *out_envc, char **out_envv[]);
+
+void getProgEnvv(int *out_envc, char **out_envv[]) {
+    ghc_rust_get_prog_envv(out_envc, out_envv);
+}
+
+#else
+
 #if defined(darwin_HOST_OS)
 
 /* While the "extern char** environ" var does exist on OSX, it is not
@@ -38,6 +48,8 @@ void getProgEnvv(int *out_envc, char **out_envv[]) {
     *out_envc = envc;
     *out_envv = environ;
 }
+
+#endif
 
 void freeProgEnvv(int envc STG_UNUSED, char *envv[] STG_UNUSED) {
     /* nothing */

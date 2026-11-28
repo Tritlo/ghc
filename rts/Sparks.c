@@ -114,184 +114,81 @@ require a GC barrier but that seems to high a price to pay.
  * the spark pool only contains sparkable closures.
  * -------------------------------------------------------------------------- */
 
-void
-pruneSparkQueue (bool nonmovingMarkFinished, Capability *cap)
+typedef struct {
+    Capability *cap;
+    bool nonmovingMarkFinished;
+    uint32_t pruned_sparks;
+} SparkPruning;
+
+// Keep policy here. The deque only decides where to write a retained spark.
+STATIC_INLINE StgClosure *
+retainSpark(void *user, StgClosure *spark)
 {
-    SparkPool *pool;
-    StgClosurePtr spark, tmp, *elements;
-    uint32_t pruned_sparks; // stats only
-    StgInt botInd,oldBotInd,currInd; // indices in array (always < size)
-    const StgInfoTable *info;
+    SparkPruning *pruning = user;
+    Capability *cap = pruning->cap;
 
-    pruned_sparks = 0;
+    // Another GC thread can evacuate the closure. Read its info pointer once.
+    if (GET_CLOSURE_TAG(spark) == 0) {
+        const StgInfoTable *info = ACQUIRE_LOAD(&spark->header.info);
+        if (IS_FORWARDING_PTR(info)) {
+            StgClosure *forwarded = (StgClosure *)UN_FORWARDING_PTR(info);
+            if (closure_SHOULD_SPARK(forwarded)) {
+                return forwarded;
+            }
+        } else if (HEAP_ALLOCED(spark)) {
+            bdescr *spark_bd = Bdescr((P_)spark);
+            bool is_alive;
+            if (pruning->nonmovingMarkFinished) {
+                // See Note [Spark management under the nonmoving collector]
+                // in NonMoving.c.
+                is_alive = !(spark_bd->flags & BF_NONMOVING) || nonmovingIsAlive(spark);
+            } else {
+                is_alive = spark_bd->flags & (BF_EVACUATED | BF_NONMOVING);
+            }
 
-    pool = cap->sparks;
+            if (!is_alive) {
+                pruning->pruned_sparks++;
+                cap->spark_stats.gcd++;
+                traceEventSparkGC(cap);
+                return NULL;
+            }
+            if (closure_SHOULD_SPARK(spark)) {
+                return spark;
+            }
+        } else if (INFO_PTR_TO_STRUCT(info)->type == THUNK_STATIC) {
+            // See Note [STATIC_LINK fields]. isAlive() also ignores statics.
+            return spark;
+        }
+    }
 
-    // it is possible that top > bottom, indicating an empty pool.  We
-    // fix that here; this is only necessary because the loop below
-    // assumes it.
-    if (pool->top > pool->bottom)
-        pool->top = pool->bottom;
+    pruning->pruned_sparks++;
+    cap->spark_stats.fizzled++;
+    traceEventSparkFizzle(cap);
+    return NULL;
+}
 
-    // Take this opportunity to reset top/bottom modulo the size of
-    // the array, to avoid overflow.  This is only possible because no
-    // stealing is happening during GC.
-    pool->bottom  -= pool->top & ~pool->moduloSize;
-    pool->top     &= pool->moduloSize;
+void
+pruneSparkQueue(bool nonmovingMarkFinished, Capability *cap)
+{
+    SparkPool *pool = cap->sparks;
+    SparkPruning pruning = { cap, nonmovingMarkFinished, 0 };
 
-    debugTrace(DEBUG_sparks,
-               "markSparkQueue: current spark queue len=%ld; "
-               "(hd=%" FMT_Int "; tl=%" FMT_Int ")",
-               sparkPoolSize(pool), pool->bottom, pool->top);
+    IF_DEBUG(sparks, {
+        StgInt top = stg_min(pool->top, pool->bottom);
+        StgInt bottom = pool->bottom - (top & ~pool->moduloSize);
+        top &= pool->moduloSize;
+        debugTrace(DEBUG_sparks,
+                   "markSparkQueue: current spark queue len=%ld; "
+                   "(hd=%" FMT_Int "; tl=%" FMT_Int ")",
+                   (long)(bottom - top), bottom, top);
+    });
 
-    ASSERT_WSDEQUE_INVARIANTS(pool);
+    retainWSDequeClosureSlots(pool, retainSpark, &pruning);
 
-    elements = (StgClosurePtr *)pool->elements;
-
-    /* We have exclusive access to the structure here, so we can reset
-       bottom and top counters, and prune invalid sparks. Contents are
-       copied in-place if they are valuable, otherwise discarded. The
-       routine uses "real" indices t and b, starts by computing them
-       as the modulus size of top and bottom,
-
-       Copying:
-
-       At the beginning, the pool structure can look like this:
-       ( bottom % size >= top % size , no wrap-around)
-                  t          b
-       ___________***********_________________
-
-       or like this ( bottom % size < top % size, wrap-around )
-                  b         t
-       ***********__________******************
-       As we need to remove useless sparks anyway, we make one pass
-       between t and b, moving valuable content to b and subsequent
-       cells (wrapping around when the size is reached).
-
-                     b      t
-       ***********OOO_______XX_X__X?**********
-                     ^____move?____/
-
-       After this movement, botInd becomes the new bottom, and old
-       bottom becomes the new top index, both as indices in the array
-       size range.
-    */
-    // starting here
-    currInd = (pool->top) & (pool->moduloSize); // mod
-
-    // copies of evacuated closures go to space from botInd on
-    // we keep oldBotInd to know when to stop
-    oldBotInd = botInd = (pool->bottom) & (pool->moduloSize); // mod
-
-    // on entry to loop, we are within the bounds
-    ASSERT( currInd < pool->size && botInd  < pool->size );
-
-    while (currInd != oldBotInd ) {
-      /* must use != here, wrap-around at size
-         subtle: loop not entered if queue empty
-       */
-
-      /* check element at currInd. if valuable, evacuate and move to
-         botInd, otherwise move on */
-      spark = elements[currInd];
-
-      // We have to be careful here: in the parallel GC, another
-      // thread might evacuate this closure while we're looking at it,
-      // so grab the info pointer just once.
-      if (GET_CLOSURE_TAG(spark) != 0) {
-          // Tagged pointer is a value, so the spark has fizzled.  It
-          // probably never happens that we get a tagged pointer in
-          // the spark pool, because we would have pruned the spark
-          // during the previous GC cycle if it turned out to be
-          // evaluated, but it doesn't hurt to have this check for
-          // robustness.
-          pruned_sparks++;
-          cap->spark_stats.fizzled++;
-          traceEventSparkFizzle(cap);
-      } else {
-          info = ACQUIRE_LOAD(&spark->header.info);
-          if (IS_FORWARDING_PTR(info)) {
-              tmp = (StgClosure*)UN_FORWARDING_PTR(info);
-              /* if valuable work: shift inside the pool */
-              if (closure_SHOULD_SPARK(tmp)) {
-                  elements[botInd] = tmp; // keep entry (new address)
-                  botInd++;
-              } else {
-                  pruned_sparks++; // discard spark
-                  cap->spark_stats.fizzled++;
-                  traceEventSparkFizzle(cap);
-              }
-          } else if (HEAP_ALLOCED(spark)) {
-              bdescr *spark_bd = Bdescr((P_) spark);
-              bool is_alive = false;
-              if (nonmovingMarkFinished) {
-                  // See Note [Spark management under the nonmoving collector]
-                  // in NonMoving.c.
-                  // If we just concluded concurrent marking then we can rely
-                  // on the mark bitmap to reflect whether sparks living in the
-                  // non-moving heap have died.
-                  if (spark_bd->flags & BF_NONMOVING) {
-                      is_alive = nonmovingIsAlive(spark);
-                  } else {
-                      // The nonmoving collector doesn't collect anything
-                      // outside of the non-moving heap.
-                      is_alive = true;
-                  }
-              } else if (spark_bd->flags & (BF_EVACUATED | BF_NONMOVING)) {
-                  is_alive = true;
-              }
-
-              if (is_alive) {
-                  if (closure_SHOULD_SPARK(spark)) {
-                      elements[botInd] = spark; // keep entry (new address)
-                      botInd++;
-                  } else {
-                      pruned_sparks++; // discard spark
-                      cap->spark_stats.fizzled++;
-                      traceEventSparkFizzle(cap);
-                  }
-              } else {
-                  pruned_sparks++; // discard spark
-                  cap->spark_stats.gcd++;
-                  traceEventSparkGC(cap);
-              }
-          } else {
-              if (INFO_PTR_TO_STRUCT(info)->type == THUNK_STATIC) {
-                  // We can't tell whether a THUNK_STATIC is garbage or not.
-                  // See also Note [STATIC_LINK fields]
-                  // isAlive() also ignores static closures (see GCAux.c)
-                  elements[botInd] = spark; // keep entry (new address)
-                  botInd++;
-              } else {
-                  pruned_sparks++; // discard spark
-                  cap->spark_stats.fizzled++;
-                  traceEventSparkFizzle(cap);
-              }
-          }
-      }
-
-      currInd++;
-
-      // in the loop, we may reach the bounds, and instantly wrap around
-      ASSERT( currInd <= pool->size && botInd <= pool->size );
-      if ( currInd == pool->size ) { currInd = 0; }
-      if ( botInd == pool->size )  { botInd = 0;  }
-
-    } // while-loop over spark pool elements
-
-    ASSERT(currInd == oldBotInd);
-
-    pool->top = oldBotInd; // where we started writing
-
-    pool->bottom = (oldBotInd <= botInd) ? botInd : (botInd + pool->size);
-    // first free place we did not use (corrected by wraparound)
-
-    debugTrace(DEBUG_sparks, "pruned %d sparks", pruned_sparks);
-
+    debugTrace(DEBUG_sparks, "pruned %d sparks", pruning.pruned_sparks);
     debugTrace(DEBUG_sparks,
                "new spark queue len=%ld; (hd=%" FMT_Int "; tl=%" FMT_Int ")",
                sparkPoolSize(pool), pool->bottom, pool->top);
-
     ASSERT_WSDEQUE_INVARIANTS(pool);
 }
 
@@ -300,27 +197,8 @@ pruneSparkQueue (bool nonmovingMarkFinished, Capability *cap)
 void
 traverseSparkQueue (evac_fn evac, void *user, Capability *cap)
 {
-    StgClosure **sparkp;
-    SparkPool *pool;
-    StgWord top,bottom, modMask;
-
-    pool = cap->sparks;
-
-    ASSERT_WSDEQUE_INVARIANTS(pool);
-
-    top = pool->top;
-    bottom = pool->bottom;
-    sparkp = (StgClosurePtr*)pool->elements;
-    modMask = pool->moduloSize;
-
-    while (top < bottom) {
-    /* call evac for all closures in range (wrap-around via modulo)
-     * In GHC-6.10, evac takes an additional 1st argument to hold a
-     * GC-specific register, see rts/sm/GC.c::mark_root()
-     */
-      evac( user , sparkp + (top & modMask) );
-      top++;
-    }
+    SparkPool *pool = cap->sparks;
+    visitWSDequeClosureSlots(pool, evac, user);
 
     debugTrace(DEBUG_sparks,
                "traversed spark queue, len=%ld; "

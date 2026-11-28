@@ -29,9 +29,58 @@
          It untags and (if needed) retags pointers to closures.
    -------------------------------------------------------------------------- */
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+GHC_STATIC_ASSERT(TAG_MASK == 7 && offsetof(StgHeader, info) == 0 &&
+                  sizeof(((StgInfoTable *)0)->type) == sizeof(uint32_t), "Rust closure layout");
+GHC_STATIC_ASSERT(BF_EVACUATED == 1 && BF_LARGE == 2 && BF_MARKED == 8 && BF_NONMOVING == 1024,
+                  "Rust liveness block flags");
+GHC_STATIC_ASSERT(IND == 27 && IND_STATIC == 28 && BLACKHOLE == 38, "Rust indirection types");
+RTS_PRIVATE StgClosure *ghc_rust_is_alive(StgClosure *p, const StgWord16 *(*flags)(StgClosure *),
+    bool (*marked)(StgClosure *), ptrdiff_t info_type_offset, size_t indirectee_offset);
+
+/* Note [Block lookup for closure liveness]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * In the large address space, a megablock contains the descriptors for its
+ * blocks. See Bdescr in rts/storage/Block.h. The release fast path reads the
+ * flags and compaction bitmap in Rust. This avoids a C callback per closure.
+ * Use the native accessors when assertions or another heap layout require them.
+ */
+#if defined(USE_LARGE_ADDRESS_SPACE) && !defined(ASSERTS_ENABLED) && MBLOCK_SHIFT == 20 && BLOCK_SHIFT == 12 && BDESCR_SHIFT == 6
+#define RUST_LARGE_LIVENESS
+GHC_STATIC_ASSERT(offsetof(bdescr, start) == 0 && offsetof(bdescr, u.bitmap) == 24 &&
+                  offsetof(bdescr, flags) == 46 && offsetof(struct mblock_address_range, begin) == 0 &&
+                  offsetof(struct mblock_address_range, end) == sizeof(StgWord), "Rust megablock lookup");
+RTS_PRIVATE StgClosure *ghc_rust_is_alive_large(StgClosure *p, const struct mblock_address_range *range);
+#endif
+
+static const StgWord16 *livenessBlockFlags(StgClosure *q)
+{
+    ASSERT(LOOKS_LIKE_CLOSURE_PTR(q));
+    return HEAP_ALLOCED_GC(q) ? &Bdescr((P_)q)->flags : NULL;
+}
+
+static bool livenessMarked(StgClosure *q)
+{
+    return is_marked((P_)q, Bdescr((P_)q)) != 0;
+}
+#endif
+
 StgClosure *
 isAlive(StgClosure *p)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ptrdiff_t type_offset = offsetof(StgInfoTable, type);
+#if defined(TABLES_NEXT_TO_CODE)
+    type_offset -= (ptrdiff_t)sizeof(StgInfoTable);
+#endif
+#if defined(RUST_LARGE_LIVENESS)
+    if (type_offset == -8 && offsetof(StgInd, indirectee) == 8) {
+        return ghc_rust_is_alive_large(p, &mblock_address_space);
+    }
+#endif
+    return ghc_rust_is_alive(p, livenessBlockFlags, livenessMarked, type_offset,
+                             offsetof(StgInd, indirectee));
+#else
   const StgInfoTable *info;
   bdescr *bd;
   StgWord tag;
@@ -115,15 +164,30 @@ isAlive(StgClosure *p)
       return NULL;
     }
   }
+#endif
 }
 
 /* -----------------------------------------------------------------------------
    Reverting CAFs
    -------------------------------------------------------------------------- */
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+GHC_STATIC_ASSERT(STATIC_BITS == 3 && STATIC_FLAG_LIST == STATIC_BITS,
+                  "Rust CAF list tags");
+GHC_STATIC_ASSERT(offsetof(StgIndStatic, header.info) == 0 &&
+                  offsetof(StgIndStatic, static_link) == offsetof(StgIndStatic, indirectee) + sizeof(void *) &&
+                  offsetof(StgIndStatic, saved_info) == offsetof(StgIndStatic, static_link) + sizeof(void *),
+                  "Rust CAF layout");
+RTS_PRIVATE void ghc_rust_mark_cafs(evac_fn evac, void *user, size_t payload_offset);
+RTS_PRIVATE void ghc_rust_revert_cafs(size_t payload_offset);
+#endif
+
 void
 revertCAFs( void )
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_revert_cafs(offsetof(StgIndStatic, indirectee));
+#else
     StgIndStatic *c = revertible_caf_list;
 
     while (c != (StgIndStatic *) END_OF_CAF_LIST) {
@@ -141,11 +205,15 @@ revertCAFs( void )
         c = next;
     }
     revertible_caf_list = (StgIndStatic*)END_OF_CAF_LIST;
+#endif
 }
 
 void
 markCAFs (evac_fn evac, void *user)
 {
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    ghc_rust_mark_cafs(evac, user, offsetof(StgIndStatic, indirectee));
+#else
     /* N.B. We must both ensure that the indirectee is
      * evacuated and that we let the linker know that the CAF
      * itself is still reachable, lest it be collected (see
@@ -170,4 +238,5 @@ markCAFs (evac_fn evac, void *user)
         // See Note [Object unloading] in CheckUnload.c
         if (unload_mark_needed) markObjectCode(c);
     }
+#endif
 }

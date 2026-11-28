@@ -15,6 +15,7 @@ import Oracles.ModuleFiles
 import Packages
 import Rules.Gmp
 import Rules.Register
+import Rules.Rts (rtsRustObjects)
 import Settings
 import Target
 import Utilities
@@ -194,7 +195,7 @@ jsObjects context = do
 -- This is non-empty for:
 --
 -- * @ghc-internal@ when built with in-tree GMP backend
--- * @rts@ on Windows when linking dynamically
+-- * @rts@ with the optional Rust RTS or on Windows when linking dynamically
 --
 extraObjects :: Context -> Action [FilePath]
 extraObjects context
@@ -204,10 +205,11 @@ extraObjects context
             _     -> return []
 
     | package context == rts = do
+          rustObjs <- rtsRustObjects (stage context) (way context)
           target   <- interpretInContext context getStagedTarget
           if not (archOS_OS (tgtArchOs target) == OSMinGW32
                 && Dynamic `wayUnit` way context)
-          then return []
+          then return rustObjs
           else do
             -- Find the ghc-internal library file name. Note that the
             -- ghc-internal's .dll.a file is placed in the RTS build dir and not
@@ -221,7 +223,7 @@ extraObjects context
                 }
 
             builddir <- buildPath context
-            return [ builddir -/- ghcInternalDllName <> ".a"]
+            return (rustObjs ++ [builddir -/- ghcInternalDllName <> ".a"])
 
     | otherwise = return []
 

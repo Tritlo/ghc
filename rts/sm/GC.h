@@ -39,6 +39,8 @@ void GarbageCollect (struct GcConfig config,
 
 typedef void (*evac_fn)(void *user, StgClosure **root);
 
+// Use this callback when code outside the GC visits a root for the GC thread.
+void         mark_root    ( void *user, StgClosure **root );
 StgClosure * isAlive      ( StgClosure *p );
 void         markCAFs     ( evac_fn evac, void *user );
 

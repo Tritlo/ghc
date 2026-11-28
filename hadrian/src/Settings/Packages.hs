@@ -316,6 +316,7 @@ rtsPackageArgs = package rts ? do
     let ghcArgs = mconcat
           [ arg "-Irts"
           , arg $ "-I" ++ path
+          , input "**/PrimOps.cmm" ? (not . null <$> staged rtsRustCompiler ? arg "-optc-DUSE_RUST_RTS")
           , way `elem` [debug, debugDynamic] ? pure [ "-DTICKY_TICKY"
                                                     , "-optc-DTICKY_TICKY"]
           , Profiling `wayUnit` way          ? arg "-DPROFILING"
@@ -359,6 +360,7 @@ rtsPackageArgs = package rts ? do
           , arg $ "-DFS_NAMESPACE=rts"
 
           , arg $ "-DCOMPILING_RTS"
+          , not . null <$> staged rtsRustCompiler ? arg "-DUSE_RUST_RTS"
 
           , inputs ["**/RtsMessages.c", "**/Trace.c"] ?
             pure

@@ -214,7 +214,6 @@ DECLARE_GCT
    Static function declarations
    -------------------------------------------------------------------------- */
 
-static void mark_root               (void *user, StgClosure **root);
 static void prepare_collected_gen   (generation *gen);
 static void prepare_uncollected_gen (generation *gen);
 static void init_gc_thread          (gc_thread *t);
@@ -1965,14 +1964,12 @@ init_gc_thread (gc_thread *t)
    Function we pass to evacuate roots.
    -------------------------------------------------------------------------- */
 
-static void
+void
 mark_root(void *user USED_IF_THREADS, StgClosure **root)
 {
-    // we stole a register for gct, but this function is called from
-    // *outside* the GC where the register variable is not in effect,
-    // so we need to save and restore it here.  NB. only call
-    // mark_root() from the main GC thread, otherwise gct will be
-    // incorrect.
+    // The caller uses the platform ABI and can use the GC register for
+    // another value. The main GC thread and each parallel worker pass
+    // their own gc_thread as user. Install it for the call to evacuate.
 #if defined(THREADED_RTS)
     gc_thread *saved_gct;
     saved_gct = gct;
@@ -1983,6 +1980,14 @@ mark_root(void *user USED_IF_THREADS, StgClosure **root)
 
     SET_GCT(saved_gct);
 }
+
+#if defined(USE_RUST_RTS)
+#include "BeginPrivate.h"
+StgWord ghc_rust_limit_generation_size(StgWord size, StgWord max_heap,
+                                      StgWord min_alloc, StgWord generations,
+                                      bool in_place_oldest);
+#include "EndPrivate.h"
+#endif
 
 /* ----------------------------------------------------------------------------
    Reset the sizes of the older generations when we do a major
@@ -2062,6 +2067,10 @@ resizeGenerations (void)
             heapOverflow();
         }
 
+#if defined(USE_RUST_RTS)
+        size = ghc_rust_limit_generation_size(size, max, min_alloc, gens,
+                                             oldest_gen->compact || RtsFlags.GcFlags.useNonmoving);
+#else
         if (oldest_gen->compact || RtsFlags.GcFlags.useNonmoving) {
             if ( (size + (size - 1) * (gens - 2) * 2) + min_alloc > max ) {
                 size = (max - min_alloc) / ((gens - 1) * 2 - 1);
@@ -2071,6 +2080,7 @@ resizeGenerations (void)
                 size = (max - min_alloc) / ((gens - 1) * 2);
             }
         }
+#endif
 
         if (size < live) {
             heapOverflow();

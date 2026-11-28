@@ -44,7 +44,6 @@ import CLOSURE g0;
 import CLOSURE large_alloc_lim;
 import CLOSURE n_capabilities;
 import CLOSURE sleeping_queue;
-import CLOSURE stable_name_table;
 import CLOSURE stable_ptr_table;
 import CLOSURE stg_AP_STACK_info;
 import CLOSURE stg_AP_info;
@@ -70,7 +69,6 @@ import CLOSURE stg_NO_TREC_closure;
 import CLOSURE stg_SMALL_MUT_ARR_PTRS_DIRTY_info;
 import CLOSURE stg_SMALL_MUT_ARR_PTRS_FROZEN_CLEAN_info;
 import CLOSURE stg_SMALL_MUT_ARR_PTRS_FROZEN_DIRTY_info;
-import CLOSURE stg_STABLE_NAME_info;
 import CLOSURE stg_TREC_HEADER_info;
 import CLOSURE stg_TVAR_DIRTY_info;
 import CLOSURE stg_WEAK_info;
@@ -288,8 +286,14 @@ stg_shrinkMutableByteArrayzh ( gcptr mba, W_ new_size )
           See Note [shrink-array slop marker] */
        W_ n;
        n = old_wds - new_wds;
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+       foreign "C" ghc_rust_publish_shrink(
+           mba + SIZEOF_StgHeader + OFFSET_StgArrBytes_bytes "ptr",
+           new_size, mba + WDS(new_wds) "ptr", n);
+#else
        foreign "C" stg_writeSlopMarker(mba + WDS(new_wds) "ptr", n);
        StgArrBytes_bytes(mba) = new_size;
+#endif
        // No need to call PROF_HEADER_CREATE. See Note [LDV profiling and resizing arrays]
        return ();
    }
@@ -471,6 +475,13 @@ stg_shrinkSmallMutableArrayzh ( gcptr mba, W_ new_size )
    IF_NONMOVING_WRITE_BARRIER_ENABLED {
      // Ensure that the elements we are about to shrink out of existence
      // remain visible to the non-moving collector.
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+     foreign "C" ghc_rust_shrink_small_array_active(
+         BaseReg "ptr",
+         mba + SIZEOF_StgHeader + OFFSET_StgSmallMutArrPtrs_ptrs "ptr",
+         new_size);
+     return ();
+#else
      W_ p, end;
      p = mba + SIZEOF_StgSmallMutArrPtrs + WDS(new_size);
      end = mba + SIZEOF_StgSmallMutArrPtrs + WDS(StgSmallMutArrPtrs_ptrs(mba));
@@ -481,6 +492,7 @@ again:
        p = p + SIZEOF_W;
        goto again;
      }
+#endif
    }
 
    /* Write slop marker. See Note [shrink-array slop marker] */
@@ -488,12 +500,17 @@ again:
    old_size_sma = StgSmallMutArrPtrs_ptrs(mba);
    n_sma = old_size_sma - new_size;
    slop_start = mba + SIZEOF_StgSmallMutArrPtrs + WDS(new_size);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+   foreign "C" ghc_rust_publish_shrink(
+       mba + SIZEOF_StgHeader + OFFSET_StgSmallMutArrPtrs_ptrs "ptr",
+       new_size, slop_start "ptr", n_sma);
+#else
    foreign "C" stg_writeSlopMarker(slop_start "ptr", n_sma);
-
    // No ordering needed: the concurrent mark thread bounds the slop with the
    // marker's own release/acquire (Note [Slop marker memory ordering]), not
    // with this store, and reading the new size it never scans the slop.
    StgSmallMutArrPtrs_ptrs(mba) = new_size;
+#endif
    // No need to call PROF_HEADER_CREATE. See Note [LDV profiling and resizing arrays]
 
    return ();
@@ -725,6 +742,9 @@ stg_copyArray_barrier ( W_ hdr_size, gcptr dst, W_ dst_off, W_ n)
     W_ end, p;
     ASSERT(n > 0);  // Assumes n==0 is handled by caller
     p = dst + hdr_size + WDS(dst_off);
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+    foreign "C" ghc_rust_visit_pointer_range(BaseReg "ptr", p "ptr", n);
+#else
     end = p + WDS(n);
 
 again:
@@ -733,6 +753,7 @@ again:
     if (p < end) {
         goto again;
     }
+#endif
 
     return ();
 }
@@ -1295,7 +1316,8 @@ stg_isCurrentThreadBoundzh (/* no args */)
 stg_threadLabelzh ( gcptr tso )
 {
     W_ r;
-    r = StgTSO_label(tso);
+    // See Note [Thread label publication] in ThreadLabels.c.
+    r = %acquire StgTSO_label(tso);
     if (r == 0) {
         return (0, stg_DEAD_SLOT_closure);
     } else {
@@ -2208,35 +2230,11 @@ stg_tryReadMVarzh ( P_ mvar, /* :: MVar a */ )
 
 stg_makeStableNamezh ( P_ obj )
 {
-    W_ index, sn_obj;
+    W_ sn_obj;
 
     MAYBE_GC_P(stg_makeStableNamezh, obj);
 
-    (index) = ccall lookupStableName(obj "ptr");
-
-    /* Is there already a StableName for this heap object?
-     *  stable_name_table is a pointer to an array of snEntry structs.
-     */
-    sn_obj = %acquire snEntry_sn_obj(W_[stable_name_table] + index*SIZEOF_snEntry);
-    if (sn_obj  == NULL) {
-        // At this point we have a snEntry, but it doesn't look as used to the
-        // GC yet because we don't have a StableName object for the sn_obj field
-        // (remember that sn_obj == NULL means the entry is free). So if we call
-        // GC here we end up skipping the snEntry in gcStableNameTable(). This
-        // caused #15906. Solution: use allocate(), which does not call GC.
-        //
-        // (Alternatively we could use a special value for the sn_obj field to
-        // indicate that the entry is being allocated and not free, but that's
-        // too complicated and doesn't buy us much. See D5342?id=18700.)
-        ("ptr" sn_obj) = ccall allocate(MyCapability() "ptr",
-                                        BYTES_TO_WDS(SIZEOF_StgStableName));
-        SET_HDR(sn_obj, stg_STABLE_NAME_info, CCCS);
-        StgStableName_sn(sn_obj) = index;
-        // This will make the StableName# object visible to other threads;
-        // be sure that its completely visible to other cores.
-        // See Note [Heap memory barriers] in SMP.h.
-        %release snEntry_sn_obj(W_[stable_name_table] + index*SIZEOF_snEntry) = sn_obj;
-    }
+    ("ptr" sn_obj) = ccall makeStableName(MyCapability() "ptr", obj "ptr", CCCS);
 
     return (sn_obj);
 }

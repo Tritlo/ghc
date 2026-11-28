@@ -31,6 +31,7 @@
 #include "Sparks.h"
 #include "Capability.h"
 #include "Task.h"
+#include "SuspendedCalls.h"
 #include "IOManager.h"
 #if defined(mingw32_HOST_OS)
 #include "win32/MIOManager.h"
@@ -2418,10 +2419,18 @@ deleteAllThreads (void)
     // being GC'd, and we don't want the "main thread has been GC'd" panic.
 }
 
-/* -----------------------------------------------------------------------------
-   Managing the suspended_ccalls list.
-   Locks required: sched_mutex
-   -------------------------------------------------------------------------- */
+/* Note [Suspended in-call list in Rust]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * A task owns the capability while it changes this list. suspendThread
+ * inserts the InCall under cap->lock before releasing the capability.
+ * resumeThread removes it after waitForCapability restores ownership.
+ *
+ * The collector visits the address of each suspended_tso slot so it can
+ * update the stored pointer when it moves a TSO. It reads the next link
+ * after the visit. An interruptible foreign call uses this same list to
+ * find the worker to interrupt. C owns the records and the fork reset.
+ * TSAN builds use the C implementation.
+ */
 
 STATIC_INLINE void
 suspendTask (Capability *cap, Task *task)
@@ -2430,6 +2439,11 @@ suspendTask (Capability *cap, Task *task)
 
     incall = task->incall;
     ASSERT(incall->next == NULL && incall->prev == NULL);
+#if defined(USE_RUST_SUSPENDED_CALLS)
+    ghc_rust_suspended_calls_insert(&cap->suspended_ccalls,
+                                    &cap->n_suspended_ccalls, incall,
+                                    offsetof(InCall, prev));
+#else
     incall->next = cap->suspended_ccalls;
     incall->prev = NULL;
     if (cap->suspended_ccalls) {
@@ -2437,6 +2451,7 @@ suspendTask (Capability *cap, Task *task)
     }
     cap->suspended_ccalls = incall;
     cap->n_suspended_ccalls++;
+#endif
 }
 
 STATIC_INLINE void
@@ -2445,6 +2460,12 @@ recoverSuspendedTask (Capability *cap, Task *task)
     InCall *incall;
 
     incall = task->incall;
+#if defined(USE_RUST_SUSPENDED_CALLS)
+    ASSERT(incall->prev != NULL || cap->suspended_ccalls == incall);
+    ghc_rust_suspended_calls_remove(&cap->suspended_ccalls,
+                                    &cap->n_suspended_ccalls, incall,
+                                    offsetof(InCall, prev));
+#else
     if (incall->prev) {
         incall->prev->next = incall->next;
     } else {
@@ -2456,6 +2477,7 @@ recoverSuspendedTask (Capability *cap, Task *task)
     }
     incall->next = incall->prev = NULL;
     cap->n_suspended_ccalls--;
+#endif
 }
 
 /* ---------------------------------------------------------------------------

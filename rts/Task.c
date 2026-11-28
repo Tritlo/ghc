@@ -25,6 +25,37 @@
 #include <signal.h>
 #endif
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+#define USE_RUST_INCALL_FRAMES
+
+/* Note [In-call frame ownership]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Each task owns its active stack and a cache of spare frames. A foreign
+ * export can re-enter Haskell on the same task and push another frame.
+ * Rust allocates and releases frames through the RTS allocator. C passes the
+ * three stack and cache fields separately because Task layouts vary by way.
+ * Other RTS operations read the InCall fields directly.
+ */
+GHC_STATIC_ASSERT(sizeof(InCall) == 72, "InCall size");
+GHC_STATIC_ASSERT(_Alignof(InCall) == 8, "InCall alignment");
+GHC_STATIC_ASSERT(sizeof(SchedulerStatus) == 4 && NoStatus == 0, "InCall initial status");
+GHC_STATIC_ASSERT(offsetof(InCall, tso) == 0, "InCall tso");
+GHC_STATIC_ASSERT(offsetof(InCall, suspended_tso) == 8, "InCall suspended_tso");
+GHC_STATIC_ASSERT(offsetof(InCall, suspended_cap) == 16, "InCall suspended_cap");
+GHC_STATIC_ASSERT(offsetof(InCall, rstat) == 24, "InCall rstat");
+GHC_STATIC_ASSERT(offsetof(InCall, ret) == 32, "InCall ret");
+GHC_STATIC_ASSERT(offsetof(InCall, task) == 40, "InCall task");
+GHC_STATIC_ASSERT(offsetof(InCall, prev_stack) == 48, "InCall prev_stack");
+GHC_STATIC_ASSERT(offsetof(InCall, prev) == 56, "InCall prev");
+GHC_STATIC_ASSERT(offsetof(InCall, next) == 64, "InCall next");
+
+RTS_PRIVATE void ghc_rust_incall_push(Task *task, InCall **active,
+                                      InCall **spares, uint32_t *spare_count);
+RTS_PRIVATE void ghc_rust_incall_pop(InCall **active, InCall **spares,
+                                     uint32_t *spare_count, uint32_t limit);
+RTS_PRIVATE void ghc_rust_incall_free(InCall *active, InCall *spares);
+#endif
+
 // Task lists and global counters.
 // Locks required: all_tasks_mutex.
 Task *all_tasks = NULL;
@@ -167,8 +198,6 @@ void freeMyTask (void)
 static void
 freeTask (Task *task)
 {
-    InCall *incall, *next;
-
     // We only free resources if the Task is not in use.  A
     // Task may still be in use if we have a Haskell thread in
     // a foreign call while we are attempting to shut down the
@@ -178,6 +207,10 @@ freeTask (Task *task)
     closeMutex(&task->lock);
 #endif
 
+#if defined(USE_RUST_INCALL_FRAMES)
+    ghc_rust_incall_free(task->incall, task->spare_incalls);
+#else
+    InCall *incall, *next;
     for (incall = task->incall; incall != NULL; incall = next) {
         next = incall->prev_stack;
         stgFree(incall);
@@ -186,6 +219,7 @@ freeTask (Task *task)
         next = incall->next;
         stgFree(incall);
     }
+#endif
 
     stgFree(task);
 }
@@ -248,6 +282,10 @@ newTask (bool worker)
 static void
 newInCall (Task *task)
 {
+#if defined(USE_RUST_INCALL_FRAMES)
+    ghc_rust_incall_push(task, &task->incall,
+                         &task->spare_incalls, &task->n_spare_incalls);
+#else
     InCall *incall;
 
     if (task->spare_incalls != NULL) {
@@ -268,11 +306,16 @@ newInCall (Task *task)
     incall->prev = NULL;
     incall->prev_stack = task->incall;
     task->incall = incall;
+#endif
 }
 
 static void
 endInCall (Task *task)
 {
+#if defined(USE_RUST_INCALL_FRAMES)
+    ghc_rust_incall_pop(&task->incall, &task->spare_incalls,
+                        &task->n_spare_incalls, MAX_SPARE_INCALLS);
+#else
     InCall *incall;
 
     incall = task->incall;
@@ -286,6 +329,7 @@ endInCall (Task *task)
         task->spare_incalls = incall;
         task->n_spare_incalls++;
     }
+#endif
 }
 
 

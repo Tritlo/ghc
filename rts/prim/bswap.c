@@ -1,5 +1,6 @@
 #include "Rts.h"
 
+#if !defined(USE_RUST_RTS)
 StgWord
 hs_bswap16(StgWord x)
 {
@@ -24,3 +25,5 @@ hs_bswap64(StgWord64 x)
          | ((x >> 8)  & 0xff000000) | ((x & 0xff000000) << 8)
          );
 }
+
+#endif

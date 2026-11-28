@@ -17,6 +17,22 @@
 
 #include <string.h>
 
+#if defined(USE_RUST_RTS)
+RTS_PRIVATE size_t ghc_rust_profiler_json_size(const char *input, size_t input_len);
+RTS_PRIVATE size_t ghc_rust_profiler_json_escape(const char *input, size_t input_len,
+                                               char *output, size_t output_len);
+
+static void escapeString(char const* str, char **buf)
+{
+    size_t input_size = strlen(str);
+    size_t out_size = ghc_rust_profiler_json_size(str, input_size);
+    char *out = stgMallocBytes(out_size, "writeCCSReportJson");
+    size_t written = ghc_rust_profiler_json_escape(str, input_size, out, out_size);
+    assert(written == out_size);
+    (void)written;
+    *buf = out;
+}
+#else
 // Including zero byte
 static size_t escaped_size(char const* str)
 {
@@ -190,6 +206,7 @@ static void escapeString(char const* str, char **buf)
     assert(pos == out_size);
     *buf = out;
 }
+#endif
 
 static void
 logCostCentres(FILE *prof_file)

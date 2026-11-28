@@ -10,6 +10,53 @@
 #include "Rts.h"
 
 #include "FileLock.h"
+
+#if defined(THREADED_RTS)
+static Mutex file_lock_mutex;
+#endif
+
+#if defined(USE_RUST_RTS)
+
+#include "BeginPrivate.h"
+
+typedef struct RtsRustFileLocks_ RtsRustFileLocks;
+
+RtsRustFileLocks *rts_rust_file_locks_new(void);
+void rts_rust_file_locks_free(RtsRustFileLocks *locks);
+int rts_rust_file_locks_lock(RtsRustFileLocks *locks,
+                            StgWord64 id, StgWord64 dev, StgWord64 ino,
+                            int for_writing);
+int rts_rust_file_locks_unlock(RtsRustFileLocks *locks, StgWord64 id);
+
+#include "EndPrivate.h"
+
+static RtsRustFileLocks *file_locks;
+
+static void
+initRegistry(void)
+{
+    file_locks = rts_rust_file_locks_new();
+}
+
+static void
+freeRegistry(void)
+{
+    rts_rust_file_locks_free(file_locks);
+}
+
+static int
+lockRegistry(StgWord64 id, StgWord64 dev, StgWord64 ino, int for_writing)
+{
+    return rts_rust_file_locks_lock(file_locks, id, dev, ino, for_writing);
+}
+
+static int
+unlockRegistry(StgWord64 id)
+{
+    return rts_rust_file_locks_unlock(file_locks, id);
+}
+
+#else
 #include "Hash.h"
 #include "RtsUtils.h"
 
@@ -30,10 +77,6 @@ typedef struct {
 static HashTable *obj_hash;
 static HashTable *key_hash;
 
-#if defined(THREADED_RTS)
-static Mutex file_lock_mutex;
-#endif
-
 STATIC_INLINE int cmpLocks(StgWord w1, StgWord w2)
 {
     Lock *l1 = (Lock *)w1;
@@ -49,14 +92,11 @@ STATIC_INLINE int hashLock(const HashTable *table, StgWord w)
     return hashWord(table, key);
 }
 
-void
-initFileLocking(void)
+static void
+initRegistry(void)
 {
     obj_hash = allocHashTable();
     key_hash  = allocHashTable(); /* ordinary word-based table */
-#if defined(THREADED_RTS)
-    initMutex(&file_lock_mutex);
-#endif
 }
 
 static void
@@ -65,22 +105,17 @@ freeLock(void *lock)
     stgFree(lock);
 }
 
-void
-freeFileLocking(void)
+static void
+freeRegistry(void)
 {
     freeHashTable(obj_hash, freeLock);
     freeHashTable(key_hash,  NULL);
-#if defined(THREADED_RTS)
-    closeMutex(&file_lock_mutex);
-#endif
 }
 
-int
-lockFile(StgWord64 id, StgWord64 dev, StgWord64 ino, int for_writing)
+static int
+lockRegistry(StgWord64 id, StgWord64 dev, StgWord64 ino, int for_writing)
 {
     Lock key, *lock;
-
-    ACQUIRE_LOCK(&file_lock_mutex);
 
     key.device = dev;
     key.inode  = ino;
@@ -95,36 +130,30 @@ lockFile(StgWord64 id, StgWord64 dev, StgWord64 ino, int for_writing)
         lock->readers = for_writing ? -1 : 1;
         insertHashTable_(obj_hash, (StgWord)lock, (void *)lock, hashLock);
         insertHashTable(key_hash, id, lock);
-        RELEASE_LOCK(&file_lock_mutex);
         return 0;
     }
     else
     {
         // single-writer/multi-reader locking:
         if (for_writing || lock->readers < 0) {
-            RELEASE_LOCK(&file_lock_mutex);
             return -1;
         }
         insertHashTable(key_hash, id, lock);
         lock->readers++;
-        RELEASE_LOCK(&file_lock_mutex);
         return 0;
     }
 }
 
-int
-unlockFile(StgWord64 id)
+static int
+unlockRegistry(StgWord64 id)
 {
     Lock *lock;
-
-    ACQUIRE_LOCK(&file_lock_mutex);
 
     lock = lookupHashTable(key_hash, id);
     if (lock == NULL) {
         // errorBelch("unlockFile: key %d not found", key);
         // This is normal: we didn't know when calling unlockFile
         // whether this FD referred to a locked file or not.
-        RELEASE_LOCK(&file_lock_mutex);
         return 1;
     }
 
@@ -139,7 +168,43 @@ unlockFile(StgWord64 id)
         stgFree(lock);
     }
     removeHashTable(key_hash, id, NULL);
-
-    RELEASE_LOCK(&file_lock_mutex);
     return 0;
+}
+
+#endif /* USE_RUST_RTS */
+
+void
+initFileLocking(void)
+{
+    initRegistry();
+#if defined(THREADED_RTS)
+    initMutex(&file_lock_mutex);
+#endif
+}
+
+void
+freeFileLocking(void)
+{
+    freeRegistry();
+#if defined(THREADED_RTS)
+    closeMutex(&file_lock_mutex);
+#endif
+}
+
+int
+lockFile(StgWord64 id, StgWord64 dev, StgWord64 ino, int for_writing)
+{
+    ACQUIRE_LOCK(&file_lock_mutex);
+    int result = lockRegistry(id, dev, ino, for_writing);
+    RELEASE_LOCK(&file_lock_mutex);
+    return result;
+}
+
+int
+unlockFile(StgWord64 id)
+{
+    ACQUIRE_LOCK(&file_lock_mutex);
+    int result = unlockRegistry(id);
+    RELEASE_LOCK(&file_lock_mutex);
+    return result;
 }

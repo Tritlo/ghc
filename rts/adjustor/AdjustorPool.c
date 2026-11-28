@@ -8,6 +8,22 @@
 
 #include <string.h>
 
+#if defined(USE_RUST_RTS) && !defined(TSAN_ENABLED)
+#define USE_RUST_ADJUSTOR_SLOTS 1
+/* Note [Adjustor slot bookkeeping]
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * C holds the pool lock and owns the chunk list, context, and code pages.
+ * Rust updates the bitmap and first_free in one call for each slot change.
+ * TSAN uses the C path so it can instrument these writes.
+ */
+RTS_PRIVATE size_t ghc_rust_adjustor_claim_slot(uint8_t *bitmap,
+                                                size_t *first_free,
+                                                size_t chunk_slots);
+RTS_PRIVATE void ghc_rust_adjustor_return_slot(uint8_t *bitmap,
+                                               size_t *first_free,
+                                               size_t slot_idx);
+#endif
+
 /*
  * Note [Adjustor pools]
  * ~~~~~~~~~~~~~~~~~~~~~
@@ -167,6 +183,7 @@ new_adjustor_pool(
     return pool;
 }
 
+#if !defined(USE_RUST_ADJUSTOR_SLOTS)
 static void
 bitmap_set(uint8_t *bitmap, size_t idx, bool value)
 {
@@ -178,6 +195,7 @@ bitmap_set(uint8_t *bitmap, size_t idx, bool value)
         bitmap[word_n] &= ~bit;
     }
 }
+#endif
 
 // N.B. this is unused in non-DEBUG compilers
 static bool STG_UNUSED
@@ -190,6 +208,7 @@ bitmap_get(uint8_t *bitmap, size_t idx)
 
 /* Return the index of the first unset bit of the given bitmap or
  * length_in_bits if all bits are set. */
+#if !defined(USE_RUST_ADJUSTOR_SLOTS)
 static size_t
 bitmap_first_unset(uint8_t *bitmap, size_t length_in_bits, size_t start_idx)
 {
@@ -200,6 +219,7 @@ bitmap_first_unset(uint8_t *bitmap, size_t length_in_bits, size_t start_idx)
     }
     return length_in_bits;
 }
+#endif
 
 static void *
 get_context(struct AdjustorChunk *chunk, size_t slot_idx)
@@ -221,13 +241,19 @@ alloc_adjustor(struct AdjustorPool *pool, void *context)
     }
 
     chunk = pool->free_list;
+    ASSERT(chunk->first_free < pool->chunk_slots);
+    ASSERT(bitmap_get(chunk->slot_bitmap, chunk->first_free) == 0);
+#if defined(USE_RUST_ADJUSTOR_SLOTS)
+    slot_idx = ghc_rust_adjustor_claim_slot(chunk->slot_bitmap,
+                                           &chunk->first_free,
+                                           pool->chunk_slots);
+#else
     slot_idx = chunk->first_free;
-    ASSERT(slot_idx < pool->chunk_slots);
-    ASSERT(bitmap_get(chunk->slot_bitmap, slot_idx) == 0);
     bitmap_set(chunk->slot_bitmap, slot_idx, 1);
 
     // advance first_free
     chunk->first_free = bitmap_first_unset(chunk->slot_bitmap, pool->chunk_slots, slot_idx+1);
+#endif
     if (chunk->first_free == pool->chunk_slots) {
         // there are no free slots left in this chunk; remove it from
         // free_list.
@@ -235,9 +261,7 @@ alloc_adjustor(struct AdjustorPool *pool, void *context)
         chunk->free_list_next = NULL;
     }
 
-    // update next_free and update bitmap
     ASSERT(bitmap_get(chunk->slot_bitmap, slot_idx));
-    bitmap_set(chunk->slot_bitmap, slot_idx, true);
 
     // fill in the context
     memcpy(get_context(chunk, slot_idx), context, pool->context_size);
@@ -269,17 +293,22 @@ free_adjustor(void *adjustor, void *context) {
 
     // ensure that the slot is in fact allocated.
     ASSERT(bitmap_get(chunk->slot_bitmap, slot_idx));
+    bool was_full = chunk->first_free == pool->chunk_slots;
+#if defined(USE_RUST_ADJUSTOR_SLOTS)
+    ghc_rust_adjustor_return_slot(chunk->slot_bitmap, &chunk->first_free, slot_idx);
+#else
     // mark it as free.
     bitmap_set(chunk->slot_bitmap, slot_idx, false);
-    // add the chunk to the pool's free_list if necessary.
-    if (chunk->first_free == pool->chunk_slots) {
-        chunk->free_list_next = pool->free_list;
-        pool->free_list = chunk;
-    }
 
     // update first_free
     if (chunk->first_free > slot_idx) {
         chunk->first_free = slot_idx;
+    }
+#endif
+    // add the chunk to the pool's free_list if necessary.
+    if (was_full) {
+        chunk->free_list_next = pool->free_list;
+        pool->free_list = chunk;
     }
 
     memcpy(context, get_context(chunk, slot_idx), pool->context_size);

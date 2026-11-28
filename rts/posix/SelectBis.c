@@ -28,6 +28,7 @@
 #include "RtsSignals.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <sys/select.h>
 
 #include "IOManagerInternals.h"
@@ -562,6 +563,7 @@ void interruptIOManagerSelectBis(CapIOManager *iomgr)
 static bool enlargeTables(CapIOManager *iomgr)
 {
     int oldcapacity = capacityClosureTable(&iomgr->aiop_table);
+    if (oldcapacity > INT_MAX / 2) return false;
     int newcapacity = (oldcapacity == 0) ? 1 : (oldcapacity * 2);
 
     bool ok = enlargeClosureTable(iomgr->cap, &iomgr->aiop_table, newcapacity);
